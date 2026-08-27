@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>詮達工程 - 施工日報表</title>
+    <!-- 引入 LINE LIFF SDK -->
+    <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; padding: 20px; color: #333; }
+        .container { background-color: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); max-width: 500px; margin: auto; }
+        h2 { text-align: center; color: #00B900; margin-top: 0; }
+        label { font-weight: bold; display: block; margin-top: 15px; margin-bottom: 5px; }
+        input[type="text"], textarea, input[type="file"] { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 16px; }
+        button { width: 100%; background-color: #00B900; color: white; border: none; padding: 12px; font-size: 18px; border-radius: 5px; margin-top: 20px; cursor: pointer; }
+        button:active { background-color: #009900; }
+        .voice-btn { background-color: #007bff; margin-top: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>👷‍♂️ 詮達施工日報表</h2>
+        <form id="dailyReportForm">
+            <label for="projectName">工程名稱 / 案場位置：</label>
+            <input type="text" id="projectName" placeholder="請輸入案場名稱" required>
+
+            <label for="materials">今日用料與施工進度 (可語音輸入)：</label>
+            <textarea id="materials" rows="4" placeholder="例如：使用 20 支管線，完成 A 區配線..." required></textarea>
+            <!-- 語音輸入按鈕 (外觀預留) -->
+            <button type="button" class="voice-btn" onclick="alert('語音輸入功能即將啟用！')">🎤 點我語音輸入</button>
+
+            <label for="photo">現場照片上傳：</label>
+            <input type="file" id="photo" accept="image/*" capture="camera">
+
+            <button type="button" onclick="submitForm()">上傳至雲端系統</button>
+        </form>
+    </div>
+
+    <script>
+        // 這裡之後會填入連接 Render 後端與 LINE 的程式碼
+        function submitForm() {
+            alert('系統即將把資料傳送至您的 Render 後端伺服器！');
+        }
+    </script>
+</body>
+</html>
