@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>詮達工程 - 施工日報表</title>
+    <title>云說工程 - 施工日報表</title>
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; padding: 20px; color: #333; }
@@ -19,7 +19,7 @@
 </head>
 <body>
     <div class="container">
-        <h2>👷‍♂️ 詮達施工日報表</h2>
+        <h2>👷‍♂️ 云說施工日報表</h2>
         <form id="dailyReportForm">
             <label for="projectName">工程名稱 / 案場位置：</label>
             <!-- 🎯 這裡改成了下拉選單，您可以自行修改裡面的 option -->
@@ -61,7 +61,7 @@
 
             document.getElementById('loading').style.display = 'block';
 
-            let userId = "詮達工程師傅";
+            let userId = "云說工程師傅";
             try {
                 if (liff.isLoggedIn()) {
                     const profile = await liff.getProfile();
