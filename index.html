@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>詮達工程 - 施工日報表</title>
+    <title>云說工程 - 施工日報表</title>
     <!-- 引入 LINE LIFF SDK -->
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <style>
@@ -20,7 +20,7 @@
 </head>
 <body>
     <div class="container">
-        <h2>👷‍♂️ 詮達施工日報表</h2>
+        <h2>👷‍♂️ 云說施工日報表</h2>
         <form id="dailyReportForm">
             <label for="projectName">工程名稱 / 案場位置：</label>
             <input type="text" id="projectName" placeholder="請輸入案場名稱" required>
@@ -28,8 +28,8 @@
             <label for="materials">今日用料與施工進度：</label>
             <textarea id="materials" rows="4" placeholder="例如：使用 20 支管線，完成 A 區配線..." required></textarea>
 
-            <label for="photo">現場照片上傳：</label>
-            <input type="file" id="photo" accept="image/*" capture="camera">
+            <label for="photo">現場照片上傳 (可選多張)：</label>
+            <input type="file" id="photo" accept="image/*" multiple>
 
             <button type="button" onclick="submitForm()">確認送出至雲端</button>
             <div id="loading">正在傳送資料至 OneDrive，請稍候...</div>
