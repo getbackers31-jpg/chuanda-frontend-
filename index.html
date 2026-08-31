@@ -157,6 +157,7 @@
     }
 
     function handleWorkItemChange() {
+      if (isRestoringDraft) return;
       const otherChecked = [...document.querySelectorAll('input[name="workItem"]:checked')]
         .some(cb => cb.value === '其他');
       const input = document.getElementById('customWorkItem');
@@ -327,11 +328,7 @@
       navigator.geolocation.getCurrentPosition(async position => {
         const lat = position.coords.latitude;
         const lon = position.coords.longitude;
-        const weatherUrl = 'https://api.open-meteo.com/v1/forecast' +
-          `?latitude=${encodeURIComponent(lat)}` +
-          `&longitude=${encodeURIComponent(lon)}` +
-          '&current=temperature_2m,relative_humidity_2m,wind_speed_10m' +
-          '&wind_speed_unit=ms&timezone=Asia%2FTaipei';
+        const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${encodeURIComponent(lat)}&longitude=${encodeURIComponent(lon)}&current=temperature_2m,relative_humidity_2m,wind_speed_10m&wind_speed_unit=ms&timezone=Asia%2FTaipei`;
 
         try {
           const response = await fetch(weatherUrl);
