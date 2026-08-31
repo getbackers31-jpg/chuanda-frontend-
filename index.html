@@ -24,6 +24,8 @@
         button.submit-btn:disabled { background-color: #cccccc; cursor: not-allowed; }
         .section-divider { border-bottom: 2px dashed #ddd; margin: 20px 0; }
         .hidden { display: none !important; }
+        .no-material-option { display: flex; align-items: center; font-weight: bold; color: #d9534f; margin-bottom: 15px; background: #fdf5f5; padding: 10px; border-radius: 5px; border: 1px solid #f5c6c6; }
+        .no-material-option input { width: auto; margin-right: 10px; transform: scale(1.3); }
     </style>
 </head>
 <body>
@@ -45,7 +47,6 @@
                 <option value="詮達">詮達</option>
                 <option value="其他">➕ 其他 (自行輸入)</option>
             </select>
-            <!-- 隱藏的自訂廠商輸入框 -->
             <input type="text" id="customContractor" class="hidden" placeholder="請輸入廠商名稱" oninput="saveDraft()">
 
             <select id="workerCount" onchange="saveDraft()" required>
@@ -58,9 +59,9 @@
             <label>🌤️ 氣象資訊</label>
             <button type="button" class="btn-weather" onclick="getWeather()">一鍵獲取當地天氣</button>
             <div class="flex-row">
-                <input type="text" id="temp" placeholder="溫度(度)">
-                <input type="text" id="humidity" placeholder="濕度(%)">
-                <input type="text" id="wind" placeholder="風速(m/s)">
+                <input type="text" id="temp" placeholder="溫度(度)" oninput="saveDraft()">
+                <input type="text" id="humidity" placeholder="濕度(%)" oninput="saveDraft()">
+                <input type="text" id="wind" placeholder="風速(m/s)" oninput="saveDraft()">
             </div>
 
             <div class="section-divider"></div>
@@ -74,10 +75,15 @@
             <div class="section-divider"></div>
 
             <label>📦 今日用料</label>
+            
+            <label class="no-material-option">
+                <input type="checkbox" id="noMaterial" onchange="handleNoMaterialChange(); saveDraft();"> 今日無用料
+            </label>
+
             <div id="materialsContainer">
                 <!-- 動態用料列表會產生在這裡 -->
             </div>
-            <button type="button" class="btn-add" onclick="addMaterialRow()">➕ 新增一項用料</button>
+            <button type="button" id="addMaterialButton" class="btn-add" onclick="addMaterialRow()">➕ 新增一項用料</button>
 
             <div class="section-divider"></div>
 
@@ -89,6 +95,7 @@
     </div>
 
     <script>
+        const MAX_MATERIAL_ROWS = 10;
         const workItemsList = [
             "材料進場", "現場放樣", "鷹架搭設", "鷹架拆除", "水刀除鏽", 
             "手動工具除鏽", "底漆施工", "中塗漆施工", "面漆施工", "底漆修補", 
@@ -97,18 +104,15 @@
         ];
 
         let isSubmitting = false;
-        let materialCount = 0;
 
         window.onload = function() {
             liff.init({ liffId: "2011289657-vQgMb0eI" }).catch(err => console.error(err));
             
-            // 產生人數下拉選單
             const workerSelect = document.getElementById('workerCount');
             for(let i = 1; i <= 30; i++) {
                 workerSelect.options.add(new Option(`${i}人`, `${i}人`));
             }
 
-            // 產生複選框
             const grid = document.getElementById('workItemsGrid');
             workItemsList.forEach(item => {
                 const label = document.createElement('label');
@@ -117,44 +121,90 @@
                 grid.appendChild(label);
             });
 
+            loadSavedContractors();
             loadDraft();
         };
 
-        // --- 廠商自訂邏輯 ---
+        // --- 自訂廠商記憶 ---
+        function loadSavedContractors() {
+            const saved = JSON.parse(localStorage.getItem('savedContractors') || '[]');
+            const select = document.getElementById('contractor');
+            const otherOption = Array.from(select.options).find(opt => opt.value === '其他');
+            
+            saved.forEach(name => {
+                const exists = Array.from(select.options).some(opt => opt.value === name);
+                if (!exists) {
+                    select.insertBefore(new Option(name, name), otherOption);
+                }
+            });
+        }
+
+        function saveCustomContractor(contractorName) {
+            const name = String(contractorName || '').trim();
+            if (!name) return;
+            const saved = JSON.parse(localStorage.getItem('savedContractors') || '[]');
+            if (!saved.includes(name)) {
+                saved.push(name);
+                localStorage.setItem('savedContractors', JSON.stringify(saved));
+            }
+        }
+
         function toggleCustomContractor() {
             const select = document.getElementById('contractor');
             const customInput = document.getElementById('customContractor');
             if (select.value === '其他') {
                 customInput.classList.remove('hidden');
+                customInput.focus();
             } else {
                 customInput.classList.add('hidden');
                 customInput.value = '';
             }
         }
 
-        // --- 動態用料邏輯 ---
-        function addMaterialRow(name = '', qty = '', unit = '') {
-            materialCount++;
-            const id = materialCount;
+        // --- 無用料邏輯 ---
+        function handleNoMaterialChange() {
+            const noMaterial = document.getElementById('noMaterial').checked;
             const container = document.getElementById('materialsContainer');
+            const addButton = document.getElementById('addMaterialButton');
             
+            container.style.display = noMaterial ? 'none' : 'block';
+            addButton.style.display = noMaterial ? 'none' : 'block';
+            
+            if (!noMaterial && container.children.length === 0) {
+                addMaterialRow();
+            }
+        }
+
+        // --- 動態用料邏輯 ---
+        function addMaterialRow(name = '', customName = '', qty = '', unit = '') {
+            const currentCount = document.querySelectorAll('.material-group').length;
+            if (currentCount >= MAX_MATERIAL_ROWS) {
+                alert(`最多可填寫 ${MAX_MATERIAL_ROWS} 筆用料`);
+                return;
+            }
+
+            const container = document.getElementById('materialsContainer');
             const div = document.createElement('div');
             div.className = 'material-group';
-            div.id = `matGroup${id}`;
+            
+            const isCustom = (name === '其他' || (name && !['底漆','中塗漆','面漆','矽利康','其他'].includes(name)));
+            const selectName = isCustom ? '其他' : name;
+            const finalCustomName = isCustom && !customName ? name : customName;
+
             div.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 5px;">
-                    <div class="material-title">用料項目</div>
-                    ${id > 1 ? `<button type="button" onclick="removeMaterialRow(${id})" style="color:#ff4d4f; border:none; background:none; font-weight:bold; cursor:pointer;">❌ 移除</button>` : ''}
+                    <div class="material-title">用料</div>
+                    <button type="button" onclick="removeMaterialRow(this)" style="color:#ff4d4f; border:none; background:none; font-weight:bold; cursor:pointer;">❌ 移除</button>
                 </div>
-                <select class="mat-name" onchange="saveDraft()">
-                    <option value="" disabled ${!name ? 'selected' : ''}>請選擇品項</option>
-                    <option value="今日無用料" ${name==='今日無用料'?'selected':''}>今日無用料</option>
-                    <option value="底漆" ${name==='底漆'?'selected':''}>底漆</option>
-                    <option value="中塗漆" ${name==='中塗漆'?'selected':''}>中塗漆</option>
-                    <option value="面漆" ${name==='面漆'?'selected':''}>面漆</option>
-                    <option value="矽利康" ${name==='矽利康'?'selected':''}>矽利康</option>
-                    <option value="其他" ${name==='其他'?'selected':''}>其他</option>
+                <select class="mat-name" onchange="toggleCustomMaterial(this); saveDraft()">
+                    <option value="" disabled ${!selectName ? 'selected' : ''}>請選擇品項</option>
+                    <option value="底漆" ${selectName==='底漆'?'selected':''}>底漆</option>
+                    <option value="中塗漆" ${selectName==='中塗漆'?'selected':''}>中塗漆</option>
+                    <option value="面漆" ${selectName==='面漆'?'selected':''}>面漆</option>
+                    <option value="矽利康" ${selectName==='矽利康'?'selected':''}>矽利康</option>
+                    <option value="其他" ${selectName==='其他'?'selected':''}>其他</option>
                 </select>
+                <input type="text" class="custom-mat-name ${!isCustom ? 'hidden' : ''}" placeholder="請輸入材料名稱" maxlength="50" value="${finalCustomName}" oninput="saveDraft()">
                 <div class="flex-row">
                     <input type="number" class="mat-qty" placeholder="數量" step="0.5" min="0" value="${qty}" oninput="saveDraft()">
                     <select class="mat-unit" onchange="saveDraft()">
@@ -171,30 +221,55 @@
                 </div>
             `;
             container.appendChild(div);
+            refreshMaterialTitles();
             saveDraft();
         }
 
-        function removeMaterialRow(id) {
-            const group = document.getElementById(`matGroup${id}`);
-            if(group) {
-                group.remove();
-                saveDraft();
+        function removeMaterialRow(button) {
+            const group = button.closest('.material-group');
+            group.remove();
+            refreshMaterialTitles();
+            saveDraft();
+        }
+
+        function refreshMaterialTitles() {
+            document.querySelectorAll('.material-group').forEach((group, index) => {
+                group.querySelector('.material-title').textContent = `用料 ${index + 1}`;
+            });
+        }
+
+        function toggleCustomMaterial(select) {
+            const group = select.closest('.material-group');
+            const customInput = group.querySelector('.custom-mat-name');
+            if (select.value === '其他') {
+                customInput.classList.remove('hidden');
+                customInput.focus();
+            } else {
+                customInput.classList.add('hidden');
+                customInput.value = '';
             }
         }
 
+        function formatMaterial(name, qty, unit) {
+            if (unit === '桶 (1加侖)') return `${name}：${qty}桶，每桶1加侖`;
+            if (unit === '桶 (5加侖)') return `${name}：${qty}桶，每桶5加侖`;
+            return `${name}：${qty}${unit}`;
+        }
+
         // --- 氣象抓取 ---
-        function getWeather() {
+        async function getWeather() {
             if (navigator.geolocation) {
                 document.getElementById('temp').value = "讀取中...";
                 navigator.geolocation.getCurrentPosition(async (position) => {
                     const lat = position.coords.latitude; const lon = position.coords.longitude;
                     try {
-                        // 加上 wind_speed_unit=ms 參數，強制回傳每秒公尺
                         const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m&wind_speed_unit=ms`);
                         const data = await res.json();
+                        
                         document.getElementById('temp').value = data.current.temperature_2m;
                         document.getElementById('humidity').value = data.current.relative_humidity_2m;
-                        document.getElementById('wind').value = data.current.wind_speed_10m;
+                        document.getElementById('wind').value = Number(data.current.wind_speed_10m).toFixed(1);
+                        saveDraft();
                     } catch (e) {
                         alert("氣象抓取失敗，請手動輸入"); document.getElementById('temp').value = "";
                     }
@@ -208,6 +283,7 @@
             document.querySelectorAll('.material-group').forEach(group => {
                 materials.push({
                     name: group.querySelector('.mat-name').value,
+                    customName: group.querySelector('.custom-mat-name').value,
                     qty: group.querySelector('.mat-qty').value,
                     unit: group.querySelector('.mat-unit').value
                 });
@@ -220,8 +296,12 @@
                 workerCount: document.getElementById('workerCount').value,
                 workItems: Array.from(document.querySelectorAll('input[name="workItem"]:checked')).map(cb => cb.value),
                 workNotes: document.getElementById('workNotes').value,
+                noMaterial: document.getElementById('noMaterial').checked,
                 materialsList: materials,
-                remarks: document.getElementById('remarks').value
+                remarks: document.getElementById('remarks').value,
+                temp: document.getElementById('temp').value,
+                humidity: document.getElementById('humidity').value,
+                wind: document.getElementById('wind').value
             };
             localStorage.setItem('dailyReportDraft', JSON.stringify(draft));
         }
@@ -248,38 +328,53 @@
                 
                 if(draft.workNotes) document.getElementById('workNotes').value = draft.workNotes;
                 if(draft.remarks) document.getElementById('remarks').value = draft.remarks;
+                if(draft.temp) document.getElementById('temp').value = draft.temp;
+                if(draft.humidity) document.getElementById('humidity').value = draft.humidity;
+                if(draft.wind) document.getElementById('wind').value = draft.wind;
                 
-                if(draft.materialsList && draft.materialsList.length > 0) {
-                    draft.materialsList.forEach(m => addMaterialRow(m.name, m.qty, m.unit));
+                if(draft.noMaterial) {
+                    document.getElementById('noMaterial').checked = true;
+                    handleNoMaterialChange();
                 } else {
-                    addMaterialRow(); // 預設新增第一行
+                    if(draft.materialsList && draft.materialsList.length > 0) {
+                        draft.materialsList.forEach(m => addMaterialRow(m.name, m.customName, m.qty, m.unit));
+                    } else {
+                        addMaterialRow(); 
+                    }
                 }
             } else {
-                addMaterialRow(); // 沒草稿時預設新增第一行
+                addMaterialRow(); 
             }
         }
 
         // --- 資料轉換與驗證 ---
         function buildProgressString() {
-            const selectedWorkItems = Array.from(document.querySelectorAll('input[name="workItem"]:checked')).map(item => item.value);
+            const selectedWorkItems = Array.from(document.querySelectorAll('input[name="workItem"]:checked')).map(item => `• ${item.value}`);
             const workNotes = document.getElementById('workNotes').value.trim();
-            let progress = selectedWorkItems.join('、');
+            
+            let progress = selectedWorkItems.join('\n');
             if (workNotes) {
-                progress += `\n作業補充：${workNotes}`;
+                progress += `\n\n作業補充：\n${workNotes}`;
             }
             return progress;
         }
 
         function buildMaterialString() {
+            if (document.getElementById('noMaterial').checked) {
+                return '無';
+            }
+
             const materials = [];
             document.querySelectorAll('.material-group').forEach(group => {
-                const name = group.querySelector('.mat-name').value;
+                let name = group.querySelector('.mat-name').value;
+                if (name === '其他') {
+                    name = group.querySelector('.custom-mat-name').value.trim();
+                }
                 const qty = group.querySelector('.mat-qty').value;
                 const unit = group.querySelector('.mat-unit').value;
                 
-                if (name && name !== '無' && name !== '今日無用料') {
-                    // 自動排版加入空格，例如：底漆：1 桶 (5加侖)
-                    materials.push(`${name}：${qty} ${unit}`);
+                if (name) {
+                    materials.push(formatMaterial(name, qty, unit));
                 }
             });
             return materials.length > 0 ? materials.join('\n') : '無';
@@ -306,19 +401,32 @@
                 return false;
             }
 
-            let isMaterialValid = true;
-            document.querySelectorAll('.material-group').forEach(group => {
-                const name = group.querySelector('.mat-name').value;
-                const qty = group.querySelector('.mat-qty').value;
-                const unit = group.querySelector('.mat-unit').value;
-                if (name && name !== '無' && name !== '今日無用料') {
-                    if (!qty || !unit) isMaterialValid = false;
-                }
-            });
+            if (!document.getElementById('noMaterial').checked) {
+                let isMaterialValid = true;
+                let missingCustomName = false;
+                
+                document.querySelectorAll('.material-group').forEach(group => {
+                    const nameSelect = group.querySelector('.mat-name').value;
+                    const customName = group.querySelector('.custom-mat-name').value.trim();
+                    const qty = group.querySelector('.mat-qty').value;
+                    const unit = group.querySelector('.mat-unit').value;
+                    
+                    if (nameSelect === '其他' && !customName) {
+                        missingCustomName = true;
+                    }
+                    if (nameSelect || customName) {
+                        if (!qty || !unit) isMaterialValid = false;
+                    }
+                });
 
-            if (!isMaterialValid) {
-                alert('⚠️ 請完整填寫已選擇用料的「數量」與「單位」');
-                return false;
+                if (missingCustomName) {
+                    alert('⚠️ 請輸入其他材料的名稱');
+                    return false;
+                }
+                if (!isMaterialValid) {
+                    alert('⚠️ 請完整填寫已選擇用料的「數量」與「單位」');
+                    return false;
+                }
             }
 
             return true;
@@ -337,6 +445,7 @@
             let finalContractor = document.getElementById('contractor').value;
             if (finalContractor === '其他') {
                 finalContractor = document.getElementById('customContractor').value.trim();
+                saveCustomContractor(finalContractor); // 記憶新廠商
             }
 
             const payload = {
@@ -364,7 +473,7 @@
                     throw new Error(result.error || result.message || '系統處理失敗');
                 }
 
-                localStorage.removeItem('dailyReportDraft'); // 成功後清除草稿
+                localStorage.removeItem('dailyReportDraft');
 
                 if (result.archived && result.pushed) {
                     alert('✅ 日報已歸檔並發布至 LINE 群組');
