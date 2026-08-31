@@ -19,9 +19,11 @@
         .checkbox-label input { margin-right: 8px; transform: scale(1.2); }
         .material-group { background-color: #f9f9f9; padding: 10px; border-radius: 5px; border: 1px solid #eee; margin-bottom: 10px; }
         .material-title { font-size: 14px; font-weight: bold; color: #666; margin-bottom: 5px; }
+        .btn-add { background-color: #6c757d; color: white; border: none; padding: 8px; border-radius: 5px; cursor: pointer; font-size: 14px; width: 100%; margin-bottom: 10px; }
         button.submit-btn { width: 100%; background-color: #00B900; color: white; border: none; padding: 12px; font-size: 18px; border-radius: 5px; margin-top: 20px; cursor: pointer; font-weight: bold; transition: background-color 0.3s; }
         button.submit-btn:disabled { background-color: #cccccc; cursor: not-allowed; }
         .section-divider { border-bottom: 2px dashed #ddd; margin: 20px 0; }
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
@@ -37,11 +39,14 @@
                 <option value="台北雙星">台北雙星</option>
             </select>
 
-            <select id="contractor" onchange="saveDraft()" required>
+            <select id="contractor" onchange="toggleCustomContractor(); saveDraft()" required>
                 <option value="" disabled selected>請選擇施工廠商</option>
                 <option value="容煜">容煜</option>
                 <option value="詮達">詮達</option>
+                <option value="其他">➕ 其他 (自行輸入)</option>
             </select>
+            <!-- 隱藏的自訂廠商輸入框 -->
+            <input type="text" id="customContractor" class="hidden" placeholder="請輸入廠商名稱" oninput="saveDraft()">
 
             <select id="workerCount" onchange="saveDraft()" required>
                 <option value="" disabled selected>請選擇施工人數</option>
@@ -69,49 +74,10 @@
             <div class="section-divider"></div>
 
             <label>📦 今日用料</label>
-            <div class="material-group">
-                <div class="material-title">用料一</div>
-                <select id="matName1" onchange="handleMaterialChange(); saveDraft();">
-                    <option value="" disabled selected>請選擇品項</option>
-                    <option value="今日無用料">今日無用料</option>
-                    <option value="防火漆">防火漆</option>
-                    <option value="底漆">底漆</option>
-                    <option value="中塗漆">中塗漆</option>
-                    <option value="面漆">面漆</option>
-                    <option value="矽利康">矽利康</option>
-                    <option value="其他">其他</option>
-                </select>
-                <div class="flex-row">
-                    <input type="number" id="matQty1" placeholder="數量" step="0.5" min="0" oninput="saveDraft()">
-                    <select id="matUnit1" onchange="saveDraft()">
-                        <option value="" disabled selected>單位</option>
-                        <option value="1加侖">1加侖</option><option value="5加侖">5加侖</option>
-                        <option value="桶">桶</option><option value="組">組</option>
-                        <option value="支">支</option><option value="公斤">公斤</option>
-                        <option value="公升">公升</option><option value="個">個</option>
-                    </select>
-                </div>
+            <div id="materialsContainer">
+                <!-- 動態用料列表會產生在這裡 -->
             </div>
-
-            <div class="material-group" id="materialGroup2">
-                <div class="material-title">用料二</div>
-                <select id="matName2" onchange="saveDraft()">
-                    <option value="無" selected>無</option>
-                    <option value="防火漆">防火漆</option><option value="底漆">底漆</option>
-                    <option value="中塗漆">中塗漆</option><option value="面漆">面漆</option>
-                    <option value="矽利康">矽利康</option><option value="其他">其他</option>
-                </select>
-                <div class="flex-row">
-                    <input type="number" id="matQty2" placeholder="數量" step="0.5" min="0" oninput="saveDraft()">
-                    <select id="matUnit2" onchange="saveDraft()">
-                        <option value="" disabled selected>單位</option>
-                        <option value="1加侖">1加侖</option><option value="5加侖">5加侖</option>
-                        <option value="桶">桶</option><option value="組">組</option>
-                        <option value="支">支</option><option value="公斤">公斤</option>
-                        <option value="公升">公升</option><option value="個">個</option>
-                    </select>
-                </div>
-            </div>
+            <button type="button" class="btn-add" onclick="addMaterialRow()">➕ 新增一項用料</button>
 
             <div class="section-divider"></div>
 
@@ -131,6 +97,7 @@
         ];
 
         let isSubmitting = false;
+        let materialCount = 0;
 
         window.onload = function() {
             liff.init({ liffId: "2011289657-vQgMb0eI" }).catch(err => console.error(err));
@@ -153,33 +120,77 @@
             loadDraft();
         };
 
-        // --- 互動邏輯 ---
-        function handleMaterialChange() {
-            const mat1 = document.getElementById('matName1').value;
-            const isNoMaterial = (mat1 === '今日無用料');
-            
-            document.getElementById('matQty1').disabled = isNoMaterial;
-            document.getElementById('matUnit1').disabled = isNoMaterial;
-            
-            const group2Elements = [document.getElementById('matName2'), document.getElementById('matQty2'), document.getElementById('matUnit2')];
-            group2Elements.forEach(el => {
-                el.disabled = isNoMaterial;
-                if (isNoMaterial) el.value = (el.id === 'matName2') ? '無' : '';
-            });
-
-            if (isNoMaterial) {
-                document.getElementById('matQty1').value = '';
-                document.getElementById('matUnit1').value = '';
+        // --- 廠商自訂邏輯 ---
+        function toggleCustomContractor() {
+            const select = document.getElementById('contractor');
+            const customInput = document.getElementById('customContractor');
+            if (select.value === '其他') {
+                customInput.classList.remove('hidden');
+            } else {
+                customInput.classList.add('hidden');
+                customInput.value = '';
             }
         }
 
+        // --- 動態用料邏輯 ---
+        function addMaterialRow(name = '', qty = '', unit = '') {
+            materialCount++;
+            const id = materialCount;
+            const container = document.getElementById('materialsContainer');
+            
+            const div = document.createElement('div');
+            div.className = 'material-group';
+            div.id = `matGroup${id}`;
+            div.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 5px;">
+                    <div class="material-title">用料項目</div>
+                    ${id > 1 ? `<button type="button" onclick="removeMaterialRow(${id})" style="color:#ff4d4f; border:none; background:none; font-weight:bold; cursor:pointer;">❌ 移除</button>` : ''}
+                </div>
+                <select class="mat-name" onchange="saveDraft()">
+                    <option value="" disabled ${!name ? 'selected' : ''}>請選擇品項</option>
+                    <option value="今日無用料" ${name==='今日無用料'?'selected':''}>今日無用料</option>
+                    <option value="底漆" ${name==='底漆'?'selected':''}>底漆</option>
+                    <option value="中塗漆" ${name==='中塗漆'?'selected':''}>中塗漆</option>
+                    <option value="面漆" ${name==='面漆'?'selected':''}>面漆</option>
+                    <option value="矽利康" ${name==='矽利康'?'selected':''}>矽利康</option>
+                    <option value="其他" ${name==='其他'?'selected':''}>其他</option>
+                </select>
+                <div class="flex-row">
+                    <input type="number" class="mat-qty" placeholder="數量" step="0.5" min="0" value="${qty}" oninput="saveDraft()">
+                    <select class="mat-unit" onchange="saveDraft()">
+                        <option value="" disabled ${!unit ? 'selected' : ''}>單位</option>
+                        <option value="桶 (1加侖)" ${unit==='桶 (1加侖)'?'selected':''}>桶 (1加侖)</option>
+                        <option value="桶 (5加侖)" ${unit==='桶 (5加侖)'?'selected':''}>桶 (5加侖)</option>
+                        <option value="桶" ${unit==='桶'?'selected':''}>桶</option>
+                        <option value="組" ${unit==='組'?'selected':''}>組</option>
+                        <option value="支" ${unit==='支'?'selected':''}>支</option>
+                        <option value="公斤" ${unit==='公斤'?'selected':''}>公斤</option>
+                        <option value="公升" ${unit==='公升'?'selected':''}>公升</option>
+                        <option value="個" ${unit==='個'?'selected':''}>個</option>
+                    </select>
+                </div>
+            `;
+            container.appendChild(div);
+            saveDraft();
+        }
+
+        function removeMaterialRow(id) {
+            const group = document.getElementById(`matGroup${id}`);
+            if(group) {
+                group.remove();
+                saveDraft();
+            }
+        }
+
+        // --- 氣象抓取 ---
         function getWeather() {
             if (navigator.geolocation) {
                 document.getElementById('temp').value = "讀取中...";
                 navigator.geolocation.getCurrentPosition(async (position) => {
                     const lat = position.coords.latitude; const lon = position.coords.longitude;
                     try {
-                        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m`);
+                        // 加上 wind_speed_unit=ms 參數，強制回傳每秒公尺
+                        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m&wind_speed_unit=ms`);
                         const data = await res.json();
                         document.getElementById('temp').value = data.current.temperature_2m;
                         document.getElementById('humidity').value = data.current.relative_humidity_2m;
@@ -193,18 +204,23 @@
 
         // --- 草稿系統 ---
         function saveDraft() {
+            const materials = [];
+            document.querySelectorAll('.material-group').forEach(group => {
+                materials.push({
+                    name: group.querySelector('.mat-name').value,
+                    qty: group.querySelector('.mat-qty').value,
+                    unit: group.querySelector('.mat-unit').value
+                });
+            });
+
             const draft = {
                 projectName: document.getElementById('projectName').value,
                 contractor: document.getElementById('contractor').value,
+                customContractor: document.getElementById('customContractor').value,
                 workerCount: document.getElementById('workerCount').value,
                 workItems: Array.from(document.querySelectorAll('input[name="workItem"]:checked')).map(cb => cb.value),
                 workNotes: document.getElementById('workNotes').value,
-                matName1: document.getElementById('matName1').value,
-                matQty1: document.getElementById('matQty1').value,
-                matUnit1: document.getElementById('matUnit1').value,
-                matName2: document.getElementById('matName2').value,
-                matQty2: document.getElementById('matQty2').value,
-                matUnit2: document.getElementById('matUnit2').value,
+                materialsList: materials,
                 remarks: document.getElementById('remarks').value
             };
             localStorage.setItem('dailyReportDraft', JSON.stringify(draft));
@@ -215,7 +231,13 @@
             if (saved) {
                 const draft = JSON.parse(saved);
                 if(draft.projectName) document.getElementById('projectName').value = draft.projectName;
-                if(draft.contractor) document.getElementById('contractor').value = draft.contractor;
+                if(draft.contractor) {
+                    document.getElementById('contractor').value = draft.contractor;
+                    toggleCustomContractor();
+                    if(draft.contractor === '其他' && draft.customContractor) {
+                        document.getElementById('customContractor').value = draft.customContractor;
+                    }
+                }
                 if(draft.workerCount) document.getElementById('workerCount').value = draft.workerCount;
                 
                 if(draft.workItems) {
@@ -225,15 +247,15 @@
                 }
                 
                 if(draft.workNotes) document.getElementById('workNotes').value = draft.workNotes;
-                if(draft.matName1) document.getElementById('matName1').value = draft.matName1;
-                if(draft.matQty1) document.getElementById('matQty1').value = draft.matQty1;
-                if(draft.matUnit1) document.getElementById('matUnit1').value = draft.matUnit1;
-                if(draft.matName2) document.getElementById('matName2').value = draft.matName2;
-                if(draft.matQty2) document.getElementById('matQty2').value = draft.matQty2;
-                if(draft.matUnit2) document.getElementById('matUnit2').value = draft.matUnit2;
                 if(draft.remarks) document.getElementById('remarks').value = draft.remarks;
                 
-                handleMaterialChange();
+                if(draft.materialsList && draft.materialsList.length > 0) {
+                    draft.materialsList.forEach(m => addMaterialRow(m.name, m.qty, m.unit));
+                } else {
+                    addMaterialRow(); // 預設新增第一行
+                }
+            } else {
+                addMaterialRow(); // 沒草稿時預設新增第一行
             }
         }
 
@@ -250,15 +272,16 @@
 
         function buildMaterialString() {
             const materials = [];
-            for (let i = 1; i <= 2; i++) {
-                const name = document.getElementById(`matName${i}`).value;
-                const qty = document.getElementById(`matQty${i}`).value;
-                const unit = document.getElementById(`matUnit${i}`).value;
+            document.querySelectorAll('.material-group').forEach(group => {
+                const name = group.querySelector('.mat-name').value;
+                const qty = group.querySelector('.mat-qty').value;
+                const unit = group.querySelector('.mat-unit').value;
                 
                 if (name && name !== '無' && name !== '今日無用料') {
-                    materials.push(`${name}：${qty}${unit}`);
+                    // 自動排版加入空格，例如：底漆：1 桶 (5加侖)
+                    materials.push(`${name}：${qty} ${unit}`);
                 }
-            }
+            });
             return materials.length > 0 ? materials.join('\n') : '無';
         }
 
@@ -273,23 +296,31 @@
                 return false;
             }
 
+            if (contractor === '其他' && !document.getElementById('customContractor').value.trim()) {
+                alert('⚠️ 請輸入自訂的廠商名稱');
+                return false;
+            }
+
             if (selectedWorkItems.length === 0) {
                 alert('⚠️ 請至少勾選一項今日作業');
                 return false;
             }
 
-            for (let i = 1; i <= 2; i++) {
-                const name = document.getElementById(`matName${i}`).value;
-                const qty = document.getElementById(`matQty${i}`).value;
-                const unit = document.getElementById(`matUnit${i}`).value;
-                
+            let isMaterialValid = true;
+            document.querySelectorAll('.material-group').forEach(group => {
+                const name = group.querySelector('.mat-name').value;
+                const qty = group.querySelector('.mat-qty').value;
+                const unit = group.querySelector('.mat-unit').value;
                 if (name && name !== '無' && name !== '今日無用料') {
-                    if (!qty || !unit) {
-                        alert(`⚠️ 請完整選擇「用料${i === 1 ? '一' : '二'}」的數量與單位`);
-                        return false;
-                    }
+                    if (!qty || !unit) isMaterialValid = false;
                 }
+            });
+
+            if (!isMaterialValid) {
+                alert('⚠️ 請完整填寫已選擇用料的「數量」與「單位」');
+                return false;
             }
+
             return true;
         }
 
@@ -303,12 +334,17 @@
             submitBtn.disabled = true;
             submitBtn.textContent = '🚀 正在送出...';
 
+            let finalContractor = document.getElementById('contractor').value;
+            if (finalContractor === '其他') {
+                finalContractor = document.getElementById('customContractor').value.trim();
+            }
+
             const payload = {
                 projectName: document.getElementById('projectName').value,
                 temp: document.getElementById('temp').value || '未填寫',
                 humidity: document.getElementById('humidity').value || '未填寫',
                 wind: document.getElementById('wind').value || '未填寫',
-                contractor: document.getElementById('contractor').value,
+                contractor: finalContractor,
                 workerCount: document.getElementById('workerCount').value,
                 progress: buildProgressString(),
                 materials: buildMaterialString(),
@@ -338,12 +374,12 @@
                 
                 if (result.archived && result.reason === 'PROJECT_NOT_BOUND') {
                     alert('✅ 日報已歸檔至 OneDrive\n\n⚠️ 此案場尚未綁定 LINE 群組，因此未發布。');
-                    return; // 保留畫面讓使用者截圖
+                    return; 
                 }
                 
                 if (result.archived && result.reason === 'LINE_PUSH_FAILED') {
                     alert('✅ 日報已安全歸檔至 OneDrive\n\n⚠️ LINE 發布失敗，請稍後檢查群組。');
-                    return; // 保留畫面讓使用者截圖
+                    return; 
                 }
 
                 alert(result.message || '日報處理完成');
