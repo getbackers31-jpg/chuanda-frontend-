@@ -1,703 +1,580 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>云說工程 - 施工日報表</title>
-    <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-    <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; padding: 15px; color: #333; margin: 0; }
-        .container { background-color: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); max-width: 500px; margin: auto; }
-        h2 { text-align: center; color: #00B900; margin-top: 0; font-size: 22px; }
-        label { font-weight: bold; display: block; margin-top: 15px; margin-bottom: 5px; color: #444; }
-        select, textarea, input[type="text"], input[type="number"] { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 16px; background-color: #fafafa; margin-bottom: 5px; }
-        .flex-row { display: flex; gap: 10px; margin-bottom: 5px; }
-        .flex-row > * { flex: 1; }
-        .btn-weather { background-color: #17a2b8; color: white; border: none; padding: 8px; border-radius: 5px; cursor: pointer; font-size: 14px; width: 100%; margin-bottom: 10px; }
-        .checkbox-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background-color: #f9f9f9; padding: 10px; border-radius: 5px; border: 1px solid #eee; }
-        .checkbox-label { display: flex; align-items: center; font-weight: normal; margin: 0; font-size: 15px; }
-        .checkbox-label input { margin-right: 8px; transform: scale(1.2); }
-        .material-group { background-color: #f9f9f9; padding: 10px; border-radius: 5px; border: 1px solid #eee; margin-bottom: 10px; }
-        .material-title { font-size: 14px; font-weight: bold; color: #666; margin-bottom: 5px; }
-        .btn-add { background-color: #6c757d; color: white; border: none; padding: 8px; border-radius: 5px; cursor: pointer; font-size: 14px; width: 100%; margin-bottom: 10px; }
-        .btn-add:disabled { background-color: #cccccc; cursor: not-allowed; }
-        button.submit-btn { width: 100%; background-color: #00B900; color: white; border: none; padding: 12px; font-size: 18px; border-radius: 5px; margin-top: 20px; cursor: pointer; font-weight: bold; transition: background-color 0.3s; }
-        button.submit-btn:disabled { background-color: #cccccc; cursor: not-allowed; }
-        .section-divider { border-bottom: 2px dashed #ddd; margin: 20px 0; }
-        .hidden { display: none !important; }
-        .no-material-option { display: flex; align-items: center; font-weight: bold; color: #d9534f; margin-bottom: 15px; background: #fdf5f5; padding: 10px; border-radius: 5px; border: 1px solid #f5c6c6; }
-        .no-material-option input { width: auto; margin-right: 10px; transform: scale(1.3); }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>云說工程 - 施工日報表</title>
+  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background:#f4f7f6; padding:15px; color:#333; margin:0; }
+    .container { background:white; padding:20px; border-radius:10px; box-shadow:0 4px 8px rgba(0,0,0,.1); max-width:500px; margin:auto; }
+    h2 { text-align:center; color:#00B900; margin-top:0; font-size:22px; }
+    label { font-weight:bold; display:block; margin-top:15px; margin-bottom:5px; color:#444; }
+    select, textarea, input[type="text"], input[type="number"] { width:100%; padding:10px; border:1px solid #ccc; border-radius:5px; box-sizing:border-box; font-size:16px; background:#fafafa; margin-bottom:5px; }
+    .flex-row { display:flex; gap:10px; margin-bottom:5px; }
+    .flex-row > * { flex:1; min-width:0; }
+    .btn-weather { background:#17a2b8; color:white; border:0; padding:9px; border-radius:5px; cursor:pointer; font-size:14px; width:100%; margin-bottom:10px; }
+    .btn-weather:disabled, .btn-add:disabled, .submit-btn:disabled { background:#ccc; cursor:not-allowed; }
+    .checkbox-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; background:#f9f9f9; padding:10px; border-radius:5px; border:1px solid #eee; }
+    .checkbox-label { display:flex; align-items:center; font-weight:normal; margin:0; font-size:15px; }
+    .checkbox-label input { margin-right:8px; transform:scale(1.2); }
+    .material-group { background:#f9f9f9; padding:10px; border-radius:5px; border:1px solid #eee; margin-bottom:10px; }
+    .material-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; }
+    .material-title { font-size:14px; font-weight:bold; color:#666; }
+    .remove-material-button { color:#d9534f; border:0; background:none; font-weight:bold; cursor:pointer; }
+    .btn-add { background:#6c757d; color:white; border:0; padding:9px; border-radius:5px; cursor:pointer; font-size:14px; width:100%; margin-bottom:10px; }
+    .submit-btn { width:100%; background:#00B900; color:white; border:0; padding:12px; font-size:18px; border-radius:5px; margin-top:20px; cursor:pointer; font-weight:bold; }
+    .section-divider { border-bottom:2px dashed #ddd; margin:20px 0; }
+    .hidden { display:none !important; }
+    .no-material-option { display:flex; align-items:center; font-weight:bold; color:#d9534f; margin-bottom:15px; background:#fdf5f5; padding:10px; border-radius:5px; border:1px solid #f5c6c6; }
+    .no-material-option input { width:auto; margin-right:10px; transform:scale(1.3); }
+    @media (max-width:380px) { .checkbox-grid { grid-template-columns:1fr; } .flex-row { flex-direction:column; gap:4px; } }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <h2>👷‍♂️ 施工日報表</h2>
-        <form id="dailyReportForm">
-            
-            <label>📍 案場資訊</label>
-            <select id="projectName" onchange="saveDraft()" required>
-                <option value="" disabled selected>請選擇案場</option>
-                <option value="台塑大樓">台塑大樓</option>
-                <option value="北市科T17、T18">北市科T17、T18</option>
-                <option value="台北雙星">台北雙星</option>
-            </select>
+  <div class="container">
+    <h2>👷 施工日報表</h2>
+    <form id="dailyReportForm">
+      <label for="projectName">📍 案場資訊</label>
+      <select id="projectName" onchange="saveDraft()" required>
+        <option value="" disabled selected>請選擇案場</option>
+        <option value="台塑大樓">台塑大樓</option>
+        <option value="北市科T17、T18">北市科T17、T18</option>
+        <option value="台北雙星">台北雙星</option>
+      </select>
 
-            <select id="contractor" onchange="toggleCustomContractor(); saveDraft()" required>
-                <option value="" disabled selected>請選擇施工廠商</option>
-                <option value="容煜">容煜</option>
-                <option value="詮達">詮達</option>
-                <option value="其他">➕ 其他 (自行輸入)</option>
-            </select>
-            <input type="text" id="customContractor" class="hidden" placeholder="請輸入廠商名稱" oninput="saveDraft()">
+      <select id="contractor" onchange="toggleCustomContractor(); saveDraft()" required>
+        <option value="" disabled selected>請選擇施工廠商</option>
+        <option value="容煜">容煜</option>
+        <option value="詮達">詮達</option>
+        <option value="其他">其他（自行輸入）</option>
+      </select>
+      <input type="text" id="customContractor" class="hidden" placeholder="請輸入廠商名稱" maxlength="50" oninput="saveDraft()">
 
-            <select id="workerCount" onchange="saveDraft()" required>
-                <option value="" disabled selected>請選擇施工人數</option>
-            </select>
+      <select id="workerCount" onchange="saveDraft()" required>
+        <option value="" disabled selected>請選擇施工人數</option>
+      </select>
 
-            <div class="section-divider"></div>
+      <div class="section-divider"></div>
 
-            <label>🌤️ 氣象資訊</label>
-            <button type="button" class="btn-weather" onclick="getWeather()">一鍵獲取當地天氣</button>
-            <div class="flex-row">
-                <input type="text" id="temp" placeholder="溫度(度)" oninput="saveDraft()">
-                <input type="text" id="humidity" placeholder="濕度(%)" oninput="saveDraft()">
-                <input type="text" id="wind" placeholder="風速(m/s)" oninput="saveDraft()">
-            </div>
+      <label>🌤️ 氣象資訊</label>
+      <button type="button" class="btn-weather" onclick="getWeather()">一鍵獲取當地天氣</button>
+      <div class="flex-row">
+        <input type="number" id="temp" placeholder="溫度(度)" step="0.1" oninput="saveDraft()">
+        <input type="number" id="humidity" placeholder="濕度(%)" min="0" max="100" step="1" oninput="saveDraft()">
+        <input type="number" id="wind" placeholder="風速(m/s)" min="0" step="0.1" oninput="saveDraft()">
+      </div>
 
-            <div class="section-divider"></div>
+      <div class="section-divider"></div>
 
-            <label>🛠️ 今日作業</label>
-            <div class="checkbox-grid" id="workItemsGrid"></div>
-            
-            <input type="text" id="customWorkItem" class="hidden" placeholder="請輸入其他作業項目" maxlength="100" oninput="saveDraft()" style="margin-top: 10px;">
-            <textarea id="workNotes" rows="2" placeholder="作業補充 (選填)" oninput="saveDraft()" style="margin-top: 10px;"></textarea>
+      <label>🛠️ 今日作業</label>
+      <div class="checkbox-grid" id="workItemsGrid"></div>
+      <input type="text" id="customWorkItem" class="hidden" placeholder="請輸入其他作業項目" maxlength="100" oninput="saveDraft()" style="margin-top:10px">
+      <textarea id="workNotes" rows="2" placeholder="作業補充（選填）" oninput="saveDraft()" style="margin-top:10px"></textarea>
 
-            <div class="section-divider"></div>
+      <div class="section-divider"></div>
 
-            <label>📦 今日用料</label>
-            <label class="no-material-option">
-                <input type="checkbox" id="noMaterial" onchange="handleNoMaterialChange(); saveDraft();"> 今日無用料
-            </label>
+      <label>📦 今日用料</label>
+      <label class="no-material-option">
+        <input type="checkbox" id="noMaterial" onchange="handleNoMaterialChange(); saveDraft()">今日無用料
+      </label>
+      <div id="materialsContainer"></div>
+      <button type="button" id="addMaterialButton" class="btn-add" onclick="addMaterialRow()">新增一項用料</button>
 
-            <div id="materialsContainer"></div>
-            <button type="button" id="addMaterialButton" class="btn-add" onclick="addMaterialRow()">➕ 新增一項用料</button>
+      <div class="section-divider"></div>
 
-            <div class="section-divider"></div>
+      <label for="remarks">📝 備註（選填）</label>
+      <textarea id="remarks" rows="2" placeholder="天候影響、材料短缺、人員異動等狀況" oninput="saveDraft()"></textarea>
 
-            <label>📝 備註 (選填)</label>
-            <textarea id="remarks" rows="2" placeholder="天候影響、材料短缺、人員異動等狀況" oninput="saveDraft()"></textarea>
+      <button type="button" id="submitButton" class="submit-btn" onclick="submitForm()">確認送出並發布至群組</button>
+    </form>
+  </div>
 
-            <button type="button" id="submitButton" class="submit-btn" onclick="submitForm()">確認送出並發布至群組</button>
-        </form>
-    </div>
+  <script>
+    const LIFF_ID = '2011289657-vQgMb0eI';
+    const API_URL = 'https://gong-cheng-linechuan-jie.onrender.com/api/submit-report';
+    const MAX_MATERIAL_ROWS = 10;
+    const DRAFT_KEY = 'dailyReportDraft';
+    const CONTRACTORS_KEY = 'savedContractors';
 
-    <script>
-        const MAX_MATERIAL_ROWS = 10;
-        const workItemsList = [
-            "材料進場", "現場放樣", "鷹架搭設", "鷹架拆除", "水刀除鏽", 
-            "手動工具除鏽", "底漆施工", "中塗漆施工", "面漆施工", "底漆修補", 
-            "中塗漆修補", "面漆修補", "底漆膜厚檢測", "中塗漆膜厚檢測", "面漆膜厚檢測", 
-            "缺失改善", "現場清潔", "等待驗收", "完成驗收", "其他"
-        ];
-        
-        const MATERIAL_OPTIONS = [
-            "底漆", "中塗漆", "面漆", "稀釋劑", "矽利康", "補土", 
-            "養生材料", "遮蔽膠帶", "滾筒", "刷具", "噴塗耗材", "砂紙", "鋼刷"
-        ];
+    const workItemsList = [
+      '材料進場', '現場放樣', '鷹架搭設', '鷹架拆除', '水刀除鏽',
+      '手動工具除鏽', '底漆施工', '中塗漆施工', '面漆施工', '底漆修補',
+      '中塗漆修補', '面漆修補', '底漆膜厚檢測', '中塗漆膜厚檢測',
+      '面漆膜厚檢測', '缺失改善', '現場清潔', '等待驗收', '完成驗收', '其他'
+    ];
 
-        let isSubmitting = false;
-        let isRestoringDraft = false;
-        let reportArchived = false;
+    const MATERIAL_OPTIONS = [
+      '底漆', '中塗漆', '面漆', '稀釋劑', '矽利康', '補土',
+      '養生材料', '遮蔽膠帶', '滾筒', '刷具', '噴塗耗材', '砂紙', '鋼刷'
+    ];
 
-        window.addEventListener('load', async () => {
-            initializeForm();
-            try {
-                await liff.init({ liffId: "2011289657-vQgMb0eI" });
-            } catch (error) {
-                console.error('LIFF 初始化失敗：', error);
-                alert('LINE 表單初始化失敗，部分功能可能無法使用。');
-            }
+    const UNIT_OPTIONS = [
+      '桶 (1加侖)', '桶 (5加侖)', '桶', '組', '支', '公斤', '公升', '個', '捲'
+    ];
+
+    let isSubmitting = false;
+    let isRestoringDraft = false;
+    let reportArchived = false;
+
+    window.addEventListener('load', async () => {
+      initializeForm();
+      try {
+        await liff.init({ liffId: LIFF_ID });
+      } catch (error) {
+        console.error('LIFF 初始化失敗：', error);
+        alert('LINE 表單初始化失敗，部分功能可能無法使用。');
+      }
+    });
+
+    function safeReadArray(key) {
+      try {
+        const value = JSON.parse(localStorage.getItem(key) || '[]');
+        return Array.isArray(value) ? value : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function initializeForm() {
+      const workerSelect = document.getElementById('workerCount');
+      for (let i = 1; i <= 30; i++) workerSelect.add(new Option(`${i}人`, `${i}人`));
+
+      const grid = document.getElementById('workItemsGrid');
+      workItemsList.forEach(item => {
+        const label = document.createElement('label');
+        label.className = 'checkbox-label';
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.name = 'workItem';
+        checkbox.value = item;
+        checkbox.addEventListener('change', handleWorkItemChange);
+        label.append(checkbox, document.createTextNode(` ${item}`));
+        grid.appendChild(label);
+      });
+
+      loadSavedContractors();
+      loadDraft();
+    }
+
+    function handleWorkItemChange() {
+      const otherChecked = [...document.querySelectorAll('input[name="workItem"]:checked')]
+        .some(cb => cb.value === '其他');
+      const input = document.getElementById('customWorkItem');
+      input.classList.toggle('hidden', !otherChecked);
+      if (!otherChecked) input.value = '';
+      saveDraft();
+    }
+
+    function loadSavedContractors() {
+      const saved = safeReadArray(CONTRACTORS_KEY);
+      const select = document.getElementById('contractor');
+      const otherOption = [...select.options].find(option => option.value === '其他');
+      saved.forEach(name => {
+        if (typeof name !== 'string' || !name.trim()) return;
+        const exists = [...select.options].some(option => option.value === name);
+        if (!exists) select.insertBefore(new Option(name, name), otherOption);
+      });
+    }
+
+    function saveCustomContractor(contractorName) {
+      const name = String(contractorName || '').trim();
+      if (!name) return;
+      const saved = safeReadArray(CONTRACTORS_KEY);
+      if (!saved.includes(name)) {
+        saved.push(name);
+        localStorage.setItem(CONTRACTORS_KEY, JSON.stringify(saved));
+      }
+    }
+
+    function toggleCustomContractor() {
+      const select = document.getElementById('contractor');
+      const input = document.getElementById('customContractor');
+      const isCustom = select.value === '其他';
+      input.classList.toggle('hidden', !isCustom);
+      if (isCustom) input.focus(); else input.value = '';
+    }
+
+    function handleNoMaterialChange() {
+      const noMaterial = document.getElementById('noMaterial').checked;
+      const container = document.getElementById('materialsContainer');
+      const addButton = document.getElementById('addMaterialButton');
+      container.style.display = noMaterial ? 'none' : 'block';
+      addButton.style.display = noMaterial ? 'none' : 'block';
+      if (!noMaterial && container.children.length === 0) addMaterialRow();
+    }
+
+    function appendOption(select, value, text = value) {
+      select.add(new Option(text, value));
+    }
+
+    function addMaterialRow(name = '', customName = '', qty = '', unit = '') {
+      const groups = document.querySelectorAll('.material-group');
+      if (groups.length >= MAX_MATERIAL_ROWS) {
+        alert(`最多可填寫 ${MAX_MATERIAL_ROWS} 筆用料`);
+        return;
+      }
+
+      const div = document.createElement('div');
+      div.className = 'material-group';
+
+      const header = document.createElement('div');
+      header.className = 'material-header';
+      const title = document.createElement('div');
+      title.className = 'material-title';
+      const removeButton = document.createElement('button');
+      removeButton.type = 'button';
+      removeButton.className = 'remove-material-button';
+      removeButton.textContent = '移除';
+      removeButton.addEventListener('click', () => removeMaterialRow(removeButton));
+      header.append(title, removeButton);
+
+      const nameSelect = document.createElement('select');
+      nameSelect.className = 'mat-name';
+      appendOption(nameSelect, '', '請選擇品項');
+      nameSelect.options[0].disabled = true;
+      MATERIAL_OPTIONS.forEach(option => appendOption(nameSelect, option));
+      appendOption(nameSelect, '其他');
+
+      const customInput = document.createElement('input');
+      customInput.type = 'text';
+      customInput.className = 'custom-mat-name hidden';
+      customInput.placeholder = '請輸入材料名稱';
+      customInput.maxLength = 50;
+
+      const row = document.createElement('div');
+      row.className = 'flex-row';
+      const qtyInput = document.createElement('input');
+      qtyInput.type = 'number';
+      qtyInput.className = 'mat-qty';
+      qtyInput.placeholder = '數量';
+      qtyInput.step = '0.5';
+      qtyInput.min = '0.5';
+      qtyInput.inputMode = 'decimal';
+
+      const unitSelect = document.createElement('select');
+      unitSelect.className = 'mat-unit';
+      appendOption(unitSelect, '', '單位');
+      unitSelect.options[0].disabled = true;
+      UNIT_OPTIONS.forEach(option => appendOption(unitSelect, option));
+      row.append(qtyInput, unitSelect);
+      div.append(header, nameSelect, customInput, row);
+
+      nameSelect.addEventListener('change', () => {
+        toggleCustomMaterial(nameSelect);
+        saveDraft();
+      });
+      customInput.addEventListener('input', saveDraft);
+      qtyInput.addEventListener('input', saveDraft);
+      unitSelect.addEventListener('change', saveDraft);
+
+      const isCustom = name === '其他' || (name && !MATERIAL_OPTIONS.includes(name));
+      nameSelect.value = isCustom ? '其他' : name;
+      if (isCustom) {
+        customInput.value = name === '其他' ? customName : name;
+        customInput.classList.remove('hidden');
+      }
+      if (qty !== '') qtyInput.value = qty;
+      if (unit) unitSelect.value = unit;
+
+      document.getElementById('materialsContainer').appendChild(div);
+      refreshMaterialTitles();
+      if (!isRestoringDraft) saveDraft();
+    }
+
+    function removeMaterialRow(button) {
+      button.closest('.material-group')?.remove();
+      refreshMaterialTitles();
+      saveDraft();
+    }
+
+    function refreshMaterialTitles() {
+      const groups = document.querySelectorAll('.material-group');
+      groups.forEach((group, index) => {
+        group.querySelector('.material-title').textContent = `用料 ${index + 1}`;
+      });
+      const addButton = document.getElementById('addMaterialButton');
+      const reachedLimit = groups.length >= MAX_MATERIAL_ROWS;
+      addButton.disabled = reachedLimit;
+      addButton.textContent = reachedLimit ? `已達上限，共 ${MAX_MATERIAL_ROWS} 筆` : '新增一項用料';
+    }
+
+    function toggleCustomMaterial(select) {
+      const input = select.closest('.material-group').querySelector('.custom-mat-name');
+      const isCustom = select.value === '其他';
+      input.classList.toggle('hidden', !isCustom);
+      if (isCustom) input.focus(); else input.value = '';
+    }
+
+    function formatMaterial(name, qty, unit) {
+      if (unit === '桶 (1加侖)') return `${name}：${qty}桶，每桶1加侖`;
+      if (unit === '桶 (5加侖)') return `${name}：${qty}桶，每桶5加侖`;
+      return `${name}：${qty}${unit}`;
+    }
+
+    async function getWeather() {
+      if (!navigator.geolocation) {
+        alert('此裝置不支援定位，請手動輸入氣象');
+        return;
+      }
+
+      const button = document.querySelector('.btn-weather');
+      const tempInput = document.getElementById('temp');
+      const humidityInput = document.getElementById('humidity');
+      const windInput = document.getElementById('wind');
+      button.disabled = true;
+      button.textContent = '正在取得天氣...';
+
+      navigator.geolocation.getCurrentPosition(async position => {
+        const lat = position.coords.latitude;
+        const lon = position.coords.longitude;
+        const weatherUrl = 'https://api.open-meteo.com/v1/forecast' +
+          `?latitude=${encodeURIComponent(lat)}` +
+          `&longitude=${encodeURIComponent(lon)}` +
+          '&current=temperature_2m,relative_humidity_2m,wind_speed_10m' +
+          '&wind_speed_unit=ms&timezone=Asia%2FTaipei';
+
+        try {
+          const response = await fetch(weatherUrl);
+          if (!response.ok) throw new Error(`氣象服務錯誤 ${response.status}`);
+          const data = await response.json();
+          if (!data.current) throw new Error('氣象服務未回傳目前資料');
+          const windUnit = data.current_units?.wind_speed_10m;
+          if (windUnit && windUnit !== 'm/s') throw new Error(`風速單位異常：${windUnit}`);
+
+          const temperature = Number(data.current.temperature_2m);
+          const humidity = Number(data.current.relative_humidity_2m);
+          const windSpeed = Number(data.current.wind_speed_10m);
+          if (![temperature, humidity, windSpeed].every(Number.isFinite)) throw new Error('氣象資料格式不正確');
+
+          tempInput.value = temperature.toFixed(1);
+          humidityInput.value = Math.round(humidity);
+          windInput.value = windSpeed.toFixed(1);
+          saveDraft();
+        } catch (error) {
+          console.error('氣象抓取失敗：', error);
+          alert('氣象抓取失敗，請手動輸入');
+        } finally {
+          button.disabled = false;
+          button.textContent = '一鍵獲取當地天氣';
+        }
+      }, error => {
+        console.error('定位失敗：', error);
+        button.disabled = false;
+        button.textContent = '一鍵獲取當地天氣';
+        alert('請允許網頁取用位置，或手動輸入氣象');
+      }, { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 });
+    }
+
+    function saveDraft() {
+      if (isRestoringDraft || reportArchived) return;
+      const materialsList = [...document.querySelectorAll('.material-group')].map(group => ({
+        name: group.querySelector('.mat-name').value,
+        customName: group.querySelector('.custom-mat-name').value,
+        qty: group.querySelector('.mat-qty').value,
+        unit: group.querySelector('.mat-unit').value
+      }));
+
+      const draft = {
+        projectName: document.getElementById('projectName').value,
+        contractor: document.getElementById('contractor').value,
+        customContractor: document.getElementById('customContractor').value,
+        workerCount: document.getElementById('workerCount').value,
+        workItems: [...document.querySelectorAll('input[name="workItem"]:checked')].map(cb => cb.value),
+        customWorkItem: document.getElementById('customWorkItem').value,
+        workNotes: document.getElementById('workNotes').value,
+        noMaterial: document.getElementById('noMaterial').checked,
+        materialsList,
+        remarks: document.getElementById('remarks').value,
+        temp: document.getElementById('temp').value,
+        humidity: document.getElementById('humidity').value,
+        wind: document.getElementById('wind').value
+      };
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+    }
+
+    function loadDraft() {
+      isRestoringDraft = true;
+      try {
+        const saved = localStorage.getItem(DRAFT_KEY);
+        if (!saved) { addMaterialRow(); return; }
+        const draft = JSON.parse(saved);
+
+        document.getElementById('projectName').value = draft.projectName || '';
+        document.getElementById('workerCount').value = draft.workerCount || '';
+        document.getElementById('workNotes').value = draft.workNotes || '';
+        document.getElementById('remarks').value = draft.remarks || '';
+        document.getElementById('temp').value = draft.temp || '';
+        document.getElementById('humidity').value = draft.humidity || '';
+        document.getElementById('wind').value = draft.wind || '';
+
+        if (draft.contractor) {
+          const select = document.getElementById('contractor');
+          const exists = [...select.options].some(option => option.value === draft.contractor);
+          select.value = exists ? draft.contractor : '其他';
+          toggleCustomContractor();
+          if (select.value === '其他') document.getElementById('customContractor').value = draft.customContractor || draft.contractor;
+        }
+
+        if (Array.isArray(draft.workItems)) {
+          document.querySelectorAll('input[name="workItem"]').forEach(checkbox => {
+            checkbox.checked = draft.workItems.includes(checkbox.value);
+          });
+          const hasOtherWork = draft.workItems.includes('其他');
+          const customWorkInput = document.getElementById('customWorkItem');
+          customWorkInput.classList.toggle('hidden', !hasOtherWork);
+          customWorkInput.value = hasOtherWork ? (draft.customWorkItem || '') : '';
+        }
+
+        const noMaterial = draft.noMaterial === true;
+        document.getElementById('noMaterial').checked = noMaterial;
+        if (noMaterial) {
+          handleNoMaterialChange();
+        } else if (Array.isArray(draft.materialsList) && draft.materialsList.length) {
+          draft.materialsList.forEach(m => addMaterialRow(m.name, m.customName, m.qty, m.unit));
+        } else {
+          addMaterialRow();
+        }
+      } catch (error) {
+        console.error('草稿還原失敗：', error);
+        localStorage.removeItem(DRAFT_KEY);
+        document.getElementById('materialsContainer').innerHTML = '';
+        addMaterialRow();
+      } finally {
+        isRestoringDraft = false;
+      }
+    }
+
+    function buildProgressString() {
+      const customWorkItem = document.getElementById('customWorkItem').value.trim();
+      const items = [...document.querySelectorAll('input[name="workItem"]:checked')].map(item =>
+        `• ${item.value === '其他' ? customWorkItem : item.value}`
+      );
+      const notes = document.getElementById('workNotes').value.trim();
+      return items.join('\n') + (notes ? `\n\n作業補充：\n${notes}` : '');
+    }
+
+    function buildMaterialString() {
+      if (document.getElementById('noMaterial').checked) return '無';
+      const materials = [];
+      document.querySelectorAll('.material-group').forEach(group => {
+        const selected = group.querySelector('.mat-name').value;
+        const name = selected === '其他' ? group.querySelector('.custom-mat-name').value.trim() : selected;
+        const qty = group.querySelector('.mat-qty').value;
+        const unit = group.querySelector('.mat-unit').value;
+        if (name && qty && unit) materials.push(formatMaterial(name, qty, unit));
+      });
+      return materials.join('\n');
+    }
+
+    function validateForm() {
+      const projectName = document.getElementById('projectName').value;
+      const contractor = document.getElementById('contractor').value;
+      const workerCount = document.getElementById('workerCount').value;
+      if (!projectName || !contractor || !workerCount) { alert('請填寫案場、廠商與施工人數'); return false; }
+      if (contractor === '其他' && !document.getElementById('customContractor').value.trim()) { alert('請輸入自訂廠商名稱'); return false; }
+
+      const tempText = document.getElementById('temp').value.trim();
+      const humidityText = document.getElementById('humidity').value.trim();
+      const windText = document.getElementById('wind').value.trim();
+      if (tempText && !Number.isFinite(Number(tempText))) { alert('溫度必須是數字'); return false; }
+      if (humidityText && (!Number.isFinite(Number(humidityText)) || Number(humidityText) < 0 || Number(humidityText) > 100)) { alert('濕度必須介於 0 至 100'); return false; }
+      if (windText && (!Number.isFinite(Number(windText)) || Number(windText) < 0)) { alert('風速必須是大於或等於 0 的數字'); return false; }
+
+      const selectedWorkItems = [...document.querySelectorAll('input[name="workItem"]:checked')];
+      if (!selectedWorkItems.length) { alert('請至少勾選一項今日作業'); return false; }
+      if (selectedWorkItems.some(cb => cb.value === '其他') && !document.getElementById('customWorkItem').value.trim()) { alert('請輸入其他作業項目名稱'); return false; }
+
+      if (!document.getElementById('noMaterial').checked) {
+        let completed = 0;
+        const groups = [...document.querySelectorAll('.material-group')];
+        for (let index = 0; index < groups.length; index++) {
+          const group = groups[index];
+          const selected = group.querySelector('.mat-name').value;
+          const custom = group.querySelector('.custom-mat-name').value.trim();
+          const qtyText = group.querySelector('.mat-qty').value;
+          const unit = group.querySelector('.mat-unit').value;
+          if (!selected && !custom && !qtyText && !unit) continue;
+          if (!selected) { alert(`請選擇用料 ${index + 1} 的品項`); return false; }
+          if (selected === '其他' && !custom) { alert(`請輸入用料 ${index + 1} 的材料名稱`); return false; }
+          const qty = Number(qtyText);
+          if (!Number.isFinite(qty) || qty <= 0) { alert(`請輸入用料 ${index + 1} 的正確數量`); return false; }
+          if (!unit) { alert(`請選擇用料 ${index + 1} 的單位`); return false; }
+          completed++;
+        }
+        if (!completed) { alert('請至少填寫一筆今日用料，或勾選「今日無用料」'); return false; }
+      }
+      return true;
+    }
+
+    async function submitForm() {
+      if (isSubmitting) return;
+      if (reportArchived) { alert('這份日報已歸檔，請勿重複送出。'); return; }
+      if (!validateForm()) return;
+
+      const submitButton = document.getElementById('submitButton');
+      isSubmitting = true;
+      submitButton.disabled = true;
+      submitButton.textContent = '正在送出...';
+
+      let contractor = document.getElementById('contractor').value;
+      if (contractor === '其他') {
+        contractor = document.getElementById('customContractor').value.trim();
+        saveCustomContractor(contractor);
+      }
+
+      const payload = {
+        projectName: document.getElementById('projectName').value,
+        temp: document.getElementById('temp').value || '未填寫',
+        humidity: document.getElementById('humidity').value || '未填寫',
+        wind: document.getElementById('wind').value || '未填寫',
+        contractor,
+        workerCount: document.getElementById('workerCount').value,
+        progress: buildProgressString(),
+        materials: buildMaterialString(),
+        remarks: document.getElementById('remarks').value.trim() || '無'
+      };
+
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
         });
+        const responseText = await response.text();
+        let result;
+        try { result = responseText ? JSON.parse(responseText) : {}; }
+        catch { throw new Error(`伺服器回應格式異常，HTTP ${response.status}`); }
+        if (!response.ok || result.success === false) throw new Error(result.error || result.message || `系統處理失敗，HTTP ${response.status}`);
 
-        function initializeForm() {
-            const workerSelect = document.getElementById('workerCount');
-            for(let i = 1; i <= 30; i++) {
-                workerSelect.options.add(new Option(`${i}人`, `${i}人`));
-            }
-
-            const grid = document.getElementById('workItemsGrid');
-            workItemsList.forEach(item => {
-                const label = document.createElement('label');
-                label.className = 'checkbox-label';
-                
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.name = 'workItem';
-                checkbox.value = item;
-                checkbox.addEventListener('change', handleWorkItemChange);
-                
-                label.appendChild(checkbox);
-                label.appendChild(document.createTextNode(` ${item}`));
-                grid.appendChild(label);
-            });
-
-            loadSavedContractors();
-            loadDraft();
+        if (result.archived) reportArchived = true;
+        if (result.archived && result.pushed) {
+          localStorage.removeItem(DRAFT_KEY);
+          alert('日報已歸檔並發布至 LINE 群組');
+          if (window.liff && liff.isInClient()) liff.closeWindow();
+          return;
         }
-
-        function handleWorkItemChange() {
-            if (isRestoringDraft) return;
-            const otherChecked = Array.from(document.querySelectorAll('input[name="workItem"]:checked'))
-                                     .some(cb => cb.value === '其他');
-            const input = document.getElementById('customWorkItem');
-            
-            input.classList.toggle('hidden', !otherChecked);
-            if (!otherChecked) input.value = '';
-            
-            saveDraft();
+        if (result.archived && result.reason === 'PROJECT_NOT_BOUND') {
+          submitButton.textContent = '日報已歸檔，尚未發布';
+          alert('日報已歸檔至 OneDrive，但案場尚未綁定 LINE 群組。請勿重複送出。');
+          return;
         }
-
-        function loadSavedContractors() {
-            const saved = JSON.parse(localStorage.getItem('savedContractors') || '[]');
-            const select = document.getElementById('contractor');
-            const otherOption = Array.from(select.options).find(opt => opt.value === '其他');
-            
-            saved.forEach(name => {
-                const exists = Array.from(select.options).some(opt => opt.value === name);
-                if (!exists) {
-                    select.insertBefore(new Option(name, name), otherOption);
-                }
-            });
+        if (result.archived && result.reason === 'LINE_PUSH_FAILED') {
+          submitButton.textContent = '日報已歸檔，發布失敗';
+          alert('日報已歸檔至 OneDrive，但 LINE 發布失敗。請勿重複送出。');
+          return;
         }
-
-        function saveCustomContractor(contractorName) {
-            const name = String(contractorName || '').trim();
-            if (!name) return;
-            const saved = JSON.parse(localStorage.getItem('savedContractors') || '[]');
-            if (!saved.includes(name)) {
-                saved.push(name);
-                localStorage.setItem('savedContractors', JSON.stringify(saved));
-            }
+        alert(result.message || '日報處理完成');
+      } catch (error) {
+        alert(`傳送失敗：${error.message}`);
+      } finally {
+        isSubmitting = false;
+        if (!reportArchived) {
+          submitButton.disabled = false;
+          submitButton.textContent = '確認送出並發布至群組';
         }
-
-        function toggleCustomContractor() {
-            const select = document.getElementById('contractor');
-            const customInput = document.getElementById('customContractor');
-            if (select.value === '其他') {
-                customInput.classList.remove('hidden');
-                customInput.focus();
-            } else {
-                customInput.classList.add('hidden');
-                customInput.value = '';
-            }
-        }
-
-        function handleNoMaterialChange() {
-            const noMaterial = document.getElementById('noMaterial').checked;
-            const container = document.getElementById('materialsContainer');
-            const addButton = document.getElementById('addMaterialButton');
-            
-            container.style.display = noMaterial ? 'none' : 'block';
-            addButton.style.display = noMaterial ? 'none' : 'block';
-            
-            if (!noMaterial && container.children.length === 0) {
-                addMaterialRow();
-            }
-        }
-
-        function addMaterialRow(name = '', customName = '', qty = '', unit = '') {
-            const currentCount = document.querySelectorAll('.material-group').length;
-            if (currentCount >= MAX_MATERIAL_ROWS) {
-                alert(`最多可填寫 ${MAX_MATERIAL_ROWS} 筆用料`);
-                return;
-            }
-
-            const container = document.getElementById('materialsContainer');
-            const div = document.createElement('div');
-            div.className = 'material-group';
-            
-            const isCustom = name === '其他' || (name && !MATERIAL_OPTIONS.includes(name));
-            const selectedName = isCustom ? '其他' : name;
-            const restoredCustomName = name === '其他' ? customName : (isCustom ? name : customName);
-
-            let optionsHtml = `<option value="" disabled selected>請選擇品項</option>`;
-            MATERIAL_OPTIONS.forEach(opt => {
-                optionsHtml += `<option value="${opt}">${opt}</option>`;
-            });
-            optionsHtml += `<option value="其他">其他</option>`;
-
-            div.innerHTML = `
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 5px;">
-                    <div class="material-title">用料</div>
-                    <button type="button" class="remove-material-button" onclick="removeMaterialRow(this)" style="color:#ff4d4f; border:none; background:none; font-weight:bold; cursor:pointer;">❌ 移除</button>
-                </div>
-                <select class="mat-name" onchange="toggleCustomMaterial(this); saveDraft()">
-                    ${optionsHtml}
-                </select>
-                <input type="text" class="custom-mat-name hidden" placeholder="請輸入材料名稱" maxlength="50" oninput="saveDraft()">
-                <div class="flex-row">
-                    <input type="number" class="mat-qty" placeholder="數量" step="0.5" min="0.5" inputmode="decimal" oninput="saveDraft()">
-                    <select class="mat-unit" onchange="saveDraft()">
-                        <option value="" disabled selected>單位</option>
-                        <option value="桶 (1加侖)">桶 (1加侖)</option>
-                        <option value="桶 (5加侖)">桶 (5加侖)</option>
-                        <option value="桶">桶</option>
-                        <option value="組">組</option>
-                        <option value="支">支</option>
-                        <option value="公斤">公斤</option>
-                        <option value="公升">公升</option>
-                        <option value="個">個</option>
-                        <option value="捲">捲</option>
-                    </select>
-                </div>
-            `;
-            
-            const nameSelect = div.querySelector('.mat-name');
-            const customInput = div.querySelector('.custom-mat-name');
-            const qtyInput = div.querySelector('.mat-qty');
-            const unitSelect = div.querySelector('.mat-unit');
-
-            if (selectedName) nameSelect.value = selectedName;
-            if (isCustom) {
-                customInput.value = restoredCustomName || '';
-                customInput.classList.remove('hidden');
-            }
-            if (qty) qtyInput.value = qty;
-            if (unit) unitSelect.value = unit;
-
-            container.appendChild(div);
-            refreshMaterialTitles();
-            if (!isRestoringDraft) saveDraft();
-        }
-
-        function removeMaterialRow(button) {
-            const group = button.closest('.material-group');
-            group.remove();
-            refreshMaterialTitles();
-            saveDraft();
-        }
-
-        function refreshMaterialTitles() {
-            const groups = document.querySelectorAll('.material-group');
-            groups.forEach((group, index) => {
-                group.querySelector('.material-title').textContent = `用料 ${index + 1}`;
-            });
-            
-            const addButton = document.getElementById('addMaterialButton');
-            const reachedLimit = groups.length >= MAX_MATERIAL_ROWS;
-            addButton.disabled = reachedLimit;
-            addButton.textContent = reachedLimit ? `已達上限，共 ${MAX_MATERIAL_ROWS} 筆` : '➕ 新增一項用料';
-        }
-
-        function toggleCustomMaterial(select) {
-            const group = select.closest('.material-group');
-            const customInput = group.querySelector('.custom-mat-name');
-            if (select.value === '其他') {
-                customInput.classList.remove('hidden');
-                customInput.focus();
-            } else {
-                customInput.classList.add('hidden');
-                customInput.value = '';
-            }
-        }
-
-        function formatMaterial(name, qty, unit) {
-            if (unit === '桶 (1加侖)') return `${name}：${qty}桶，每桶1加侖`;
-            if (unit === '桶 (5加侖)') return `${name}：${qty}桶，每桶5加侖`;
-            return `${name}：${qty}${unit}`;
-        }
-
-        async function getWeather() {
-            if (!navigator.geolocation) {
-                alert('此裝置不支援定位，請手動輸入氣象');
-                return;
-            }
-            
-            const weatherBtn = document.querySelector('.btn-weather');
-            const tempInput = document.getElementById('temp');
-            const humInput = document.getElementById('humidity');
-            const windInput = document.getElementById('wind');
-
-            weatherBtn.disabled = true;
-            weatherBtn.textContent = '正在取得天氣...';
-            tempInput.value = "讀取中...";
-
-            navigator.geolocation.getCurrentPosition(async position => {
-                const lat = position.coords.latitude; 
-                const lon = position.coords.longitude;
-                
-                const weatherUrl = 'https://api.open-meteo.com/v1/forecast' + 
-                    `?latitude=${encodeURIComponent(lat)}` + 
-                    `&longitude=${encodeURIComponent(lon)}` + 
-                    '&current=temperature_2m,relative_humidity_2m,wind_speed_10m' + 
-                    '&wind_speed_unit=ms' + 
-                    '&timezone=Asia%2FTaipei';
-
-                try {
-                    const response = await fetch(weatherUrl);
-                    if (!response.ok) throw new Error(`氣象服務錯誤 ${response.status}`);
-                    
-                    const data = await response.json();
-                    if (!data.current) throw new Error('氣象服務未回傳目前資料');
-
-                    const windUnit = data.current_units?.wind_speed_10m;
-                    if (windUnit && windUnit !== 'm/s') {
-                        throw new Error(`風速單位異常：${windUnit}`);
-                    }
-
-                    const temperature = Number(data.current.temperature_2m);
-                    const humidity = Number(data.current.relative_humidity_2m);
-                    const windSpeed = Number(data.current.wind_speed_10m);
-
-                    if (!Number.isFinite(temperature) || !Number.isFinite(humidity) || !Number.isFinite(windSpeed)) {
-                        throw new Error('氣象資料格式不正確');
-                    }
-
-                    tempInput.value = temperature.toFixed(1);
-                    humInput.value = Math.round(humidity);
-                    windInput.value = windSpeed.toFixed(1);
-                    
-                    saveDraft();
-                } catch (error) {
-                    console.error('氣象抓取失敗：', error);
-                    tempInput.value = '';
-                    alert('氣象抓取失敗，請手動輸入');
-                } finally {
-                    weatherBtn.disabled = false;
-                    weatherBtn.textContent = '一鍵獲取當地天氣';
-                }
-            }, error => {
-                console.error('定位失敗：', error);
-                tempInput.value = '';
-                weatherBtn.disabled = false;
-                weatherBtn.textContent = '一鍵獲取當地天氣';
-                alert('請允許網頁取用位置，或手動輸入氣象');
-            }, { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 });
-        }
-
-        function saveDraft() {
-            if (isRestoringDraft) return;
-
-            const materials = [];
-            document.querySelectorAll('.material-group').forEach(group => {
-                materials.push({
-                    name: group.querySelector('.mat-name').value,
-                    customName: group.querySelector('.custom-mat-name').value,
-                    qty: group.querySelector('.mat-qty').value,
-                    unit: group.querySelector('.mat-unit').value
-                });
-            });
-
-            const draft = {
-                projectName: document.getElementById('projectName').value,
-                contractor: document.getElementById('contractor').value,
-                customContractor: document.getElementById('customContractor').value,
-                workerCount: document.getElementById('workerCount').value,
-                workItems: Array.from(document.querySelectorAll('input[name="workItem"]:checked')).map(cb => cb.value),
-                customWorkItem: document.getElementById('customWorkItem').value,
-                workNotes: document.getElementById('workNotes').value,
-                noMaterial: document.getElementById('noMaterial').checked,
-                materialsList: materials,
-                remarks: document.getElementById('remarks').value,
-                temp: document.getElementById('temp').value,
-                humidity: document.getElementById('humidity').value,
-                wind: document.getElementById('wind').value
-            };
-            localStorage.setItem('dailyReportDraft', JSON.stringify(draft));
-        }
-
-        function loadDraft() {
-            isRestoringDraft = true;
-            try {
-                const saved = localStorage.getItem('dailyReportDraft');
-                if (!saved) {
-                    addMaterialRow();
-                    return;
-                }
-
-                const draft = JSON.parse(saved);
-                if(draft.projectName) document.getElementById('projectName').value = draft.projectName;
-                if(draft.contractor) {
-                    document.getElementById('contractor').value = draft.contractor;
-                    toggleCustomContractor();
-                    if(draft.contractor === '其他' && draft.customContractor) {
-                        document.getElementById('customContractor').value = draft.customContractor;
-                    }
-                }
-                if(draft.workerCount) document.getElementById('workerCount').value = draft.workerCount;
-                
-                if(Array.isArray(draft.workItems)) {
-                    document.querySelectorAll('input[name="workItem"]').forEach(checkbox => {
-                        checkbox.checked = draft.workItems.includes(checkbox.value);
-                    });
-                    
-                    const hasOtherWork = draft.workItems.includes('其他');
-                    const customWorkInput = document.getElementById('customWorkItem');
-                    
-                    customWorkInput.classList.toggle('hidden', !hasOtherWork);
-                    customWorkInput.value = hasOtherWork ? (draft.customWorkItem || '') : '';
-                }
-                
-                document.getElementById('workNotes').value = draft.workNotes || '';
-                document.getElementById('remarks').value = draft.remarks || '';
-                document.getElementById('temp').value = draft.temp || '';
-                document.getElementById('humidity').value = draft.humidity || '';
-                document.getElementById('wind').value = draft.wind || '';
-                
-                const noMaterial = draft.noMaterial === true;
-                document.getElementById('noMaterial').checked = noMaterial;
-                
-                if (noMaterial) {
-                    handleNoMaterialChange();
-                } else if (Array.isArray(draft.materialsList) && draft.materialsList.length > 0) {
-                    draft.materialsList.forEach(m => addMaterialRow(m.name, m.customName, m.qty, m.unit));
-                } else {
-                    addMaterialRow(); 
-                }
-            } catch (error) {
-                console.error('草稿還原失敗：', error);
-                localStorage.removeItem('dailyReportDraft');
-                document.getElementById('materialsContainer').innerHTML = '';
-                addMaterialRow();
-            } finally {
-                isRestoringDraft = false;
-            }
-        }
-
-        function buildProgressString() {
-            const customWorkItem = document.getElementById('customWorkItem')?.value.trim();
-            const selectedWorkItems = Array.from(document.querySelectorAll('input[name="workItem"]:checked')).map(item => {
-                if (item.value === '其他' && customWorkItem) {
-                    return `• ${customWorkItem}`;
-                }
-                return `• ${item.value}`;
-            });
-            
-            const workNotes = document.getElementById('workNotes').value.trim();
-            let progress = selectedWorkItems.join('\n');
-            
-            if (workNotes) {
-                progress += `\n\n作業補充：\n${workNotes}`;
-            }
-            return progress;
-        }
-
-        function buildMaterialString() {
-            if (document.getElementById('noMaterial').checked) {
-                return '無';
-            }
-
-            const materials = [];
-            document.querySelectorAll('.material-group').forEach(group => {
-                let name = group.querySelector('.mat-name').value;
-                if (name === '其他') {
-                    name = group.querySelector('.custom-mat-name').value.trim();
-                }
-                const qty = group.querySelector('.mat-qty').value;
-                const unit = group.querySelector('.mat-unit').value;
-                
-                if (name || qty || unit) {
-                    materials.push(formatMaterial(name, qty, unit));
-                }
-            });
-            return materials.length > 0 ? materials.join('\n') : '無';
-        }
-
-        function validateForm() {
-            const projectName = document.getElementById('projectName').value;
-            const contractor = document.getElementById('contractor').value;
-            const workerCount = document.getElementById('workerCount').value;
-            const selectedWorkItems = document.querySelectorAll('input[name="workItem"]:checked');
-
-            if (!projectName || !contractor || !workerCount) {
-                alert('⚠️ 請填寫案場、廠商與施工人數');
-                return false;
-            }
-
-            if (contractor === '其他' && !document.getElementById('customContractor').value.trim()) {
-                alert('⚠️ 請輸入自訂的廠商名稱');
-                return false;
-            }
-
-            const tempText = document.getElementById('temp').value.trim();
-            const humidityText = document.getElementById('humidity').value.trim();
-            const windText = document.getElementById('wind').value.trim();
-            
-            if (tempText === '讀取中...') {
-                alert('⚠️ 氣象仍在讀取中，請稍候');
-                return false;
-            }
-            if (tempText) {
-                const temperature = Number(tempText);
-                if (!Number.isFinite(temperature)) {
-                    alert('⚠️ 溫度必須是數字');
-                    return false;
-                }
-            }
-            if (humidityText) {
-                const humidity = Number(humidityText);
-                if (!Number.isFinite(humidity) || humidity < 0 || humidity > 100) {
-                    alert('⚠️ 濕度必須介於 0 至 100');
-                    return false;
-                }
-            }
-            if (windText) {
-                const windSpeed = Number(windText);
-                if (!Number.isFinite(windSpeed) || windSpeed < 0) {
-                    alert('⚠️ 風速必須是大於或等於 0 的數字');
-                    return false;
-                }
-            }
-
-            if (selectedWorkItems.length === 0) {
-                alert('⚠️ 請至少勾選一項今日作業');
-                return false;
-            }
-
-            const customWorkItem = document.getElementById('customWorkItem').value.trim();
-            const hasOtherChecked = Array.from(selectedWorkItems).some(cb => cb.value === '其他');
-            if (hasOtherChecked && !customWorkItem) {
-                alert('⚠️ 請輸入其他作業項目的名稱');
-                return false;
-            }
-
-            if (!document.getElementById('noMaterial').checked) {
-                const materialGroups = Array.from(document.querySelectorAll('.material-group'));
-                let completedMaterialCount = 0;
-
-                for (let index = 0; index < materialGroups.length; index++) {
-                    const group = materialGroups[index];
-                    const selectedName = group.querySelector('.mat-name').value;
-                    const customName = group.querySelector('.custom-mat-name').value.trim();
-                    const qtyText = group.querySelector('.mat-qty').value;
-                    const unit = group.querySelector('.mat-unit').value;
-
-                    const hasAnyValue = Boolean(selectedName) || Boolean(customName) || Boolean(qtyText) || Boolean(unit);
-
-                    if (!hasAnyValue) continue;
-
-                    if (!selectedName) {
-                        alert(`⚠️ 請選擇用料 ${index + 1} 的品項`);
-                        return false;
-                    }
-
-                    if (selectedName === '其他' && !customName) {
-                        alert(`⚠️ 請輸入用料 ${index + 1} 的材料名稱`);
-                        return false;
-                    }
-
-                    const qty = Number(qtyText);
-                    if (!Number.isFinite(qty) || qty <= 0) {
-                        alert(`⚠️ 請輸入用料 ${index + 1} 的正確數量 (必須大於 0)`);
-                        return false;
-                    }
-
-                    if (!unit) {
-                        alert(`⚠️ 請選擇用料 ${index + 1} 的單位`);
-                        return false;
-                    }
-
-                    completedMaterialCount++;
-                }
-
-                if (completedMaterialCount === 0) {
-                    alert('⚠️ 請至少填寫一筆今日用料，或勾選「今日無用料」');
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
-        async function submitForm() {
-            if (isSubmitting) return;
-            if (reportArchived) {
-                alert('⚠️ 這份日報已經歸檔至 OneDrive，請勿重複送出，以免產生重複日報。');
-                return;
-            }
-            if (!validateForm()) return;
-
-            const submitBtn = document.getElementById('submitButton');
-            isSubmitting = true;
-            submitBtn.disabled = true;
-            submitBtn.textContent = '🚀 正在送出...';
-
-            let finalContractor = document.getElementById('contractor').value;
-            if (finalContractor === '其他') {
-                finalContractor = document.getElementById('customContractor').value.trim();
-                saveCustomContractor(finalContractor); 
-            }
-
-            const payload = {
-                projectName: document.getElementById('projectName').value,
-                temp: document.getElementById('temp').value || '未填寫',
-                humidity: document.getElementById('humidity').value || '未填寫',
-                wind: document.getElementById('wind').value || '未填寫',
-                contractor: finalContractor,
-                workerCount: document.getElementById('workerCount').value,
-                progress: buildProgressString(),
-                materials: buildMaterialString(),
-                remarks: document.getElementById('remarks').value.trim() || '無'
-            };
-
-            const apiUrl = 'https://gong-cheng-linechuan-jie.onrender.com/api/submit-report';
-
-            try {
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                
-                const responseText = await response.text();
-                let result;
-                try {
-                    result = responseText ? JSON.parse(responseText) : {};
-                } catch (error) {
-                    throw new Error(`伺服器回應格式異常，HTTP ${response.status}`);
-                }
-
-                if (!response.ok || result.success === false) {
-                    throw new Error(result.error || result.message || `系統處理失敗，HTTP ${response.status}`);
-                }
-
-                if (result.archived) {
-                    reportArchived = true;
-                }
-
-                if (result.archived && result.pushed) {
-                    localStorage.removeItem('dailyReportDraft'); 
-                    alert('✅ 日報已歸檔並發布至 LINE 群組');
-                    if (liff.isInClient()) {
-                        liff.closeWindow();
-                    }
-                    return;
-                }
-                
-                if (result.archived && result.reason === 'PROJECT_NOT_BOUND') {
-                    submitBtn.textContent = '日報已歸檔，尚未發布';
-                    alert('✅ 日報已歸檔至 OneDrive\n\n⚠️ 此案場尚未綁定 LINE 群組，因此未發布。\n\n請勿再次送出，以免產生重複日報。');
-                    return; 
-                }
-                
-                if (result.archived && result.reason === 'LINE_PUSH_FAILED') {
-                    submitBtn.textContent = '日報已歸檔，發布失敗';
-                    alert('✅ 日報已安全歸檔至 OneDrive\n\n⚠️ LINE 發布失敗，請稍後檢查群組。\n\n請勿再次送出，以免產生重複日報。');
-                    return; 
-                }
-
-                alert(result.message || '日報處理完成');
-
-            } catch (error) {
-                alert('❌ 傳送失敗：' + error.message);
-            } finally {
-                isSubmitting = false;
-                if (!reportArchived) {
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = '確認送出並發布至群組';
-                }
-            }
-        }
-    </script>
+      }
+    }
+  </script>
 </body>
 </html>
