@@ -46,10 +46,9 @@
 
       <label for="contractor">🤝 施工廠商</label>
       <div class="contractor-row">
+        <!-- 移除了原本寫死的容煜、詮達，統一交由 JavaScript 快取控制 -->
         <select id="contractor" onchange="toggleCustomContractor(); saveDraft()" required>
           <option value="" disabled selected>請選擇施工廠商</option>
-          <option value="容煜">容煜</option>
-          <option value="詮達">詮達</option>
           <option value="其他">其他（自行輸入）</option>
         </select>
         <button type="button" id="delContractorBtn" class="btn-del-contractor hidden" onclick="deleteSelectedContractor()">移出本機選單</button>
@@ -231,28 +230,34 @@
       saveDraft();
     }
 
+    // 更新：將容煜和詮達作為初始本機設定，不再寫死，隨時可刪
     function loadSavedContractors() {
-      const saved = safeReadArray(CONTRACTORS_KEY);
+      let savedStr = localStorage.getItem(CONTRACTORS_KEY);
+      let saved;
+      if (!savedStr) {
+        saved = ['容煜', '詮達'];
+        localStorage.setItem(CONTRACTORS_KEY, JSON.stringify(saved));
+      } else {
+        saved = safeReadArray(CONTRACTORS_KEY);
+      }
+
       const select = document.getElementById('contractor');
-      const defaultValues = ['容煜', '詮達', '其他'];
       
       [...select.options].forEach(opt => {
-        if (!defaultValues.includes(opt.value)) opt.remove();
+        if (opt.value !== '' && opt.value !== '其他') opt.remove();
       });
 
       const otherOption = [...select.options].find(option => option.value === '其他');
       
       saved.forEach(name => {
-        if (typeof name !== 'string' || !name.trim() || defaultValues.includes(name)) return;
-        const exists = [...select.options].some(option => option.value === name);
-        if (!exists) select.insertBefore(new Option(name, name), otherOption);
+        if (typeof name !== 'string' || !name.trim() || name === '其他') return;
+        select.insertBefore(new Option(name, name), otherOption);
       });
     }
 
     function saveCustomContractor(contractorName) {
       const name = String(contractorName || '').trim();
-      const defaults = ['容煜', '詮達', '其他'];
-      if (!name || defaults.includes(name)) return;
+      if (!name || name === '其他') return;
       const saved = safeReadArray(CONTRACTORS_KEY);
       if (!saved.includes(name)) {
         saved.push(name);
@@ -264,8 +269,7 @@
     function deleteSelectedContractor() {
       const select = document.getElementById('contractor');
       const val = select.value;
-      const defaults = ['容煜', '詮達', '其他'];
-      if (!val || defaults.includes(val)) return;
+      if (!val || val === '其他') return;
 
       if (confirm(`確定要從本機選單中移除廠商「${val}」嗎？`)) {
         let saved = safeReadArray(CONTRACTORS_KEY);
@@ -283,7 +287,7 @@
       const input = document.getElementById('customContractor');
       const delBtn = document.getElementById('delContractorBtn');
       const isCustom = select.value === '其他';
-      const isUserCustom = !['容煜', '詮達', '其他', ''].includes(select.value);
+      const isUserCustom = select.value !== '' && select.value !== '其他';
 
       input.classList.toggle('hidden', !isCustom);
       delBtn.classList.toggle('hidden', !isUserCustom);
