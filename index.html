@@ -31,6 +31,7 @@
     .contractor-row { display: flex; gap: 5px; }
     .btn-del-contractor { background: #d9534f; color: white; border: 0; border-radius: 5px; padding: 0 12px; cursor: pointer; font-size: 13px; white-space: nowrap; }
     .field-help { margin-top: 4px; color: #777; font-size: 13px; line-height: 1.5; }
+    .readonly-input { background-color: #e9ecef; color: #495057; cursor: not-allowed; }
     @media (max-width:380px) { .checkbox-grid { grid-template-columns:1fr; } .flex-row { flex-direction:column; gap:4px; } }
   </style>
 </head>
@@ -38,15 +39,29 @@
   <div class="container">
     <h2>👷 施工日報表</h2>
     <form id="dailyReportForm">
-      <label for="projectName">📍 案場名稱</label>
-      <select id="projectName" onchange="saveDraft()" required disabled>
-        <option value="" disabled selected>正在載入案場清單...</option>
-      </select>
-      <div class="field-help">新案場請先在施工群組輸入「設定案場 案場名稱」</div>
+      
+      <div id="lockedProjectSection" class="hidden">
+        <label for="lockedProjectName">📍 案場名稱</label>
+        <input type="text" id="lockedProjectName" class="readonly-input" readonly>
+        <div class="field-help" style="color: #666; font-size: 0.9em; margin-top: 4px;">
+          🔒 此連結已綁定以下案場，案場名稱不可修改
+        </div>
+      </div>
+
+      <div id="compatibleProjectSection">
+        <label for="projectName">📍 案場名稱</label>
+        <select id="projectName" onchange="saveDraft()" required disabled>
+          <option value="" disabled selected>正在載入案場清單...</option>
+        </select>
+        <div class="field-help" style="color: #666; font-size: 0.9em; margin-top: 4px;">
+          新案場請先在施工群組輸入「設定案場 案場名稱」
+        </div>
+      </div>
+
+      <input type="hidden" id="projectId" value="">
 
       <label for="contractor">🤝 施工廠商</label>
       <div class="contractor-row">
-        <!-- 移除了原本寫死的容煜、詮達，統一交由 JavaScript 快取控制 -->
         <select id="contractor" onchange="toggleCustomContractor(); saveDraft()" required>
           <option value="" disabled selected>請選擇施工廠商</option>
           <option value="其他">其他（自行輸入）</option>
@@ -99,7 +114,6 @@
     const API_URL = 'https://gong-cheng-linechuan-jie.onrender.com/api/submit-report';
     const PROJECTS_API_URL = 'https://gong-cheng-linechuan-jie.onrender.com/api/projects';
     const MAX_MATERIAL_ROWS = 10;
-    const DRAFT_KEY = 'dailyReportDraft';
     const CONTRACTORS_KEY = 'savedContractors';
 
     const workItemsList = [
@@ -120,75 +134,122 @@
     let isSubmitting = false;
     let isRestoringDraft = false;
     let reportArchived = false;
+    let projectMode = 'LOADING';
+
+    function getSelectedProjectName() {
+      if (projectMode === 'LOCKED') {
+        return document.getElementById('lockedProjectName').value.trim();
+      }
+      return document.getElementById('projectName').value.trim();
+    }
+
+    function getDraftKey() {
+      const projectId = document.getElementById('projectId').value.trim();
+      if (projectId) {
+        return `dailyReportDraft:${projectId}`;
+      }
+      return 'dailyReportDraft';
+    }
+
+    function getProjectIdFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+      return String(params.get('projectId') || '').trim();
+    }
 
     window.addEventListener('load', async () => {
       initializeStaticForm();
-      const results = await Promise.allSettled([
-        initializeLiff(),
-        loadProjects()
-      ]);
 
-      if (results[0].status === 'rejected') {
-        console.error('LIFF 初始化失敗：', results[0].reason);
-      }
-      if (results[1].status === 'rejected') {
-        console.error('中央案場清單初始化失敗：', results[1].reason);
+      let liffInitialized = false;
+      try {
+        await liff.init({ liffId: LIFF_ID });
+        liffInitialized = true;
+      } catch (error) {
+        console.error('LIFF 初始化失敗：', error);
       }
 
-      loadDraft();
+      const projectIdFromUrl = getProjectIdFromUrl();
+
+      if (!liffInitialized && !projectIdFromUrl) {
+        console.warn('LIFF 未完成初始化，且目前無法取得 projectId');
+      }
+
+      try {
+        if (projectIdFromUrl) {
+          await loadLockedProject(projectIdFromUrl);
+        } else {
+          await loadProjects();
+        }
+        loadDraft();
+      } catch (error) {
+        console.error('案場初始化失敗：', error);
+        projectMode = 'ERROR';
+        document.getElementById('submitButton').disabled = true;
+        alert('案場載入失敗，請重新從施工群組開啟表單');
+      }
     });
 
-    async function initializeLiff() {
-      await liff.init({ liffId: LIFF_ID });
+    async function loadLockedProject(projectId) {
+      const response = await fetch(`${PROJECTS_API_URL}/${encodeURIComponent(projectId)}`);
+      const responseText = await response.text();
+      
+      let result;
+      try {
+        result = responseText ? JSON.parse(responseText) : {};
+      } catch {
+        throw new Error(`案場資料回應格式異常，HTTP ${response.status}`);
+      }
+
+      if (!response.ok || result.success !== true || !result.project) {
+        throw new Error(result.error || '找不到指定案場');
+      }
+
+      document.getElementById('projectId').value = result.project.projectId;
+      document.getElementById('lockedProjectName').value = result.project.projectName;
+      
+      document.getElementById('compatibleProjectSection').classList.add('hidden');
+      document.getElementById('lockedProjectSection').classList.remove('hidden');
+      
+      projectMode = 'LOCKED';
     }
 
     async function loadProjects() {
       const projectSelect = document.getElementById('projectName');
+      const response = await fetch(PROJECTS_API_URL);
+      const responseText = await response.text();
+      
+      let result;
       try {
-        const response = await fetch(PROJECTS_API_URL);
-        const responseText = await response.text();
-        let result;
-        try {
-          result = responseText ? JSON.parse(responseText) : {};
-        } catch {
-          throw new Error(`案場清單回應格式異常，HTTP ${response.status}`);
-        }
-
-        if (!response.ok || result.success !== true || !Array.isArray(result.projects)) {
-          throw new Error(result.error || '無法取得案場清單');
-        }
-
-        if (result.projects.length === 0) {
-          projectSelect.innerHTML = '';
-          const emptyOption = new Option('目前沒有可用案場', '');
-          emptyOption.disabled = true;
-          emptyOption.selected = true;
-          projectSelect.add(emptyOption);
-          projectSelect.disabled = true;
-          return;
-        }
-
-        projectSelect.innerHTML = '';
-        const placeholder = new Option('請選擇正式案場', '');
-        placeholder.disabled = true;
-        placeholder.selected = true;
-        projectSelect.add(placeholder);
-
-        result.projects.forEach(p => {
-          projectSelect.add(new Option(p.projectName, p.projectName));
-        });
-        projectSelect.disabled = false;
-      } catch (error) {
-        console.error('載入案場清單失敗：', error);
-        projectSelect.innerHTML = '';
-        const errorOption = new Option('案場清單載入失敗', '');
-        errorOption.disabled = true;
-        errorOption.selected = true;
-        projectSelect.add(errorOption);
-        projectSelect.disabled = true;
-        alert('無法載入中央案場清單，請稍後重新開啟表單。');
-        throw error;
+        result = responseText ? JSON.parse(responseText) : {};
+      } catch {
+        throw new Error(`案場清單回應格式異常，HTTP ${response.status}`);
       }
+
+      if (!response.ok || result.success !== true || !Array.isArray(result.projects)) {
+        throw new Error(result.error || '無法取得案場清單');
+      }
+
+      if (result.projects.length === 0) {
+        projectSelect.innerHTML = '';
+        const emptyOption = new Option('目前沒有可用案場', '');
+        emptyOption.disabled = true;
+        emptyOption.selected = true;
+        projectSelect.add(emptyOption);
+        projectSelect.disabled = true;
+        projectMode = 'ERROR';
+        throw new Error('目前沒有可用案場');
+      }
+
+      projectSelect.innerHTML = '';
+      const placeholder = new Option('請選擇正式案場', '');
+      placeholder.disabled = true;
+      placeholder.selected = true;
+      projectSelect.add(placeholder);
+
+      result.projects.forEach(project => {
+        projectSelect.add(new Option(project.projectName, project.projectName));
+      });
+      projectSelect.disabled = false;
+      projectMode = 'COMPATIBLE';
     }
 
     function safeReadArray(key) {
@@ -230,7 +291,6 @@
       saveDraft();
     }
 
-    // 更新：將容煜和詮達作為初始本機設定，不再寫死，隨時可刪
     function loadSavedContractors() {
       let savedStr = localStorage.getItem(CONTRACTORS_KEY);
       let saved;
@@ -468,7 +528,8 @@
     }
 
     function saveDraft() {
-      if (isRestoringDraft || reportArchived) return;
+      if (isRestoringDraft || reportArchived || (projectMode !== 'LOCKED' && projectMode !== 'COMPATIBLE')) return;
+      
       const materialsList = [...document.querySelectorAll('.material-group')].map(group => ({
         name: group.querySelector('.mat-name').value,
         customName: group.querySelector('.custom-mat-name').value,
@@ -477,7 +538,8 @@
       }));
 
       const draft = {
-        projectName: document.getElementById('projectName').value,
+        projectId: document.getElementById('projectId').value.trim(),
+        projectName: getSelectedProjectName(),
         contractor: document.getElementById('contractor').value,
         customContractor: document.getElementById('customContractor').value,
         workerCount: document.getElementById('workerCount').value,
@@ -491,23 +553,36 @@
         humidity: document.getElementById('humidity').value,
         wind: document.getElementById('wind').value
       };
-      localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+      localStorage.setItem(getDraftKey(), JSON.stringify(draft));
     }
 
     function loadDraft() {
       isRestoringDraft = true;
       try {
-        const saved = localStorage.getItem(DRAFT_KEY);
+        const saved = localStorage.getItem(getDraftKey());
         if (!saved) { addMaterialRow(); return; }
+        
         const draft = JSON.parse(saved);
+        const currentProjectId = document.getElementById('projectId').value.trim();
+        
+        if (projectMode === 'LOCKED') {
+          const projectIdMismatch = draft.projectId && draft.projectId !== currentProjectId;
+          const projectNameMismatch = !draft.projectId && draft.projectName && draft.projectName !== getSelectedProjectName();
+          
+          if (projectIdMismatch || projectNameMismatch) {
+            console.warn('草稿不符合目前鎖定案場，已略過');
+            document.getElementById('materialsContainer').innerHTML = '';
+            addMaterialRow();
+            return;
+          }
+        }
 
-        document.getElementById('projectName').value = draft.projectName || '';
-        document.getElementById('workerCount').value = draft.workerCount || '';
-        document.getElementById('workNotes').value = draft.workNotes || '';
-        document.getElementById('remarks').value = draft.remarks || '';
         document.getElementById('temp').value = draft.temp || '';
         document.getElementById('humidity').value = draft.humidity || '';
         document.getElementById('wind').value = draft.wind || '';
+        document.getElementById('workerCount').value = draft.workerCount || '';
+        document.getElementById('workNotes').value = draft.workNotes || '';
+        document.getElementById('remarks').value = draft.remarks || '';
 
         if (draft.contractor) {
           const select = document.getElementById('contractor');
@@ -529,16 +604,41 @@
 
         const noMaterial = draft.noMaterial === true;
         document.getElementById('noMaterial').checked = noMaterial;
+        
         if (noMaterial) {
+          document.getElementById('materialsContainer').innerHTML = '';
           handleNoMaterialChange();
-        } else if (Array.isArray(draft.materialsList) && draft.materialsList.length) {
-          draft.materialsList.forEach(m => addMaterialRow(m.name, m.customName, m.qty, m.unit));
         } else {
-          addMaterialRow();
+          document.getElementById('materialsContainer').style.display = 'block';
+          document.getElementById('addMaterialButton').style.display = 'block';
+          
+          if (Array.isArray(draft.materialsList) && draft.materialsList.length > 0) {
+            document.getElementById('materialsContainer').innerHTML = '';
+            draft.materialsList.forEach(material => {
+              addMaterialRow(
+                material.name || '',
+                material.customName || '',
+                material.qty || '',
+                material.unit || ''
+              );
+            });
+          } else {
+            addMaterialRow();
+          }
         }
+
+        if (projectMode === 'COMPATIBLE' && draft.projectName) {
+          const projectSelect = document.getElementById('projectName');
+          const projectExists = [...projectSelect.options].some(option => option.value === draft.projectName);
+          
+          if (projectExists) {
+            projectSelect.value = draft.projectName;
+          }
+        }
+
       } catch (error) {
         console.error('草稿還原失敗：', error);
-        localStorage.removeItem(DRAFT_KEY);
+        localStorage.removeItem(getDraftKey());
         document.getElementById('materialsContainer').innerHTML = '';
         addMaterialRow();
       } finally {
@@ -568,16 +668,27 @@
       return materials.join('\n');
     }
 
-    function validateForm() {
-      const projectSelect = document.getElementById('projectName');
-      if (projectSelect.disabled) {
-        alert('案場清單尚未成功載入，請稍後重新開啟表單');
+    function validateProject() {
+      if (projectMode !== 'LOCKED' && projectMode !== 'COMPATIBLE') {
+        alert('案場資料尚未成功載入，請重新開啟表單');
         return false;
       }
+      if (!getSelectedProjectName()) {
+        alert('請選擇案場');
+        return false;
+      }
+      if (projectMode === 'LOCKED' && !document.getElementById('projectId').value.trim()) {
+        alert('案場識別資料不完整，請從施工群組重新開啟表單');
+        return false;
+      }
+      return true;
+    }
 
-      const projectName = projectSelect.value.trim();
+    function validateForm() {
+      const projectName = getSelectedProjectName();
       const contractor = document.getElementById('contractor').value;
       const workerCount = document.getElementById('workerCount').value;
+      
       if (!projectName || !contractor || !workerCount) { alert('請填寫案場、廠商與施工人數'); return false; }
       if (contractor === '其他' && !document.getElementById('customContractor').value.trim()) { alert('請輸入自訂廠商名稱'); return false; }
 
@@ -617,6 +728,7 @@
     async function submitForm() {
       if (isSubmitting) return;
       if (reportArchived) { alert('這份日報已歸檔，請勿重複送出。'); return; }
+      if (!validateProject()) return;
       if (!validateForm()) return;
 
       const submitButton = document.getElementById('submitButton');
@@ -631,7 +743,8 @@
       }
 
       const payload = {
-        projectName: document.getElementById('projectName').value.trim(),
+        projectId: document.getElementById('projectId').value.trim(),
+        projectName: getSelectedProjectName(),
         temp: document.getElementById('temp').value || '未填寫',
         humidity: document.getElementById('humidity').value || '未填寫',
         wind: document.getElementById('wind').value || '未填寫',
@@ -648,30 +761,42 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
+        
         const responseText = await response.text();
         let result;
-        try { result = responseText ? JSON.parse(responseText) : {}; }
-        catch { throw new Error(`伺服器回應格式異常，HTTP ${response.status}`); }
-        if (!response.ok || result.success === false) throw new Error(result.error || result.message || `系統處理失敗，HTTP ${response.status}`);
+        try { 
+          result = responseText ? JSON.parse(responseText) : {}; 
+        } catch { 
+          throw new Error(`伺服器回應格式異常，HTTP ${response.status}`); 
+        }
+
+        if (!response.ok || result.success === false) {
+          throw new Error(result.error || result.message || `系統處理失敗，HTTP ${response.status}`);
+        }
 
         if (result.archived) reportArchived = true;
+
         if (result.archived && result.pushed) {
-          localStorage.removeItem(DRAFT_KEY);
+          localStorage.removeItem(getDraftKey());
           alert('日報已歸檔並發布至 LINE 群組');
           if (window.liff && liff.isInClient()) liff.closeWindow();
           return;
         }
+
         if (result.archived && result.reason === 'PROJECT_NOT_BOUND') {
           submitButton.textContent = '日報已歸檔，尚未發布';
           alert('日報已歸檔至 OneDrive，但案場尚未綁定 LINE 群組。請勿重複送出。');
           return;
         }
+
         if (result.archived && result.reason === 'LINE_PUSH_FAILED') {
           submitButton.textContent = '日報已歸檔，發布失敗';
           alert('日報已歸檔至 OneDrive，但 LINE 發布失敗。請勿重複送出。');
           return;
         }
+
         alert(result.message || '日報處理完成');
+
       } catch (error) {
         alert(`傳送失敗：${error.message}`);
       } finally {
