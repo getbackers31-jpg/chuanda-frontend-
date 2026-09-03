@@ -757,12 +757,12 @@
               const select = group.querySelector('.contractor-name').value;
               const name = select === '其他' ? group.querySelector('.custom-contractor-name').value.trim() : select;
               const workers = Number(group.querySelector('.contractor-workers').value);
-              contractorList.push(`${name} (${workers}人)`);
+              contractorList.push(`• ${name}（${workers}人）`);
               totalWorkers += workers;
           });
 
-          finalContractorStr = contractorList.join('、');
-          finalWorkerCountStr = String(totalWorkers);
+          finalContractorStr = '\n' + contractorList.join('\n');
+          finalWorkerCountStr = `共 ${totalWorkers} 人`;
           finalProgressStr = buildProgressString();
           finalMaterialStr = buildMaterialString();
       }
