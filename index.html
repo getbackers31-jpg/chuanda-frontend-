@@ -58,12 +58,12 @@
 
       <input type="hidden" id="projectId" value="">
 
-      <!-- 新增：今日無出工選項 -->
+      <!-- 今日無出工選項 -->
       <label class="no-material-option" style="margin-top:15px; background:#fff3f3; border-color:#ffcccc; color:#cc0000;">
         <input type="checkbox" id="noWorkToday" onchange="handleNoWorkChange(); saveDraft()">今日無出工 (停工/休息)
       </label>
 
-      <!-- 新增：無出工原因 -->
+      <!-- 無出工原因 -->
       <div id="noWorkReasonSection" class="hidden">
         <select id="noWorkReason" onchange="saveDraft()" style="border-color:#ffcccc; background:#fffcfc;">
           <option value="" disabled selected>請選擇無出工原因</option>
@@ -76,7 +76,6 @@
         <div class="section-divider"></div>
       </div>
 
-      <!-- 將會因無出工而隱藏的區塊包起來 -->
       <div id="contractorSection">
         <label>🤝 施工廠商與人數</label>
         <div id="contractorsContainer"></div>
@@ -85,7 +84,6 @@
         <div class="section-divider"></div>
       </div>
 
-      <!-- 氣象無論有無出工都保留，因為下雨停工也會需要看氣象證明 -->
       <label>🌤️ 氣象資訊</label>
       <button type="button" class="btn-weather" onclick="getWeather()">一鍵獲取當地天氣</button>
       <div class="flex-row">
@@ -95,7 +93,6 @@
       </div>
       <div class="section-divider"></div>
 
-      <!-- 作業與用料區塊 (無出工時隱藏) -->
       <div id="workAndMaterialSection">
         <label>🛠️ 今日作業</label>
         <div class="checkbox-grid" id="workItemsGrid"></div>
@@ -259,7 +256,6 @@
     function resetContractorsCache() {
       if (confirm('確定要清除所有自行輸入的廠商名稱紀錄嗎？(容煜、詮達等預設廠商將保留)')) {
         localStorage.removeItem(CONTRACTORS_KEY);
-        // 重新整理畫面上的選單
         document.querySelectorAll('.contractor-name').forEach(select => {
             const currentVal = select.value;
             select.innerHTML = '';
@@ -267,7 +263,6 @@
             select.options[0].disabled = true;
             getSavedContractorsList().forEach(c => select.add(new Option(c, c)));
             select.add(new Option('其他 (自行輸入)', '其他'));
-            // 嘗試還原原本的選擇
             const exists = [...select.options].some(opt => opt.value === currentVal);
             select.value = exists ? currentVal : (currentVal ? '其他' : '');
             toggleCustomContractorRow(select);
@@ -319,7 +314,6 @@
 
     function appendOption(select, value, text = value) { select.add(new Option(text, value)); }
 
-    // --- 動態廠商區塊 ---
     function addContractorRow(name = '', customName = '', workers = '') {
       const container = document.getElementById('contractorsContainer');
       if (container.children.length >= MAX_CONTRACTOR_ROWS) {
@@ -414,7 +408,6 @@
        if (updated) localStorage.setItem(CONTRACTORS_KEY, JSON.stringify(savedList));
     }
 
-    // --- 動態用料區塊 ---
     function addMaterialRow(name = '', customName = '', qty = '', unit = '') {
       const container = document.getElementById('materialsContainer');
       if (container.children.length >= MAX_MATERIAL_ROWS) {
@@ -581,7 +574,6 @@
           }
         }
 
-        // 還原無出工狀態
         if (draft.isNoWork) {
             document.getElementById('noWorkToday').checked = true;
             document.getElementById('noWorkReason').value = draft.noWorkReason || '';
@@ -594,7 +586,6 @@
         document.getElementById('workNotes').value = draft.workNotes || '';
         document.getElementById('remarks').value = draft.remarks || '';
 
-        // 還原廠商清單 (相容舊版單一廠商草稿)
         document.getElementById('contractorsContainer').innerHTML = '';
         if (Array.isArray(draft.contractorsList) && draft.contractorsList.length > 0) {
             draft.contractorsList.forEach(c => addContractorRow(c.name, c.customName, c.workers));
@@ -665,6 +656,84 @@
         if (name && qty && unit) materials.push(formatMaterial(name, qty, unit));
       });
       return materials.join('\n');
+    }
+
+    function buildContractorItems() {
+      if (document.getElementById('noWorkToday').checked) {
+        return [];
+      }
+      return [...document.querySelectorAll('#contractorsContainer .contractor-group')]
+        .map(group => {
+          const selected = group.querySelector('.contractor-name').value;
+          const contractorName = selected === '其他' 
+            ? group.querySelector('.custom-contractor-name').value.trim() 
+            : selected;
+          const workerCount = Number(group.querySelector('.contractor-workers').value) || 0;
+          return { contractorName, workerCount };
+        })
+        .filter(item => {
+          return item.contractorName && item.workerCount > 0;
+        });
+    }
+
+    function buildWorkItems() {
+      if (document.getElementById('noWorkToday').checked) {
+        return [];
+      }
+      return [...document.querySelectorAll('input[name="workItem"]:checked')]
+        .map(item => item.value);
+    }
+
+    function buildMaterialItems() {
+      const isNoWork = document.getElementById('noWorkToday').checked;
+      const isNoMaterial = document.getElementById('noMaterial').checked;
+      if (isNoWork || isNoMaterial) {
+        return [];
+      }
+
+      return [...document.querySelectorAll('#materialsContainer .material-group')]
+        .map(group => {
+          const selected = group.querySelector('.mat-name').value;
+          const materialName = selected === '其他' 
+            ? group.querySelector('.custom-mat-name').value.trim() 
+            : selected;
+          const quantity = Number(group.querySelector('.mat-qty').value) || 0;
+          const selectedUnit = group.querySelector('.mat-unit').value;
+
+          let stockUnit = selectedUnit;
+          let packageQuantity = null;
+          let packageUnit = null;
+          let baseQuantity = quantity;
+          let baseUnit = selectedUnit;
+
+          if (selectedUnit === '桶 (1加侖)') {
+            stockUnit = '桶';
+            packageQuantity = 1;
+            packageUnit = '加侖';
+            baseQuantity = quantity;
+            baseUnit = '加侖';
+          } else if (selectedUnit === '桶 (5加侖)') {
+            stockUnit = '桶';
+            packageQuantity = 5;
+            packageUnit = '加侖';
+            baseQuantity = quantity * 5;
+            baseUnit = '加侖';
+          }
+
+          return {
+            materialId: null,
+            materialName,
+            quantity,
+            stockUnit,
+            packageQuantity,
+            packageUnit,
+            baseQuantity,
+            baseUnit
+          };
+        })
+        .filter(item => {
+          return item.materialName && item.quantity > 0;
+        });
     }
 
     function validateProject() {
@@ -767,6 +836,14 @@
           finalMaterialStr = buildMaterialString();
       }
 
+      // --- 新增結構化資料組裝區 ---
+      const contractorItems = buildContractorItems();
+      const workItems = buildWorkItems();
+      const materialItems = buildMaterialItems();
+      const totalWorkerCount = contractorItems.reduce((total, item) => {
+        return total + item.workerCount;
+      }, 0);
+
       const payload = {
         projectId: document.getElementById('projectId').value.trim(),
         projectName: getSelectedProjectName(),
@@ -777,7 +854,17 @@
         workerCount: finalWorkerCountStr,
         progress: finalProgressStr,
         materials: finalMaterialStr,
-        remarks: document.getElementById('remarks').value.trim() || '無'
+        remarks: document.getElementById('remarks').value.trim() || '無',
+        
+        // 👇 以下為結構化欄位 👇
+        isNoWork,
+        noWorkReason: isNoWork ? document.getElementById('noWorkReason').value : '',
+        contractorItems,
+        totalWorkerCount,
+        workItems,
+        customWorkItem: isNoWork ? '' : document.getElementById('customWorkItem').value.trim(),
+        workNotes: isNoWork ? '' : document.getElementById('workNotes').value.trim(),
+        materialItems
       };
 
       try {
