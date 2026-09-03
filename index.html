@@ -349,6 +349,8 @@
       workerInput.className = 'contractor-workers';
       workerInput.placeholder = '施工人數';
       workerInput.min = '1';
+      workerInput.step = '1';            // 防呆：整數
+      workerInput.inputMode = 'numeric'; // 防呆：手機數字鍵盤
       workerInput.style.maxWidth = '100px';
 
       row.append(nameSelect, workerInput);
@@ -751,6 +753,9 @@
       } else {
           const cGroups = document.querySelectorAll('#contractorsContainer .contractor-group');
           if (cGroups.length === 0) { alert('請至少填寫一組施工廠商'); return false; }
+          
+          const contractorNames = new Set(); // 防呆：防重複廠商
+
           for (let i = 0; i < cGroups.length; i++) {
               const group = cGroups[i];
               const name = group.querySelector('.contractor-name').value;
@@ -759,7 +764,21 @@
 
               if (!name) { alert(`請選擇施工廠商 ${i + 1} 的名稱`); return false; }
               if (name === '其他' && !custom) { alert(`請輸入施工廠商 ${i + 1} 的自訂名稱`); return false; }
-              if (!workers || Number(workers) <= 0) { alert(`請輸入施工廠商 ${i + 1} 的正確人數`); return false; }
+              
+              const workerCount = Number(workers);
+              if (!Number.isInteger(workerCount) || workerCount <= 0 || workerCount > 200) { 
+                  alert(`請輸入施工廠商 ${i + 1} 的正確整數人數`); 
+                  return false; 
+              }
+
+              const finalContractorName = name === '其他' ? custom : name;
+              const normalizedContractorName = finalContractorName.normalize('NFKC').replace(/\s+/g, ' ').trim();
+              
+              if (contractorNames.has(normalizedContractorName)) {
+                  alert(`施工廠商「${finalContractorName}」重複填寫，請合併人數`);
+                  return false;
+              }
+              contractorNames.add(normalizedContractorName);
           }
 
           const selectedWorkItems = [...document.querySelectorAll('input[name="workItem"]:checked')];
@@ -836,17 +855,23 @@
           finalMaterialStr = buildMaterialString();
       }
 
-      // --- 新增結構化資料組裝區 ---
       const contractorItems = buildContractorItems();
       const workItems = buildWorkItems();
       const materialItems = buildMaterialItems();
-      const totalWorkerCount = contractorItems.reduce((total, item) => {
-        return total + item.workerCount;
-      }, 0);
+      const totalWorkerCount = contractorItems.reduce((total, item) => total + item.workerCount, 0);
+
+      // --- 👇 新增背景自動抓取當天日期與產生識別碼 👇 ---
+      const todayOpts = { timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit' };
+      const reportDateStr = new Intl.DateTimeFormat('en-CA', todayOpts).format(new Date()); // YYYY-MM-DD (台灣時區)
+      const submissionIdStr = Date.now().toString(36) + Math.random().toString(36).substring(2, 10);
 
       const payload = {
         projectId: document.getElementById('projectId').value.trim(),
         projectName: getSelectedProjectName(),
+        
+        reportDate: reportDateStr,
+        submissionId: submissionIdStr,
+
         temp: document.getElementById('temp').value || '未填寫',
         humidity: document.getElementById('humidity').value || '未填寫',
         wind: document.getElementById('wind').value || '未填寫',
@@ -856,7 +881,6 @@
         materials: finalMaterialStr,
         remarks: document.getElementById('remarks').value.trim() || '無',
         
-        // 👇 以下為結構化欄位 👇
         isNoWork,
         noWorkReason: isNoWork ? document.getElementById('noWorkReason').value : '',
         contractorItems,
