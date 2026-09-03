@@ -144,7 +144,7 @@
     let isRestoringDraft = false;
     let reportArchived = false;
     let projectMode = 'LOADING';
-    let currentSubmissionId = ''; // 紀錄當次表單唯一的 ID
+    let currentSubmissionId = '';
 
     function createSubmissionId() {
       if (window.crypto && typeof window.crypto.randomUUID === 'function') {
@@ -363,8 +363,8 @@
       workerInput.className = 'contractor-workers';
       workerInput.placeholder = '施工人數';
       workerInput.min = '1';
-      workerInput.step = '1';            // 防呆：僅限整數
-      workerInput.inputMode = 'numeric'; // 防呆：手機數字鍵盤
+      workerInput.step = '1';            
+      workerInput.inputMode = 'numeric'; 
       workerInput.style.maxWidth = '100px';
 
       row.append(nameSelect, workerInput);
@@ -776,7 +776,7 @@
           const cGroups = document.querySelectorAll('#contractorsContainer .contractor-group');
           if (cGroups.length === 0) { alert('請至少填寫一組施工廠商'); return false; }
           
-          const contractorNames = new Set(); // 防重複廠商
+          const contractorNames = new Set(); 
 
           for (let i = 0; i < cGroups.length; i++) {
               const group = cGroups[i];
