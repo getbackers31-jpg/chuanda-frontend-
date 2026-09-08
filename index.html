@@ -7,8 +7,9 @@
   <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
     body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background:#f4f7f6; padding:15px; color:#333; margin:0; }
-    .container { background:white; padding:20px; border-radius:10px; box-shadow:0 4px 8px rgba(0,0,0,.1); max-width:500px; margin:auto; }
-    h2 { text-align:center; color:#00B900; margin-top:0; font-size:22px; }
+    .container { background:white; padding:20px; border-radius:10px; box-shadow:0 4px 8px rgba(0,0,0,.1); max-width:500px; margin:auto; position: relative; }
+    h2 { text-align:center; color:#00B900; margin-top:0; font-size:22px; position: relative; }
+    .version-tag { font-size: 10px; color: #ccc; position: absolute; right: 0; bottom: 0; font-weight: normal; }
     label { font-weight:bold; display:block; margin-top:15px; margin-bottom:5px; color:#444; }
     select, textarea, input[type="text"], input[type="number"] { width:100%; padding:10px; border:1px solid #ccc; border-radius:5px; box-sizing:border-box; font-size:16px; background:#fafafa; margin-bottom:5px; }
     .flex-row { display:flex; gap:10px; margin-bottom:5px; }
@@ -35,13 +36,16 @@
 </head>
 <body>
   <div class="container">
-    <h2>👷 施工日報表</h2>
+    <h2>👷 施工日報表 <span class="version-tag">v2</span></h2>
     <form id="dailyReportForm">
       
+      <label for="reporterName">👤 填表人姓名</label>
+      <input type="text" id="reporterName" placeholder="請輸入您的姓名 (系統將自動記憶)" oninput="saveDraft()" required>
+
       <div id="lockedProjectSection" class="hidden">
         <label for="lockedProjectName">📍 案場名稱</label>
         <input type="text" id="lockedProjectName" class="readonly-input" readonly>
-        <div class="field-help" style="color: #666; font-size: 0.9em; margin-top: 4px;">
+        <div class="field-help">
           🔒 此連結已綁定以下案場，案場名稱不可修改
         </div>
       </div>
@@ -51,7 +55,7 @@
         <select id="projectName" onchange="saveDraft()" required disabled>
           <option value="" disabled selected>正在載入案場清單...</option>
         </select>
-        <div class="field-help" style="color: #666; font-size: 0.9em; margin-top: 4px;">
+        <div class="field-help">
           新案場請先在施工群組輸入「設定案場 案場名稱」
         </div>
       </div>
@@ -121,6 +125,8 @@
     const LIFF_ID = '2011289657-vQgMb0eI';
     const API_URL = 'https://gong-cheng-linechuan-jie.onrender.com/api/submit-report';
     const PROJECTS_API_URL = 'https://gong-cheng-linechuan-jie.onrender.com/api/projects';
+    const MATERIALS_API_URL = 'https://gong-cheng-linechuan-jie.onrender.com/api/materials';
+    
     const MAX_MATERIAL_ROWS = 10;
     const MAX_CONTRACTOR_ROWS = 10;
     const CONTRACTORS_KEY = 'savedContractors';
@@ -132,9 +138,7 @@
       '面漆膜厚檢測', '缺失改善', '現場清潔', '等待驗收', '完成驗收', '其他'
     ];
 
-    const MATERIAL_OPTIONS = [
-      '底漆', '中塗漆', '面漆', '調薄劑', '矽利康'
-    ];
+    let MATERIAL_OPTIONS = [];
 
     const UNIT_OPTIONS = [
       '桶 (1加侖)', '桶 (5加侖)', '桶', '組', '支', '公斤', '公升', '個', '捲'
@@ -178,13 +182,27 @@
       return String(params.get('projectId') || '').trim();
     }
 
+    async function fetchMaterials(projectId = '') {
+      try {
+        const url = projectId ? `${MATERIALS_API_URL}?projectId=${projectId}` : MATERIALS_API_URL;
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.success && Array.isArray(data.materials) && data.materials.length > 0) {
+            MATERIAL_OPTIONS = data.materials;
+        } else {
+            MATERIAL_OPTIONS = ['立邦9011', '虹牌MIO', '虹牌優利面UP-04', '矽利康'];
+        }
+      } catch (err) {
+        console.warn('材料清單讀取失敗，使用預設值', err);
+        MATERIAL_OPTIONS = ['立邦9011', '虹牌MIO', '虹牌優利面UP-04', '矽利康'];
+      }
+    }
+
     window.addEventListener('load', async () => {
       initializeStaticForm();
 
-      let liffInitialized = false;
       try {
         await liff.init({ liffId: LIFF_ID });
-        liffInitialized = true;
       } catch (error) {
         console.error('LIFF 初始化失敗：', error);
       }
@@ -194,8 +212,10 @@
       try {
         if (projectIdFromUrl) {
           await loadLockedProject(projectIdFromUrl);
+          await fetchMaterials(projectIdFromUrl);
         } else {
           await loadProjects();
+          await fetchMaterials('');
         }
         loadDraft();
       } catch (error) {
@@ -268,7 +288,7 @@
     }
 
     function resetContractorsCache() {
-      if (confirm('確定要清除所有自行輸入的廠商名稱紀錄嗎？(容煜、詮達等預設廠商將保留)')) {
+      if (confirm('確定要清除所有自行輸入的廠商名稱紀錄嗎？(預設廠商將保留)')) {
         localStorage.removeItem(CONTRACTORS_KEY);
         document.querySelectorAll('.contractor-name').forEach(select => {
             const currentVal = select.value;
@@ -416,8 +436,8 @@
           if (selectVal === '其他') {
              const custom = group.querySelector('.custom-contractor-name').value.trim();
              if (custom && !savedList.includes(custom)) {
-                savedList.push(custom);
-                updated = true;
+                 savedList.push(custom);
+                 updated = true;
              }
           }
        });
@@ -559,6 +579,7 @@
         submissionId: ensureSubmissionId(),
         projectId: document.getElementById('projectId').value.trim(),
         projectName: getSelectedProjectName(),
+        reporterName: document.getElementById('reporterName').value.trim(), 
         isNoWork: document.getElementById('noWorkToday').checked,
         noWorkReason: document.getElementById('noWorkReason').value,
         contractorsList,
@@ -579,8 +600,11 @@
       isRestoringDraft = true;
       try {
         const saved = localStorage.getItem(getDraftKey());
+        const lastReporter = localStorage.getItem('lastReporterName') || '';
+
         if (!saved) { 
           currentSubmissionId = createSubmissionId();
+          document.getElementById('reporterName').value = lastReporter;
           addContractorRow(); 
           addMaterialRow(); 
           return; 
@@ -589,6 +613,8 @@
         const draft = JSON.parse(saved);
         currentSubmissionId = String(draft.submissionId || createSubmissionId());
         
+        document.getElementById('reporterName').value = draft.reporterName || lastReporter;
+
         const currentProjectId = document.getElementById('projectId').value.trim();
         
         if (projectMode === 'LOCKED') {
@@ -768,6 +794,9 @@
     }
 
     function validateForm() {
+      const reporterName = document.getElementById('reporterName').value.trim();
+      if (!reporterName) { alert('請填寫您的填表人姓名'); return false; }
+
       const isNoWork = document.getElementById('noWorkToday').checked;
 
       if (isNoWork) {
@@ -849,6 +878,9 @@
       submitButton.disabled = true;
       submitButton.textContent = '正在送出...';
 
+      const reporterName = document.getElementById('reporterName').value.trim();
+      localStorage.setItem('lastReporterName', reporterName);
+
       let finalContractorStr, finalWorkerCountStr, finalProgressStr, finalMaterialStr;
       
       const isNoWork = document.getElementById('noWorkToday').checked;
@@ -888,6 +920,7 @@
         projectId: document.getElementById('projectId').value.trim(),
         projectName: getSelectedProjectName(),
         submissionId: submissionIdStr,
+        reporterName: reporterName,
         
         temp: document.getElementById('temp').value || '未填寫',
         humidity: document.getElementById('humidity').value || '未填寫',
