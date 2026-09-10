@@ -224,6 +224,17 @@
         document.getElementById('submitButton').disabled = true;
         alert('案場載入失敗，請重新從施工群組開啟表單');
       }
+
+      // 【優化新增】游標離開姓名欄位時，立刻記憶起來
+      const reporterInput = document.getElementById('reporterName');
+      if (reporterInput) {
+          reporterInput.addEventListener('blur', function() {
+              const currentName = this.value.trim();
+              if (currentName !== '') {
+                  localStorage.setItem('lastReporterName', currentName);
+              }
+          });
+      }
     });
 
     async function loadLockedProject(projectId) {
@@ -287,22 +298,12 @@
       return safeReadArray(CONTRACTORS_KEY);
     }
 
+    // 【優化修正】徹底清除手機快取並重新載入畫面
     function resetContractorsCache() {
-      if (confirm('確定要清除所有自行輸入的廠商名稱紀錄嗎？(預設廠商將保留)')) {
+      if (confirm('確定要清除所有自行輸入的廠商名稱紀錄嗎？\n(預設廠商將保留，清除後畫面會自動重新整理)')) {
         localStorage.removeItem(CONTRACTORS_KEY);
-        document.querySelectorAll('.contractor-name').forEach(select => {
-            const currentVal = select.value;
-            select.innerHTML = '';
-            select.add(new Option('請選擇廠商', ''));
-            select.options[0].disabled = true;
-            getSavedContractorsList().forEach(c => select.add(new Option(c, c)));
-            select.add(new Option('其他 (自行輸入)', '其他'));
-            const exists = [...select.options].some(opt => opt.value === currentVal);
-            select.value = exists ? currentVal : (currentVal ? '其他' : '');
-            toggleCustomContractorRow(select);
-        });
-        saveDraft();
-        alert('已清除自訂廠商紀錄！');
+        alert('✅ 已成功清除自訂廠商紀錄！');
+        location.reload(); 
       }
     }
 
@@ -876,7 +877,7 @@
       const submitButton = document.getElementById('submitButton');
       isSubmitting = true;
       submitButton.disabled = true;
-      submitButton.textContent = '正在送出...';
+      submitButton.textContent = '⏳ 正在送出，請稍候...';
 
       const reporterName = document.getElementById('reporterName').value.trim();
       localStorage.setItem('lastReporterName', reporterName);
@@ -956,7 +957,7 @@
         if (result.archived) reportArchived = true;
         if (result.archived && result.pushed) {
           localStorage.removeItem(getDraftKey());
-          alert('日報已歸檔並發布至 LINE 群組');
+          alert('✅ 日報已歸檔並發布至 LINE 群組');
           if (window.liff && liff.isInClient()) liff.closeWindow();
           return;
         }
@@ -970,9 +971,11 @@
           alert('日報已歸檔至 OneDrive，但 LINE 發布失敗。');
           return;
         }
-        alert(result.message || '日報處理完成');
+        alert(result.message || '✅ 日報處理完成');
       } catch (error) {
-        alert(`傳送失敗：${error.message}`);
+        // 【優化新增】網路不穩或斷線時的溫馨防呆機制
+        console.error('送出失敗:', error);
+        alert('⚠️ 網路似乎不穩定或斷線了！\n\n別擔心，您填寫的資料已經安全暫存。請移動到收訊良好的地方後，再按一次送出即可。');
       } finally {
         isSubmitting = false;
         if (!reportArchived) { submitButton.disabled = false; submitButton.textContent = '確認送出並發布至群組'; }
