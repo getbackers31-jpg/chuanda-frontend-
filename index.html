@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>云說工程 - 施工日報表</title>
+  <title>云說工程 - 施工日報與材料進場表</title>
   <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
     body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background:#f4f7f6; padding:15px; color:#333; margin:0; }
@@ -11,7 +11,7 @@
     h2 { text-align:center; color:#00B900; margin-top:0; font-size:22px; position: relative; }
     .version-tag { font-size: 10px; color: #ccc; position: absolute; right: 0; bottom: 0; font-weight: normal; }
     label { font-weight:bold; display:block; margin-top:15px; margin-bottom:5px; color:#444; }
-    select, textarea, input[type="text"], input[type="number"] { width:100%; padding:10px; border:1px solid #ccc; border-radius:5px; box-sizing:border-box; font-size:16px; background:#fafafa; margin-bottom:5px; }
+    select, textarea, input[type="text"], input[type="number"], input[type="date"] { width:100%; padding:10px; border:1px solid #ccc; border-radius:5px; box-sizing:border-box; font-size:16px; background:#fafafa; margin-bottom:5px; }
     .flex-row { display:flex; gap:10px; margin-bottom:5px; }
     .flex-row > * { flex:1; min-width:0; }
     .btn-weather { background:#17a2b8; color:white; border:0; padding:9px; border-radius:5px; cursor:pointer; font-size:14px; width:100%; margin-bottom:10px; }
@@ -36,8 +36,27 @@
 </head>
 <body>
   <div class="container">
-    <h2>👷 施工日報表 <span class="version-tag">v2</span></h2>
+    <h2 id="formTitle">👷 施工日報表 <span class="version-tag">v3</span></h2>
+
+    <!-- 💡 模式切換按鈕 -->
+    <div style="display:flex; gap:10px; margin-bottom:15px;">
+        <button type="button" id="btnDailyMode" class="btn btn-primary" style="flex:1; padding:10px; border:none; border-radius:5px; background:#00B900; color:white; font-weight:bold; cursor:pointer;" onclick="switchMode('daily_report')">📝 填寫施工日報</button>
+        <button type="button" id="btnIssueMode" class="btn btn-outline-secondary" style="flex:1; padding:10px; border:1px solid #ccc; border-radius:5px; background:#e9ecef; color:#333; font-weight:bold; cursor:pointer;" onclick="switchMode('material_issue')">📦 登記材料進場</button>
+    </div>
+
     <form id="dailyReportForm">
+      <!-- 隱藏欄位：目前表單模式 -->
+      <input type="hidden" id="formType" value="daily_report">
+
+      <!-- 📦 材料進場專用：進場類型選項 (預設隱藏) -->
+      <div id="issueTypeSection" class="hidden" style="background:#f8f9fa; padding:12px; border-radius:5px; border-left:4px solid #28a745; margin-bottom:15px;">
+        <label for="issueType" style="margin-top:0;">🚚 進場類型 <span style="color:red">*</span></label>
+        <select id="issueType" onchange="saveDraft()">
+          <option value="OPENING">🏢 開工首批進場</option>
+          <option value="ADDITIONAL">🚚 後續追加進場</option>
+        </select>
+        <div class="field-help">此紀錄將自動寫入 Excel 的「材料結案總表」作為案場領入數量。</div>
+      </div>
       
       <label for="reporterName">👤 填表人姓名</label>
       <input type="text" id="reporterName" placeholder="請輸入您的姓名 (系統將自動記憶)" oninput="saveDraft()" required>
@@ -62,10 +81,18 @@
 
       <input type="hidden" id="projectId" value="">
 
-      <!-- 今日無出工選項 -->
-      <label class="no-material-option" style="margin-top:15px; background:#fff3f3; border-color:#ffcccc; color:#cc0000;">
-        <input type="checkbox" id="noWorkToday" onchange="handleNoWorkChange(); saveDraft()">今日無出工 (停工/休息)
-      </label>
+      <!-- 📅 日期欄位 (進場單特別需要自訂日期，日報預設今天) -->
+      <div id="dateSection" class="daily-only">
+        <label for="reportDate">📅 日期</label>
+        <input type="date" id="reportDate" onchange="saveDraft()">
+      </div>
+
+      <!-- 🔵 【施工日報專用區塊】今日無出工選項 -->
+      <div class="daily-only">
+        <label class="no-material-option" style="margin-top:15px; background:#fff3f3; border-color:#ffcccc; color:#cc0000;">
+          <input type="checkbox" id="noWorkToday" onchange="handleNoWorkChange(); saveDraft()">今日無出工 (停工/休息)
+        </label>
+      </div>
 
       <!-- 無出工原因 -->
       <div id="noWorkReasonSection" class="hidden">
@@ -80,7 +107,8 @@
         <div class="section-divider"></div>
       </div>
 
-      <div id="contractorSection">
+      <!-- 🔵 施工廠商與人數 (日報專用) -->
+      <div id="contractorSection" class="daily-only">
         <label>🤝 施工廠商與人數</label>
         <div id="contractorsContainer"></div>
         <button type="button" class="btn-add" onclick="addContractorRow()" style="background:#5bc0de;">➕ 新增一組廠商</button>
@@ -88,36 +116,44 @@
         <div class="section-divider"></div>
       </div>
 
-      <label>🌤️ 氣象資訊</label>
-      <button type="button" class="btn-weather" onclick="getWeather()">一鍵獲取當地天氣</button>
-      <div class="flex-row">
-        <input type="number" id="temp" placeholder="溫度(度)" step="0.1" oninput="saveDraft()">
-        <input type="number" id="humidity" placeholder="濕度(%)" min="0" max="100" step="1" oninput="saveDraft()">
-        <input type="number" id="wind" placeholder="風速(m/s)" min="0" step="0.1" oninput="saveDraft()">
+      <!-- 🔵 氣象資訊 (日報專用) -->
+      <div class="daily-only">
+        <label>🌤️ 氣象資訊</label>
+        <button type="button" class="btn-weather" onclick="getWeather()">一鍵獲取當地天氣</button>
+        <div class="flex-row">
+          <input type="number" id="temp" placeholder="溫度(度)" step="0.1" oninput="saveDraft()">
+          <input type="number" id="humidity" placeholder="濕度(%)" min="0" max="100" step="1" oninput="saveDraft()">
+          <input type="number" id="wind" placeholder="風速(m/s)" min="0" step="0.1" oninput="saveDraft()">
+        </div>
+        <div class="section-divider"></div>
       </div>
-      <div class="section-divider"></div>
 
-      <div id="workAndMaterialSection">
+      <!-- 🔵 今日作業 (日報專用) -->
+      <div id="workAndMaterialSection" class="daily-only">
         <label>🛠️ 今日作業</label>
         <div class="checkbox-grid" id="workItemsGrid"></div>
         <input type="text" id="customWorkItem" class="hidden" placeholder="請輸入其他作業項目" maxlength="100" oninput="saveDraft()" style="margin-top:10px">
         <textarea id="workNotes" rows="2" placeholder="作業補充（選填）" oninput="saveDraft()" style="margin-top:10px"></textarea>
         <div class="section-divider"></div>
+      </div>
 
-        <label>📦 今日用料</label>
-        <label class="no-material-option">
-          <input type="checkbox" id="noMaterial" onchange="handleNoMaterialChange(); saveDraft()">今日無用料
-        </label>
+      <!-- 📦 用料區塊 (日報與進場單共用，但進場單不需要「今日無用料」) -->
+      <div id="materialSectionContainer">
+        <label id="materialLabel">📦 今日用料</label>
+        <div id="noMaterialWrapper" class="daily-only">
+          <label class="no-material-option">
+            <input type="checkbox" id="noMaterial" onchange="handleNoMaterialChange(); saveDraft()">今日無用料
+          </label>
+        </div>
         <div id="materialsContainer"></div>
         <button type="button" id="addMaterialButton" class="btn-add" onclick="addMaterialRow()">新增一項用料</button>
-
         <div class="section-divider"></div>
       </div>
 
       <label for="remarks">📝 備註（選填）</label>
       <textarea id="remarks" rows="2" placeholder="天候影響、材料短缺、人員異動等狀況" oninput="saveDraft()"></textarea>
 
-      <button type="button" id="submitButton" class="submit-btn" onclick="submitForm()">確認送出並發布至群組</button>
+      <button type="button" id="submitButton" class="submit-btn" onclick="submitForm()">確認送出施工日報</button>
     </form>
   </div>
 
@@ -149,6 +185,61 @@
     let reportArchived = false;
     let projectMode = 'LOADING';
     let currentSubmissionId = '';
+
+    // 💡 模式切換邏輯
+    function switchMode(mode) {
+        document.getElementById('formType').value = mode;
+        const btnDaily = document.getElementById('btnDailyMode');
+        const btnIssue = document.getElementById('btnIssueMode');
+        const dailyOnlyElements = document.querySelectorAll('.daily-only');
+        const issueTypeSection = document.getElementById('issueTypeSection');
+        const formTitle = document.getElementById('formTitle');
+        const submitButton = document.getElementById('submitButton');
+        const materialLabel = document.getElementById('materialLabel');
+
+        if (mode === 'daily_report') {
+            btnDaily.style.background = '#00B900';
+            btnDaily.style.color = 'white';
+            btnDaily.style.border = 'none';
+            btnIssue.style.background = '#e9ecef';
+            btnIssue.style.color = '#333';
+            btnIssue.style.border = '1px solid #ccc';
+            
+            formTitle.innerHTML = '👷 施工日報表 <span class="version-tag">v3</span>';
+            submitButton.textContent = '確認送出並發布至群組';
+            submitButton.style.background = '#00B900';
+            materialLabel.textContent = '📦 今日用料';
+
+            issueTypeSection.classList.add('hidden');
+            dailyOnlyElements.forEach(el => el.classList.remove('hidden'));
+
+            // 恢復日報必填
+            document.getElementById('temp').required = false;
+            document.getElementById('humidity').required = false;
+            document.getElementById('wind').required = false;
+        } else {
+            btnDaily.style.background = '#e9ecef';
+            btnDaily.style.color = '#333';
+            btnDaily.style.border = '1px solid #ccc';
+            btnIssue.style.background = '#28a745';
+            btnIssue.style.color = 'white';
+            btnIssue.style.border = 'none';
+
+            formTitle.innerHTML = '📦 材料進場登記表 <span class="version-tag">v3</span>';
+            submitButton.textContent = '確認送出材料進場紀錄';
+            submitButton.style.background = '#28a745';
+            materialLabel.textContent = '📦 進場材料清單';
+
+            issueTypeSection.classList.remove('hidden');
+            dailyOnlyElements.forEach(el => el.classList.add('hidden'));
+
+            // 取消日報必填
+            document.getElementById('temp').required = false;
+            document.getElementById('humidity').required = false;
+            document.getElementById('wind').required = false;
+        }
+        saveDraft();
+    }
 
     function createSubmissionId() {
       if (window.crypto && typeof window.crypto.randomUUID === 'function') {
@@ -188,7 +279,7 @@
         const res = await fetch(url);
         const data = await res.json();
         if (data.success && Array.isArray(data.materials) && data.materials.length > 0) {
-            MATERIAL_OPTIONS = data.materials;
+            MATERIAL_OPTIONS = data.materials.map(m => m.materialName);
         } else {
             MATERIAL_OPTIONS = ['立邦9011', '虹牌MIO', '虹牌優利面UP-04', '矽利康'];
         }
@@ -200,6 +291,11 @@
 
     window.addEventListener('load', async () => {
       initializeStaticForm();
+
+      // 預設填入今天日期
+      const todayStr = new Date().toISOString().split('T')[0];
+      const dateInput = document.getElementById('reportDate');
+      if (dateInput) dateInput.value = todayStr;
 
       try {
         await liff.init({ liffId: LIFF_ID });
@@ -225,7 +321,6 @@
         alert('案場載入失敗，請重新從施工群組開啟表單');
       }
 
-      // 【優化新增】游標離開姓名欄位時，立刻記憶起來
       const reporterInput = document.getElementById('reporterName');
       if (reporterInput) {
           reporterInput.addEventListener('blur', function() {
@@ -298,7 +393,6 @@
       return safeReadArray(CONTRACTORS_KEY);
     }
 
-    // 【優化修正】徹底清除手機快取並重新載入畫面
     function resetContractorsCache() {
       if (confirm('確定要清除所有自行輸入的廠商名稱紀錄嗎？\n(預設廠商將保留，清除後畫面會自動重新整理)')) {
         localStorage.removeItem(CONTRACTORS_KEY);
@@ -335,7 +429,6 @@
       const isNoWork = document.getElementById('noWorkToday').checked;
       document.getElementById('noWorkReasonSection').classList.toggle('hidden', !isNoWork);
       document.getElementById('contractorSection').classList.toggle('hidden', isNoWork);
-      document.getElementById('workAndMaterialSection').classList.toggle('hidden', isNoWork);
     }
 
     function handleNoMaterialChange() {
@@ -515,7 +608,7 @@
 
     function refreshMaterialTitles() {
       const groups = document.querySelectorAll('#materialsContainer .material-group');
-      groups.forEach((group, index) => group.querySelector('.material-title').textContent = `用料 ${index + 1}`);
+      groups.forEach((group, index) => group.querySelector('.material-title').textContent = `品項 ${index + 1}`);
       const addButton = document.getElementById('addMaterialButton');
       addButton.disabled = groups.length >= MAX_MATERIAL_ROWS;
       addButton.textContent = groups.length >= MAX_MATERIAL_ROWS ? `已達上限，共 ${MAX_MATERIAL_ROWS} 筆` : '新增一項用料';
@@ -526,12 +619,6 @@
       const isCustom = select.value === '其他';
       input.classList.toggle('hidden', !isCustom);
       if (isCustom) input.focus(); else input.value = '';
-    }
-
-    function formatMaterial(name, qty, unit) {
-      if (unit === '桶 (1加侖)') return `${name}：${qty}桶，每桶1加侖`;
-      if (unit === '桶 (5加侖)') return `${name}：${qty}桶，每桶5加侖`;
-      return `${name}：${qty}${unit}`;
     }
 
     async function getWeather() {
@@ -577,10 +664,13 @@
       }));
 
       const draft = {
+        formType: document.getElementById('formType').value,
+        issueType: document.getElementById('issueType').value,
         submissionId: ensureSubmissionId(),
         projectId: document.getElementById('projectId').value.trim(),
         projectName: getSelectedProjectName(),
         reporterName: document.getElementById('reporterName').value.trim(), 
+        reportDate: document.getElementById('reportDate').value,
         isNoWork: document.getElementById('noWorkToday').checked,
         noWorkReason: document.getElementById('noWorkReason').value,
         contractorsList,
@@ -612,12 +702,20 @@
         }
         
         const draft = JSON.parse(saved);
+        if (draft.formType) {
+            switchMode(draft.formType);
+        }
+        if (draft.issueType) {
+            document.getElementById('issueType').value = draft.issueType;
+        }
+        if (draft.reportDate) {
+            document.getElementById('reportDate').value = draft.reportDate;
+        }
+
         currentSubmissionId = String(draft.submissionId || createSubmissionId());
-        
         document.getElementById('reporterName').value = draft.reporterName || lastReporter;
 
         const currentProjectId = document.getElementById('projectId').value.trim();
-        
         if (projectMode === 'LOCKED') {
           if ((draft.projectId && draft.projectId !== currentProjectId) || (!draft.projectId && draft.projectName && draft.projectName !== getSelectedProjectName())) {
             console.warn('草稿不符合目前鎖定案場，已略過');
@@ -640,8 +738,6 @@
         document.getElementById('contractorsContainer').innerHTML = '';
         if (Array.isArray(draft.contractorsList) && draft.contractorsList.length > 0) {
             draft.contractorsList.forEach(c => addContractorRow(c.name, c.customName, c.workers));
-        } else if (draft.contractor) {
-            addContractorRow(draft.contractor, draft.customContractor || '', draft.workerCount || '');
         } else {
             addContractorRow();
         }
@@ -687,32 +783,8 @@
       }
     }
 
-    function buildProgressString() {
-      const customWorkItem = document.getElementById('customWorkItem').value.trim();
-      const items = [...document.querySelectorAll('input[name="workItem"]:checked')].map(item =>
-        `• ${item.value === '其他' ? customWorkItem : item.value}`
-      );
-      const notes = document.getElementById('workNotes').value.trim();
-      return items.join('\n') + (notes ? `\n\n作業補充：\n${notes}` : '');
-    }
-
-    function buildMaterialString() {
-      if (document.getElementById('noMaterial').checked) return '無';
-      const materials = [];
-      document.querySelectorAll('#materialsContainer .material-group').forEach(group => {
-        const selected = group.querySelector('.mat-name').value;
-        const name = selected === '其他' ? group.querySelector('.custom-mat-name').value.trim() : selected;
-        const qty = group.querySelector('.mat-qty').value;
-        const unit = group.querySelector('.mat-unit').value;
-        if (name && qty && unit) materials.push(formatMaterial(name, qty, unit));
-      });
-      return materials.join('\n');
-    }
-
     function buildContractorItems() {
-      if (document.getElementById('noWorkToday').checked) {
-        return [];
-      }
+      if (document.getElementById('noWorkToday').checked) return [];
       return [...document.querySelectorAll('#contractorsContainer .contractor-group')]
         .map(group => {
           const selected = group.querySelector('.contractor-name').value;
@@ -722,25 +794,19 @@
           const workerCount = Number(group.querySelector('.contractor-workers').value) || 0;
           return { contractorName, workerCount };
         })
-        .filter(item => {
-          return item.contractorName && item.workerCount > 0;
-        });
+        .filter(item => item.contractorName && item.workerCount > 0);
     }
 
     function buildWorkItems() {
-      if (document.getElementById('noWorkToday').checked) {
-        return [];
-      }
-      return [...document.querySelectorAll('input[name="workItem"]:checked')]
-        .map(item => item.value);
+      if (document.getElementById('noWorkToday').checked) return [];
+      return [...document.querySelectorAll('input[name="workItem"]:checked')].map(item => item.value);
     }
 
     function buildMaterialItems() {
-      const isNoWork = document.getElementById('noWorkToday').checked;
-      const isNoMaterial = document.getElementById('noMaterial').checked;
-      if (isNoWork || isNoMaterial) {
-        return [];
-      }
+      const formType = document.getElementById('formType').value;
+      const isNoWork = formType === 'daily_report' && document.getElementById('noWorkToday').checked;
+      const isNoMaterial = formType === 'daily_report' && document.getElementById('noMaterial').checked;
+      if (isNoWork || isNoMaterial) return [];
 
       return [...document.querySelectorAll('#materialsContainer .material-group')]
         .map(group => {
@@ -782,9 +848,7 @@
             baseUnit
           };
         })
-        .filter(item => {
-          return item.materialName && item.quantity > 0;
-        });
+        .filter(item => item.materialName && item.quantity > 0);
     }
 
     function validateProject() {
@@ -798,8 +862,32 @@
       const reporterName = document.getElementById('reporterName').value.trim();
       if (!reporterName) { alert('請填寫您的填表人姓名'); return false; }
 
-      const isNoWork = document.getElementById('noWorkToday').checked;
+      const formType = document.getElementById('formType').value;
 
+      // 📦 如果是材料進場單模式
+      if (formType === 'material_issue') {
+          const mGroups = [...document.querySelectorAll('#materialsContainer .material-group')];
+          let validCount = 0;
+          for (let i = 0; i < mGroups.length; i++) {
+              const group = mGroups[i];
+              const selected = group.querySelector('.mat-name').value;
+              const custom = group.querySelector('.custom-mat-name').value.trim();
+              const qty = Number(group.querySelector('.mat-qty').value);
+              const unit = group.querySelector('.mat-unit').value;
+              
+              if (!selected && !custom && !qty && !unit) continue;
+              if (!selected) { alert(`請選擇進場材料 ${i + 1} 的品項`); return false; }
+              if (selected === '其他' && !custom) { alert(`請輸入進場材料 ${i + 1} 的名稱`); return false; }
+              if (!qty || qty <= 0) { alert(`請輸入進場材料 ${i + 1} 的正確數量`); return false; }
+              if (!unit) { alert(`請選擇進場材料 ${i + 1} 的單位`); return false; }
+              validCount++;
+          }
+          if (validCount === 0) { alert('請至少填寫一筆進場材料'); return false; }
+          return true;
+      }
+
+      // 📝 如果是施工日報模式
+      const isNoWork = document.getElementById('noWorkToday').checked;
       if (isNoWork) {
          if (!document.getElementById('noWorkReason').value) { alert('請選擇今日無出工原因'); return false; }
       } else {
@@ -807,7 +895,6 @@
           if (cGroups.length === 0) { alert('請至少填寫一組施工廠商'); return false; }
           
           const contractorNames = new Set(); 
-
           for (let i = 0; i < cGroups.length; i++) {
               const group = cGroups[i];
               const name = group.querySelector('.contractor-name').value;
@@ -854,23 +941,13 @@
               if (!unit) { alert(`請選擇用料 ${i + 1} 的單位`); return false; }
               completed++;
             }
-            if (!completed) { alert('請至少填寫一筆今日用料，或勾選「今日無用料」'); return false; }
           }
       }
-
-      const temp = document.getElementById('temp').value.trim();
-      const hum = document.getElementById('humidity').value.trim();
-      const wind = document.getElementById('wind').value.trim();
-      if (temp && !Number.isFinite(Number(temp))) { alert('溫度必須是數字'); return false; }
-      if (hum && (!Number.isFinite(Number(hum)) || Number(hum) < 0 || Number(hum) > 100)) { alert('濕度必須介於 0 至 100'); return false; }
-      if (wind && (!Number.isFinite(Number(wind)) || Number(wind) < 0)) { alert('風速必須是大於或等於 0 的數字'); return false; }
-
       return true;
     }
 
     async function submitForm() {
       if (isSubmitting) return;
-      if (reportArchived) { alert('這份日報已歸檔，請勿重複送出。'); return; }
       if (!validateProject()) return;
       if (!validateForm()) return;
 
@@ -882,65 +959,76 @@
       const reporterName = document.getElementById('reporterName').value.trim();
       localStorage.setItem('lastReporterName', reporterName);
 
-      let finalContractorStr, finalWorkerCountStr, finalProgressStr, finalMaterialStr;
-      
-      const isNoWork = document.getElementById('noWorkToday').checked;
-      if (isNoWork) {
-          const reason = document.getElementById('noWorkReason').value;
-          finalContractorStr = '無出工';
-          finalWorkerCountStr = '0';
-          finalProgressStr = `今日無出工 (停工/休息)\n原因：${reason}`;
-          finalMaterialStr = '無';
-      } else {
-          saveNewContractorsFromForm();
-
-          let totalWorkers = 0;
-          const contractorList = [];
-          document.querySelectorAll('#contractorsContainer .contractor-group').forEach(group => {
-              const select = group.querySelector('.contractor-name').value;
-              const name = select === '其他' ? group.querySelector('.custom-contractor-name').value.trim() : select;
-              const workers = Number(group.querySelector('.contractor-workers').value);
-              contractorList.push(`• ${name}（${workers}人）`);
-              totalWorkers += workers;
-          });
-
-          finalContractorStr = '\n' + contractorList.join('\n');
-          finalWorkerCountStr = `共 ${totalWorkers} 人`;
-          finalProgressStr = buildProgressString();
-          finalMaterialStr = buildMaterialString();
-      }
-
-      const contractorItems = buildContractorItems();
-      const workItems = buildWorkItems();
-      const materialItems = buildMaterialItems();
-      const totalWorkerCount = contractorItems.reduce((total, item) => total + item.workerCount, 0);
-
+      const formType = document.getElementById('formType').value;
       const submissionIdStr = ensureSubmissionId();
+      const reportDateVal = document.getElementById('reportDate').value;
 
-      const payload = {
+      let payload = {
+        formType: formType,
         projectId: document.getElementById('projectId').value.trim(),
         projectName: getSelectedProjectName(),
         submissionId: submissionIdStr,
         reporterName: reporterName,
-        
-        temp: document.getElementById('temp').value || '未填寫',
-        humidity: document.getElementById('humidity').value || '未填寫',
-        wind: document.getElementById('wind').value || '未填寫',
-        contractor: finalContractorStr,
-        workerCount: finalWorkerCountStr,
-        progress: finalProgressStr,
-        materials: finalMaterialStr,
-        remarks: document.getElementById('remarks').value.trim() || '無',
-        
-        isNoWork,
-        noWorkReason: isNoWork ? document.getElementById('noWorkReason').value : '',
-        contractorItems,
-        totalWorkerCount,
-        workItems,
-        customWorkItem: isNoWork ? '' : document.getElementById('customWorkItem').value.trim(),
-        workNotes: isNoWork ? '' : document.getElementById('workNotes').value.trim(),
-        materialItems
+        date: reportDateVal,
+        remarks: document.getElementById('remarks').value.trim() || '無'
       };
+
+      if (formType === 'material_issue') {
+          payload.issueType = document.getElementById('issueType').value;
+          payload.materialItems = buildMaterialItems();
+      } else {
+          const isNoWork = document.getElementById('noWorkToday').checked;
+          let finalContractorStr, finalWorkerCountStr, finalProgressStr, finalMaterialStr;
+
+          if (isNoWork) {
+              const reason = document.getElementById('noWorkReason').value;
+              finalContractorStr = '無出工';
+              finalWorkerCountStr = '0';
+              finalProgressStr = `今日無出工 (停工/休息)\n原因：${reason}`;
+              finalMaterialStr = '無';
+          } else {
+              saveNewContractorsFromForm();
+              let totalWorkers = 0;
+              const contractorList = [];
+              document.querySelectorAll('#contractorsContainer .contractor-group').forEach(group => {
+                  const select = group.querySelector('.contractor-name').value;
+                  const name = select === '其他' ? group.querySelector('.custom-contractor-name').value.trim() : select;
+                  const workers = Number(group.querySelector('.contractor-workers').value);
+                  contractorList.push(`• ${name}（${workers}人）`);
+                  totalWorkers += workers;
+              });
+
+              finalContractorStr = '\n' + contractorList.join('\n');
+              finalWorkerCountStr = `共 ${totalWorkers} 人`;
+              finalProgressStr = [
+                  [...document.querySelectorAll('input[name="workItem"]:checked')].map(i => `• ${i.value === '其他' ? document.getElementById('customWorkItem').value.trim() : i.value}`).join('\n'),
+                  document.getElementById('workNotes').value.trim() ? `\n作業補充：\n${document.getElementById('workNotes').value.trim()}` : ''
+              ].filter(Boolean).join('\n');
+              
+              finalMaterialStr = document.getElementById('noMaterial').checked ? '無' : [...document.querySelectorAll('#materialsContainer .material-group')].map(g => {
+                  const s = g.querySelector('.mat-name').value;
+                  const n = s === 'other' ? g.querySelector('.custom-mat-name').value.trim() : s;
+                  return `${n}：${g.querySelector('.mat-qty').value}${g.querySelector('.mat-unit').value}`;
+              }).join('\n');
+          }
+
+          const contractorItems = buildContractorItems();
+          payload.temp = document.getElementById('temp').value || '未填寫';
+          payload.humidity = document.getElementById('humidity').value || '未填寫';
+          payload.wind = document.getElementById('wind').value || '未填寫';
+          payload.contractor = finalContractorStr;
+          payload.workerCount = finalWorkerCountStr;
+          payload.progress = finalProgressStr;
+          payload.materials = finalMaterialStr;
+          payload.isNoWork = isNoWork;
+          payload.noWorkReason = isNoWork ? document.getElementById('noWorkReason').value : '';
+          payload.contractorItems = contractorItems;
+          payload.totalWorkerCount = contractorItems.reduce((t, i) => t + i.workerCount, 0);
+          payload.workItems = buildWorkItems();
+          payload.customWorkItem = isNoWork ? '' : document.getElementById('customWorkItem').value.trim();
+          payload.workNotes = isNoWork ? '' : document.getElementById('workNotes').value.trim();
+          payload.materialItems = buildMaterialItems();
+      }
 
       try {
         const response = await fetch(API_URL, {
@@ -954,31 +1042,16 @@
         try { result = responseText ? JSON.parse(responseText) : {}; } catch { throw new Error(`HTTP ${response.status}`); }
         if (!response.ok || result.success === false) throw new Error(result.error || result.message || `系統處理失敗`);
 
-        if (result.archived) reportArchived = true;
-        if (result.archived && result.pushed) {
-          localStorage.removeItem(getDraftKey());
-          alert('✅ 日報已歸檔並發布至 LINE 群組');
-          if (window.liff && liff.isInClient()) liff.closeWindow();
-          return;
-        }
-        if (result.archived && result.reason === 'PROJECT_NOT_BOUND') {
-          submitButton.textContent = '日報已歸檔，尚未發布';
-          alert('日報已歸檔至 OneDrive，但案場尚未綁定 LINE。');
-          return;
-        }
-        if (result.archived && result.reason === 'LINE_PUSH_FAILED') {
-          submitButton.textContent = '日報已歸檔，發布失敗';
-          alert('日報已歸檔至 OneDrive，但 LINE 發布失敗。');
-          return;
-        }
-        alert(result.message || '✅ 日報處理完成');
+        localStorage.removeItem(getDraftKey());
+        alert(result.message || '✅ 資料已成功送出與歸檔');
+        if (window.liff && liff.isInClient()) liff.closeWindow();
       } catch (error) {
-        // 【優化新增】網路不穩或斷線時的溫馨防呆機制
         console.error('送出失敗:', error);
-        alert('⚠️ 網路似乎不穩定或斷線了！\n\n別擔心，您填寫的資料已經安全暫存。請移動到收訊良好的地方後，再按一次送出即可。');
+        alert('⚠️ 網路似乎不穩定或斷線了！\n\n別擔心，您填寫的資料已經安全暫存，請檢查網路後再次送出。');
       } finally {
         isSubmitting = false;
-        if (!reportArchived) { submitButton.disabled = false; submitButton.textContent = '確認送出並發布至群組'; }
+        submitButton.disabled = false;
+        submitButton.textContent = formType === 'material_issue' ? '確認送出材料進場紀錄' : '確認送出並發布至群組';
       }
     }
   </script>
