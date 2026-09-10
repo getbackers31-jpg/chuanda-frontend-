@@ -36,19 +36,16 @@
 </head>
 <body>
   <div class="container">
-    <h2 id="formTitle">👷 施工日報表 <span class="version-tag">v4</span></h2>
+    <h2 id="formTitle">👷 施工日報表 <span class="version-tag">v5</span></h2>
 
-    <!-- 💡 模式切換按鈕 -->
     <div style="display:flex; gap:10px; margin-bottom:15px;">
         <button type="button" id="btnDailyMode" class="btn btn-primary" style="flex:1; padding:10px; border:none; border-radius:5px; background:#00B900; color:white; font-weight:bold; cursor:pointer;" onclick="switchMode('daily_report')">📝 填寫施工日報</button>
         <button type="button" id="btnIssueMode" class="btn btn-outline-secondary" style="flex:1; padding:10px; border:1px solid #ccc; border-radius:5px; background:#e9ecef; color:#333; font-weight:bold; cursor:pointer;" onclick="switchMode('material_issue')">📦 登記材料進場</button>
     </div>
 
     <form id="dailyReportForm">
-      <!-- 隱藏欄位：目前表單模式 -->
       <input type="hidden" id="formType" value="daily_report">
 
-      <!-- 📦 材料進場專用：進場類型選項與補登日期 (預設隱藏) -->
       <div id="issueExtraSection" class="hidden" style="background:#f8f9fa; padding:12px; border-radius:5px; border-left:4px solid #28a745; margin-bottom:15px;">
         <label for="issueType" style="margin-top:0;">🚚 進場類型 <span style="color:red">*</span></label>
         <select id="issueType" onchange="saveDraft()" style="margin-bottom:10px;">
@@ -67,9 +64,7 @@
       <div id="lockedProjectSection" class="hidden">
         <label for="lockedProjectName">📍 案場名稱</label>
         <input type="text" id="lockedProjectName" class="readonly-input" readonly>
-        <div class="field-help">
-          🔒 此連結已綁定以下案場，案場名稱不可修改
-        </div>
+        <div class="field-help">🔒 此連結已綁定以下案場，案場名稱不可修改</div>
       </div>
 
       <div id="compatibleProjectSection">
@@ -77,21 +72,17 @@
         <select id="projectName" onchange="saveDraft()" required disabled>
           <option value="" disabled selected>正在載入案場清單...</option>
         </select>
-        <div class="field-help">
-          新案場請先在施工群組輸入「設定案場 案場名稱」
-        </div>
+        <div class="field-help">新案場請先在施工群組輸入「設定案場 案場名稱」</div>
       </div>
 
       <input type="hidden" id="projectId" value="">
 
-      <!-- 🔵 【施工日報專用區塊】今日無出工選項 -->
       <div class="daily-only">
         <label class="no-material-option" style="margin-top:15px; background:#fff3f3; border-color:#ffcccc; color:#cc0000;">
           <input type="checkbox" id="noWorkToday" onchange="handleNoWorkChange(); saveDraft()">今日無出工 (停工/休息)
         </label>
       </div>
 
-      <!-- 無出工原因 -->
       <div id="noWorkReasonSection" class="hidden">
         <select id="noWorkReason" onchange="saveDraft()" style="border-color:#ffcccc; background:#fffcfc;">
           <option value="" disabled selected>請選擇無出工原因</option>
@@ -104,7 +95,6 @@
         <div class="section-divider"></div>
       </div>
 
-      <!-- 🔵 施工廠商與人數 (日報專用) -->
       <div id="contractorSection" class="daily-only">
         <label>🤝 施工廠商與人數</label>
         <div id="contractorsContainer"></div>
@@ -113,7 +103,6 @@
         <div class="section-divider"></div>
       </div>
 
-      <!-- 🔵 氣象資訊 (日報專用) -->
       <div class="daily-only">
         <label>🌤️ 氣象資訊</label>
         <button type="button" class="btn-weather" onclick="getWeather()">一鍵獲取當地天氣</button>
@@ -125,7 +114,6 @@
         <div class="section-divider"></div>
       </div>
 
-      <!-- 🔵 今日作業 (日報專用) -->
       <div id="workAndMaterialSection" class="daily-only">
         <label>🛠️ 今日作業</label>
         <div class="checkbox-grid" id="workItemsGrid"></div>
@@ -134,7 +122,6 @@
         <div class="section-divider"></div>
       </div>
 
-      <!-- 📦 用料區塊 (日報與進場單共用) -->
       <div id="materialSectionContainer">
         <label id="materialLabel">📦 今日用料</label>
         <div id="noMaterialWrapper" class="daily-only">
@@ -171,10 +158,11 @@
       '面漆膜厚檢測', '缺失改善', '現場清潔', '等待驗收', '完成驗收', '其他'
     ];
 
-    let MATERIAL_OPTIONS = [];
+    let MATERIAL_ITEMS_MAP = new Map(); // materialId -> item object
+    let MATERIAL_OPTIONS = []; // inventory items array
 
     const UNIT_OPTIONS = [
-      '桶 (1加侖)', '桶 (5加侖)', '桶', '組', '支', '公斤', '公升', '個', '捲'
+      '桶', '組', '支', '公斤', '公升', '個', '捲', '塊'
     ];
 
     let isSubmitting = false;
@@ -183,7 +171,15 @@
     let projectMode = 'LOADING';
     let currentSubmissionId = '';
 
-    // 💡 模式切換邏輯 (日報隱藏日期，進場單顯示日期可補登)
+    function getTaiwanDateString() {
+      return new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Taipei',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      }).format(new Date());
+    }
+
     function switchMode(mode) {
         document.getElementById('formType').value = mode;
         const btnDaily = document.getElementById('btnDailyMode');
@@ -202,7 +198,7 @@
             btnIssue.style.color = '#333';
             btnIssue.style.border = '1px solid #ccc';
             
-            formTitle.innerHTML = '👷 施工日報表 <span class="version-tag">v4</span>';
+            formTitle.innerHTML = '👷 施工日報表 <span class="version-tag">v5</span>';
             submitButton.textContent = '確認送出並發布至群組';
             submitButton.style.background = '#00B900';
             materialLabel.textContent = '📦 今日用料';
@@ -217,7 +213,7 @@
             btnIssue.style.color = 'white';
             btnIssue.style.border = 'none';
 
-            formTitle.innerHTML = '📦 材料進場登記表 <span class="version-tag">v4</span>';
+            formTitle.innerHTML = '📦 材料進場登記表 <span class="version-tag">v5</span>';
             submitButton.textContent = '確認送出材料進場紀錄';
             submitButton.style.background = '#28a745';
             materialLabel.textContent = '📦 進場材料清單';
@@ -266,21 +262,24 @@
         const res = await fetch(url);
         const data = await res.json();
         if (data.success && Array.isArray(data.materials) && data.materials.length > 0) {
-            MATERIAL_OPTIONS = data.materials.map(m => m.materialName);
+            MATERIAL_OPTIONS = data.materials;
+            MATERIAL_ITEMS_MAP.clear();
+            MATERIAL_OPTIONS.forEach(m => {
+                if (m.materialId) MATERIAL_ITEMS_MAP.set(m.materialId, m);
+            });
         } else {
-            MATERIAL_OPTIONS = ['立邦9011', '虹牌MIO', '虹牌優利面UP-04', '矽利康'];
+            MATERIAL_OPTIONS = [];
         }
       } catch (err) {
-        console.warn('材料清單讀取失敗，使用預設值', err);
-        MATERIAL_OPTIONS = ['立邦9011', '虹牌MIO', '虹牌優利面UP-04', '矽利康'];
+        console.warn('材料清單讀取失敗', err);
+        MATERIAL_OPTIONS = [];
       }
     }
 
     window.addEventListener('load', async () => {
       initializeStaticForm();
 
-      // 預設填入今天日期
-      const todayStr = new Date().toISOString().split('T')[0];
+      const todayStr = getTaiwanDateString();
       const dateInput = document.getElementById('reportDate');
       if (dateInput) dateInput.value = todayStr;
 
@@ -525,7 +524,7 @@
        if (updated) localStorage.setItem(CONTRACTORS_KEY, JSON.stringify(savedList));
     }
 
-    function addMaterialRow(name = '', customName = '', qty = '', unit = '') {
+    function addMaterialRow(materialId = '', customName = '', qty = '', unit = '') {
       const container = document.getElementById('materialsContainer');
       if (container.children.length >= MAX_MATERIAL_ROWS) {
         alert(`最多可填寫 ${MAX_MATERIAL_ROWS} 筆用料`); return;
@@ -548,8 +547,11 @@
       nameSelect.className = 'mat-name';
       appendOption(nameSelect, '', '請選擇品項');
       nameSelect.options[0].disabled = true;
-      MATERIAL_OPTIONS.forEach(option => appendOption(nameSelect, option));
-      appendOption(nameSelect, '其他');
+      
+      MATERIAL_OPTIONS.forEach(m => {
+          appendOption(nameSelect, m.materialId, m.materialName);
+      });
+      appendOption(nameSelect, '其他', '其他 (自行輸入)');
 
       const customInput = document.createElement('input');
       customInput.type = 'text';
@@ -574,19 +576,30 @@
       row.append(qtyInput, unitSelect);
       div.append(header, nameSelect, customInput, row);
 
-      nameSelect.onchange = () => { toggleCustomMaterial(nameSelect); saveDraft(); };
+      nameSelect.onchange = () => {
+          const selectedId = nameSelect.value;
+          if (selectedId && selectedId !== '其他' && MATERIAL_ITEMS_MAP.has(selectedId)) {
+              const item = MATERIAL_ITEMS_MAP.get(selectedId);
+              if (item.stockUnit) unitSelect.value = item.stockUnit;
+          }
+          toggleCustomMaterial(nameSelect);
+          saveDraft();
+      };
       customInput.oninput = saveDraft;
       qtyInput.oninput = saveDraft;
       unitSelect.onchange = saveDraft;
 
-      const isCustom = name === '其他' || (name && !MATERIAL_OPTIONS.includes(name));
-      nameSelect.value = isCustom ? '其他' : name;
-      if (isCustom) {
-        customInput.value = name === '其他' ? customName : name;
-        customInput.classList.remove('hidden');
+      if (materialId && MATERIAL_ITEMS_MAP.has(materialId)) {
+          nameSelect.value = materialId;
+          const item = MATERIAL_ITEMS_MAP.get(materialId);
+          if (unit) unitSelect.value = unit;
+          else if (item.stockUnit) unitSelect.value = item.stockUnit;
+      } else if (materialId === '其他' || (materialId && !MATERIAL_ITEMS_MAP.has(materialId))) {
+          nameSelect.value = '其他';
+          customInput.value = materialId === '其他' ? customName : materialId;
+          customInput.classList.remove('hidden');
+          if (unit) unitSelect.value = unit;
       }
-      if (qty !== '') qtyInput.value = qty;
-      if (unit) unitSelect.value = unit;
 
       container.appendChild(div);
       refreshMaterialTitles();
@@ -638,7 +651,7 @@
       if (isRestoringDraft || reportArchived || (projectMode !== 'LOCKED' && projectMode !== 'COMPATIBLE')) return;
       
       const materialsList = [...document.querySelectorAll('#materialsContainer .material-group')].map(group => ({
-        name: group.querySelector('.mat-name').value,
+        materialId: group.querySelector('.mat-name').value,
         customName: group.querySelector('.custom-mat-name').value,
         qty: group.querySelector('.mat-qty').value,
         unit: group.querySelector('.mat-unit').value
@@ -748,7 +761,7 @@
           document.getElementById('addMaterialButton').style.display = 'block';
           if (Array.isArray(draft.materialsList) && draft.materialsList.length > 0) {
             document.getElementById('materialsContainer').innerHTML = '';
-            draft.materialsList.forEach(m => addMaterialRow(m.name || '', m.customName || '', m.qty || '', m.unit || ''));
+            draft.materialsList.forEach(m => addMaterialRow(m.materialId || '', m.customName || '', m.qty || '', m.unit || ''));
           } else {
             addMaterialRow();
           }
@@ -797,35 +810,40 @@
 
       return [...document.querySelectorAll('#materialsContainer .material-group')]
         .map(group => {
-          const selected = group.querySelector('.mat-name').value;
-          const materialName = selected === '其他' 
-            ? group.querySelector('.custom-mat-name').value.trim() 
-            : selected;
+          const selectedId = group.querySelector('.mat-name').value;
+          let materialId = null;
+          let materialCode = null;
+          let materialName = '';
+          let packageQuantity = null;
+          let packageUnit = null;
+          let baseUnit = '';
+
+          if (selectedId === 'other' || selectedId === '其他' || !MATERIAL_ITEMS_MAP.has(selectedId)) {
+              materialName = group.querySelector('.custom-mat-name').value.trim();
+          } else {
+              const item = MATERIAL_ITEMS_MAP.get(selectedId);
+              materialId = item.materialId;
+              materialCode = item.materialCode;
+              materialName = item.materialName;
+              packageQuantity = item.packageQuantity;
+              packageUnit = item.packageUnit;
+              baseUnit = item.baseUnit;
+          }
+
           const quantity = Number(group.querySelector('.mat-qty').value) || 0;
           const selectedUnit = group.querySelector('.mat-unit').value;
 
           let stockUnit = selectedUnit;
-          let packageQuantity = null;
-          let packageUnit = null;
           let baseQuantity = quantity;
-          let baseUnit = selectedUnit;
+          if (!baseUnit) baseUnit = selectedUnit;
 
-          if (selectedUnit === '桶 (1加侖)') {
-            stockUnit = '桶';
-            packageQuantity = 1;
-            packageUnit = '加侖';
-            baseQuantity = quantity;
-            baseUnit = '加侖';
-          } else if (selectedUnit === '桶 (5加侖)') {
-            stockUnit = '桶';
-            packageQuantity = 5;
-            packageUnit = '加侖';
-            baseQuantity = quantity * 5;
-            baseUnit = '加侖';
+          if (packageQuantity && packageQuantity > 0) {
+              baseQuantity = quantity * packageQuantity;
           }
 
           return {
-            materialId: null,
+            materialId,
+            materialCode,
             materialName,
             quantity,
             stockUnit,
@@ -851,20 +869,19 @@
 
       const formType = document.getElementById('formType').value;
 
-      // 📦 材料進場單驗證
       if (formType === 'material_issue') {
           const mGroups = [...document.querySelectorAll('#materialsContainer .material-group')];
           let validCount = 0;
           for (let i = 0; i < mGroups.length; i++) {
               const group = mGroups[i];
-              const selected = group.querySelector('.mat-name').value;
+              const selectedId = group.querySelector('.mat-name').value;
               const custom = group.querySelector('.custom-mat-name').value.trim();
               const qty = Number(group.querySelector('.mat-qty').value);
               const unit = group.querySelector('.mat-unit').value;
               
-              if (!selected && !custom && !qty && !unit) continue;
-              if (!selected) { alert(`請選擇進場材料 ${i + 1} 的品項`); return false; }
-              if (selected === '其他' && !custom) { alert(`請輸入進場材料 ${i + 1} 的名稱`); return false; }
+              if (!selectedId && !custom && !qty && !unit) continue;
+              if (!selectedId) { alert(`請選擇進場材料 ${i + 1} 的品項`); return false; }
+              if ((selectedId === '其他' || selectedId === 'other') && !custom) { alert(`請輸入進場材料 ${i + 1} 的名稱`); return false; }
               if (!qty || qty <= 0) { alert(`請輸入進場材料 ${i + 1} 的正確數量`); return false; }
               if (!unit) { alert(`請選擇進場材料 ${i + 1} 的單位`); return false; }
               validCount++;
@@ -873,7 +890,6 @@
           return true;
       }
 
-      // 📝 施工日報驗證
       const isNoWork = document.getElementById('noWorkToday').checked;
       if (isNoWork) {
          if (!document.getElementById('noWorkReason').value) { alert('請選擇今日無出工原因'); return false; }
@@ -941,7 +957,7 @@
 
       if (formType === 'material_issue') {
           payload.issueType = document.getElementById('issueType').value;
-          payload.date = document.getElementById('reportDate').value; // 可自由選取補登日期
+          payload.date = document.getElementById('reportDate').value;
           payload.materialItems = buildMaterialItems();
       } else {
           const isNoWork = document.getElementById('noWorkToday').checked;
@@ -973,8 +989,13 @@
               ].filter(Boolean).join('\n');
               
               finalMaterialStr = document.getElementById('noMaterial').checked ? '無' : [...document.querySelectorAll('#materialsContainer .material-group')].map(g => {
-                  const s = g.querySelector('.mat-name').value;
-                  const n = s === 'other' ? g.querySelector('.custom-mat-name').value.trim() : s;
+                  const sId = g.querySelector('.mat-name').value;
+                  let n = sId;
+                  if (MATERIAL_ITEMS_MAP.has(sId)) {
+                      n = MATERIAL_ITEMS_MAP.get(sId).materialName;
+                  } else if (sId === '其他' || sId === 'other') {
+                      n = g.querySelector('.custom-mat-name').value.trim();
+                  }
                   return `${n}：${g.querySelector('.mat-qty').value}${g.querySelector('.mat-unit').value}`;
               }).join('\n');
           }
