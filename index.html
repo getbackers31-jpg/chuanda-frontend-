@@ -36,7 +36,7 @@
 </head>
 <body>
   <div class="container">
-    <h2 id="formTitle">👷 施工日報表 <span class="version-tag">v3</span></h2>
+    <h2 id="formTitle">👷 施工日報表 <span class="version-tag">v4</span></h2>
 
     <!-- 💡 模式切換按鈕 -->
     <div style="display:flex; gap:10px; margin-bottom:15px;">
@@ -48,14 +48,17 @@
       <!-- 隱藏欄位：目前表單模式 -->
       <input type="hidden" id="formType" value="daily_report">
 
-      <!-- 📦 材料進場專用：進場類型選項 (預設隱藏) -->
-      <div id="issueTypeSection" class="hidden" style="background:#f8f9fa; padding:12px; border-radius:5px; border-left:4px solid #28a745; margin-bottom:15px;">
+      <!-- 📦 材料進場專用：進場類型選項與補登日期 (預設隱藏) -->
+      <div id="issueExtraSection" class="hidden" style="background:#f8f9fa; padding:12px; border-radius:5px; border-left:4px solid #28a745; margin-bottom:15px;">
         <label for="issueType" style="margin-top:0;">🚚 進場類型 <span style="color:red">*</span></label>
-        <select id="issueType" onchange="saveDraft()">
+        <select id="issueType" onchange="saveDraft()" style="margin-bottom:10px;">
           <option value="OPENING">🏢 開工首批進場</option>
           <option value="ADDITIONAL">🚚 後續追加進場</option>
         </select>
-        <div class="field-help">此紀錄將自動寫入 Excel 的「材料結案總表」作為案場領入數量。</div>
+
+        <label for="reportDate" style="margin-top:0;">📅 實際進場日期 (可往回補登) <span style="color:red">*</span></label>
+        <input type="date" id="reportDate" onchange="saveDraft()">
+        <div class="field-help" style="margin-top:5px;">此紀錄將自動寫入 Excel 的「材料結案總表」作為案場領入數量。</div>
       </div>
       
       <label for="reporterName">👤 填表人姓名</label>
@@ -80,12 +83,6 @@
       </div>
 
       <input type="hidden" id="projectId" value="">
-
-      <!-- 📅 日期欄位 (進場單特別需要自訂日期，日報預設今天) -->
-      <div id="dateSection" class="daily-only">
-        <label for="reportDate">📅 日期</label>
-        <input type="date" id="reportDate" onchange="saveDraft()">
-      </div>
 
       <!-- 🔵 【施工日報專用區塊】今日無出工選項 -->
       <div class="daily-only">
@@ -137,7 +134,7 @@
         <div class="section-divider"></div>
       </div>
 
-      <!-- 📦 用料區塊 (日報與進場單共用，但進場單不需要「今日無用料」) -->
+      <!-- 📦 用料區塊 (日報與進場單共用) -->
       <div id="materialSectionContainer">
         <label id="materialLabel">📦 今日用料</label>
         <div id="noMaterialWrapper" class="daily-only">
@@ -186,13 +183,13 @@
     let projectMode = 'LOADING';
     let currentSubmissionId = '';
 
-    // 💡 模式切換邏輯
+    // 💡 模式切換邏輯 (日報隱藏日期，進場單顯示日期可補登)
     function switchMode(mode) {
         document.getElementById('formType').value = mode;
         const btnDaily = document.getElementById('btnDailyMode');
         const btnIssue = document.getElementById('btnIssueMode');
         const dailyOnlyElements = document.querySelectorAll('.daily-only');
-        const issueTypeSection = document.getElementById('issueTypeSection');
+        const issueExtraSection = document.getElementById('issueExtraSection');
         const formTitle = document.getElementById('formTitle');
         const submitButton = document.getElementById('submitButton');
         const materialLabel = document.getElementById('materialLabel');
@@ -205,18 +202,13 @@
             btnIssue.style.color = '#333';
             btnIssue.style.border = '1px solid #ccc';
             
-            formTitle.innerHTML = '👷 施工日報表 <span class="version-tag">v3</span>';
+            formTitle.innerHTML = '👷 施工日報表 <span class="version-tag">v4</span>';
             submitButton.textContent = '確認送出並發布至群組';
             submitButton.style.background = '#00B900';
             materialLabel.textContent = '📦 今日用料';
 
-            issueTypeSection.classList.add('hidden');
+            issueExtraSection.classList.add('hidden');
             dailyOnlyElements.forEach(el => el.classList.remove('hidden'));
-
-            // 恢復日報必填
-            document.getElementById('temp').required = false;
-            document.getElementById('humidity').required = false;
-            document.getElementById('wind').required = false;
         } else {
             btnDaily.style.background = '#e9ecef';
             btnDaily.style.color = '#333';
@@ -225,18 +217,13 @@
             btnIssue.style.color = 'white';
             btnIssue.style.border = 'none';
 
-            formTitle.innerHTML = '📦 材料進場登記表 <span class="version-tag">v3</span>';
+            formTitle.innerHTML = '📦 材料進場登記表 <span class="version-tag">v4</span>';
             submitButton.textContent = '確認送出材料進場紀錄';
             submitButton.style.background = '#28a745';
             materialLabel.textContent = '📦 進場材料清單';
 
-            issueTypeSection.classList.remove('hidden');
+            issueExtraSection.classList.remove('hidden');
             dailyOnlyElements.forEach(el => el.classList.add('hidden'));
-
-            // 取消日報必填
-            document.getElementById('temp').required = false;
-            document.getElementById('humidity').required = false;
-            document.getElementById('wind').required = false;
         }
         saveDraft();
     }
@@ -864,7 +851,7 @@
 
       const formType = document.getElementById('formType').value;
 
-      // 📦 如果是材料進場單模式
+      // 📦 材料進場單驗證
       if (formType === 'material_issue') {
           const mGroups = [...document.querySelectorAll('#materialsContainer .material-group')];
           let validCount = 0;
@@ -886,7 +873,7 @@
           return true;
       }
 
-      // 📝 如果是施工日報模式
+      // 📝 施工日報驗證
       const isNoWork = document.getElementById('noWorkToday').checked;
       if (isNoWork) {
          if (!document.getElementById('noWorkReason').value) { alert('請選擇今日無出工原因'); return false; }
@@ -923,25 +910,6 @@
           const selectedWorkItems = [...document.querySelectorAll('input[name="workItem"]:checked')];
           if (!selectedWorkItems.length) { alert('請至少勾選一項今日作業'); return false; }
           if (selectedWorkItems.some(cb => cb.value === '其他') && !document.getElementById('customWorkItem').value.trim()) { alert('請輸入其他作業項目名稱'); return false; }
-
-          if (!document.getElementById('noMaterial').checked) {
-            let completed = 0;
-            const groups = [...document.querySelectorAll('#materialsContainer .material-group')];
-            for (let i = 0; i < groups.length; i++) {
-              const group = groups[i];
-              const selected = group.querySelector('.mat-name').value;
-              const custom = group.querySelector('.custom-mat-name').value.trim();
-              const qty = Number(group.querySelector('.mat-qty').value);
-              const unit = group.querySelector('.mat-unit').value;
-              
-              if (!selected && !custom && !qty && !unit) continue;
-              if (!selected) { alert(`請選擇用料 ${i + 1} 的品項`); return false; }
-              if (selected === '其他' && !custom) { alert(`請輸入用料 ${i + 1} 的名稱`); return false; }
-              if (!qty || qty <= 0) { alert(`請輸入用料 ${i + 1} 的正確數量`); return false; }
-              if (!unit) { alert(`請選擇用料 ${i + 1} 的單位`); return false; }
-              completed++;
-            }
-          }
       }
       return true;
     }
@@ -961,7 +929,6 @@
 
       const formType = document.getElementById('formType').value;
       const submissionIdStr = ensureSubmissionId();
-      const reportDateVal = document.getElementById('reportDate').value;
 
       let payload = {
         formType: formType,
@@ -969,12 +936,12 @@
         projectName: getSelectedProjectName(),
         submissionId: submissionIdStr,
         reporterName: reporterName,
-        date: reportDateVal,
         remarks: document.getElementById('remarks').value.trim() || '無'
       };
 
       if (formType === 'material_issue') {
           payload.issueType = document.getElementById('issueType').value;
+          payload.date = document.getElementById('reportDate').value; // 可自由選取補登日期
           payload.materialItems = buildMaterialItems();
       } else {
           const isNoWork = document.getElementById('noWorkToday').checked;
