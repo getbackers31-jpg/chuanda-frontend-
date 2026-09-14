@@ -32,13 +32,16 @@
             background-color: #00B900; 
             border-color: #00B900; 
         }
+        .btn-primary:hover {
+            background-color: #009900;
+            border-color: #009900;
+        }
         .form-label { 
             font-weight: 500; 
             color: #495057; 
             font-size: 0.95rem; 
         }
         
-        /* 材料餘額提示樣式 */
         .material-balance-info { 
             font-size: 0.85em; 
             color: #666; 
@@ -55,7 +58,6 @@
             color: #dc3545; 
         }
 
-        /* 載入中遮罩層 */
         #loadingOverlay { 
             position: fixed; 
             top: 0; 
@@ -72,10 +74,9 @@
     </style>
 </head>
 <body>
-    <!-- 載入中遮罩 -->
     <div id="loadingOverlay">
         <div class="spinner-border text-success" role="status" style="width: 3rem; height: 3rem;"></div>
-        <div class="mt-3 fw-bold text-success">系統處理中...</div>
+        <div class="mt-3 fw-bold text-success" id="loadingText">系統載入中...</div>
     </div>
 
     <div class="container">
@@ -101,7 +102,11 @@
                     </div>
                     <div class="card-body">
                         <form id="reportForm">
-                            <input type="hidden" id="reporterName" name="reporterName">
+                            <!-- 填表人 (可視可編修) -->
+                            <div class="mb-3">
+                                <label class="form-label">👤 填表人</label>
+                                <input type="text" class="form-control" id="reporterName" placeholder="請輸入填表人姓名" required>
+                            </div>
                             
                             <div class="mb-3">
                                 <label class="form-label">📅 施工日期 (可補登)</label>
@@ -114,7 +119,7 @@
                                 <label class="form-check-label fw-bold text-danger" for="isNoWork">今日無出工 (停工)</label>
                             </div>
                             
-                            <!-- 停工原因選單 (預設隱藏) -->
+                            <!-- 停工原因選單 -->
                             <div id="noWorkReasonGroup" style="display: none;" class="mb-4">
                                 <label class="form-label">🛑 停工原因</label>
                                 <select class="form-select" id="noWorkReason">
@@ -128,29 +133,36 @@
 
                             <!-- 正常出工填寫區塊 -->
                             <div id="normalWorkFields">
-                                <!-- 氣候條件 -->
+                                <!-- 氣候條件 (含一鍵查詢) -->
                                 <div class="card bg-light mb-3">
                                     <div class="card-body p-3">
-                                        <h6 class="card-title fw-bold">⛅ 氣候條件</h6>
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <h6 class="card-title fw-bold mb-0">⛅ 氣候條件</h6>
+                                            <button type="button" class="btn btn-sm btn-outline-success py-0" id="btnAutoWeather" onclick="fetchCurrentWeather()">📍 一鍵帶入氣候</button>
+                                        </div>
                                         <div class="row g-2">
                                             <div class="col-4">
-                                                <input type="number" class="form-control form-control-sm" id="temp" placeholder="氣溫(度)" step="0.1" required>
+                                                <label class="form-label small text-muted mb-1">氣溫 (°C)</label>
+                                                <input type="number" class="form-control form-control-sm" id="temp" placeholder="氣溫" step="0.1" required>
                                             </div>
                                             <div class="col-4">
-                                                <input type="number" class="form-control form-control-sm" id="humidity" placeholder="濕度(%)" required>
+                                                <label class="form-label small text-muted mb-1">相對濕度 (%)</label>
+                                                <input type="number" class="form-control form-control-sm" id="humidity" placeholder="濕度" required>
                                             </div>
                                             <div class="col-4">
-                                                <input type="number" class="form-control form-control-sm" id="wind" placeholder="風速(m/s)" step="0.1" required>
+                                                <label class="form-label small text-muted mb-1">風速 (m/s)</label>
+                                                <input type="number" class="form-control form-control-sm" id="wind" placeholder="風速" step="0.1" required>
                                             </div>
                                         </div>
+                                        <div class="small text-muted mt-1" id="weatherStatusMsg"></div>
                                     </div>
                                 </div>
 
-                                <!-- 施工廠商 -->
+                                <!-- 施工廠商與人數 -->
                                 <div class="mb-3">
-                                    <label class="form-label d-flex justify-content-between">
+                                    <label class="form-label d-flex justify-content-between align-items-center">
                                         <span>👷 施工廠商與人數</span>
-                                        <button type="button" class="btn btn-sm btn-outline-secondary py-0" onclick="addContractorRow()">+ 新增</button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary py-0" onclick="addContractorRow()">+ 新增廠商</button>
                                     </label>
                                     <div id="contractorList"></div>
                                 </div>
@@ -165,7 +177,7 @@
                                         <div class="col-6"><div class="form-check"><input class="form-check-input work-item-cb" type="checkbox" value="面漆施工"><label class="form-check-label">面漆施工</label></div></div>
                                         <div class="col-6"><div class="form-check"><input class="form-check-input work-item-cb" type="checkbox" value="修補作業"><label class="form-check-label">修補作業</label></div></div>
                                     </div>
-                                    <textarea class="form-control" id="workNotes" rows="2" placeholder="填寫施作區域或進度詳情 (必填一項)"></textarea>
+                                    <textarea class="form-control" id="workNotes" rows="2" placeholder="填寫施作區域或進度詳情 (工項或補充必填一項)"></textarea>
                                 </div>
 
                                 <!-- 材料使用 -->
@@ -205,7 +217,10 @@
                     </div>
                     <div class="card-body">
                         <form id="issueForm">
-                            <input type="hidden" id="issueReporterName" name="issueReporterName">
+                            <div class="mb-3">
+                                <label class="form-label">👤 填表人</label>
+                                <input type="text" class="form-control" id="issueReporterName" placeholder="請輸入填表人姓名" required>
+                            </div>
                             
                             <div class="mb-3">
                                 <label class="form-label">📅 進場日期 (可補登)</label>
@@ -224,14 +239,14 @@
                             <div class="mb-4">
                                 <label class="form-label d-flex justify-content-between">
                                     <span>📦 進場材料明細</span>
-                                    <button type="button" class="btn btn-sm btn-outline-primary py-0" onclick="addMaterialRow('issueMaterialsList')">+ 新增</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary py-0" onclick="addMaterialRow('issueMaterialsList')">+ 新增材料</button>
                                 </label>
                                 <div id="issueMaterialsList"></div>
                             </div>
                             
                             <div class="mb-4">
                                 <label class="form-label">💬 備註 (選填)</label>
-                                <textarea class="form-control" id="issueRemarks" rows="2" placeholder="填寫物流單號等"></textarea>
+                                <textarea class="form-control" id="issueRemarks" rows="2" placeholder="填寫物流單號、車號等"></textarea>
                             </div>
                             
                             <button type="submit" class="btn btn-secondary w-100 py-2 fw-bold">確認登記進場</button>
@@ -242,13 +257,11 @@
         </div>
     </div>
 
-    <!-- 引入外部套件 -->
+    <!-- 外部套件 -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     
-    <!-- 核心 JavaScript 邏輯 -->
     <script>
-        // 環境變數與全域設定
         const API_BASE_URL = 'https://bot.cyber-cloud.info';
         const LIFF_ID = '2011289657-vQgMb0eI';
         
@@ -256,47 +269,45 @@
         let currentProjectName = '';
         let globalMaterialOptions = [];
         let projectMaterialBalances = {}; 
-        
-        // 全域防止重複送出鎖
         let isSubmitting = false;
 
         document.addEventListener('DOMContentLoaded', initializeApp);
 
-        // ==========================================
-        // 系統初始化與資料抓取
-        // ==========================================
         async function initializeApp() {
             try {
-                // 1. 初始化 LIFF
                 await liff.init({ liffId: LIFF_ID });
                 if (!liff.isLoggedIn()) { 
                     liff.login(); 
                     return; 
                 }
 
-                // 2. 取得用戶資訊
-                const profile = await liff.getProfile();
-                document.getElementById('reporterName').value = profile.displayName;
-                document.getElementById('issueReporterName').value = profile.displayName;
+                // 自動帶入 LINE 名稱至填表人欄位，現場仍可自行修改
+                try {
+                    const profile = await liff.getProfile();
+                    if (profile && profile.displayName) {
+                        document.getElementById('reporterName').value = profile.displayName;
+                        document.getElementById('issueReporterName').value = profile.displayName;
+                    }
+                } catch (e) {
+                    console.warn('無法抓取 LINE 個人檔案', e);
+                }
                 
-                // 3. 解析網址參數 projectId
                 const urlParams = new URLSearchParams(window.location.search);
                 currentProjectId = urlParams.get('projectId');
                 
                 if (!currentProjectId) { 
-                    alert('⚠️ 未帶有案場參數，請從 LINE 進入。'); 
+                    alert('⚠️ 網址缺少案場參數，請由 LINE 機器人選單開啟。'); 
                     showLoading(false); 
                     return; 
                 }
 
-                // 4. 同步抓取：案場資料、材料主檔、案場即時餘額
+                // 同步載入案場資訊、材料清單與即時理論餘額
                 const [projectRes, materialRes, balanceRes] = await Promise.all([
                     fetch(`${API_BASE_URL}/api/projects/${currentProjectId}`).then(res => res.json()),
                     fetch(`${API_BASE_URL}/api/materials?projectId=${currentProjectId}`).then(res => res.json()),
                     fetch(`${API_BASE_URL}/api/projects/${currentProjectId}/material-balances`).then(res => res.json())
                 ]);
 
-                // 5. 處理案場資料
                 if (!projectRes.success) {
                     throw new Error(projectRes.error || '無法載入案場資料');
                 }
@@ -304,7 +315,6 @@
                 document.getElementById('projectNameDisplay').textContent = currentProjectName;
                 document.getElementById('issueProjectNameDisplay').textContent = currentProjectName;
 
-                // 6. 處理材料主檔與建立第一列
                 if (materialRes.success) {
                     globalMaterialOptions = materialRes.materials;
                     addContractorRow(); 
@@ -312,20 +322,20 @@
                     addMaterialRow('issueMaterialsList');
                 }
                 
-                // 7. 將餘額存入全域變數供即時防呆
                 if (balanceRes.success && balanceRes.balances) {
                     balanceRes.balances.forEach(b => { 
                         projectMaterialBalances[b.materialId] = b; 
                     });
                 }
 
-                // 8. 設定預設日期為今天
                 const today = new Date().toLocaleDateString('en-CA', {timeZone: 'Asia/Taipei'});
                 document.getElementById('reportDate').value = today;
                 document.getElementById('issueDate').value = today;
 
-                // 9. 綁定事件監聽
                 setupFormListeners();
+                
+                // 自動嘗試帶入一次氣象
+                fetchCurrentWeather(true);
                 
                 showLoading(false);
             } catch (error) { 
@@ -334,15 +344,58 @@
             }
         }
 
-        // ==========================================
-        // 畫面與事件控制
-        // ==========================================
-        function showLoading(show) { 
+        function showLoading(show, text = '系統處理中...') { 
+            document.getElementById('loadingText').textContent = text;
             document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none'; 
         }
 
+        // ==========================================
+        // ⛅ 一鍵氣候查詢邏輯 (GPS + 即時氣象)
+        // ==========================================
+        function fetchCurrentWeather(isSilent = false) {
+            const statusMsg = document.getElementById('weatherStatusMsg');
+            if (!navigator.geolocation) {
+                if (!isSilent) alert('您的瀏覽器或手機不支援定位功能，請手動填寫氣溫氣候。');
+                return;
+            }
+
+            if (!isSilent) statusMsg.textContent = '正在定位並抓取氣象數據...';
+
+            navigator.geolocation.getCurrentPosition(
+                async (position) => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    try {
+                        // 使用開放且不需金鑰的高精準即時氣象 API
+                        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m&timezone=Asia%2FTaipei`;
+                        const res = await fetch(url);
+                        if (!res.ok) throw new Error('氣象伺服器回應異常');
+                        const data = await res.json();
+                        
+                        if (data && data.current) {
+                            document.getElementById('temp').value = Math.round(data.current.temperature_2m * 10) / 10;
+                            document.getElementById('humidity').value = Math.round(data.current.relative_humidity_2m);
+                            // 轉成 m/s (Open-meteo 預設 km/h)
+                            const windSpeedMs = Math.round((data.current.wind_speed_10m / 3.6) * 10) / 10;
+                            document.getElementById('wind').value = windSpeedMs;
+                            statusMsg.textContent = '✅ 已成功更新現場定位氣象數據';
+                        }
+                    } catch (err) {
+                        console.error('氣象更新失敗', err);
+                        if (!isSilent) alert('氣象自動更新失敗，請手動輸入數值。');
+                        statusMsg.textContent = '⚠️ 氣象抓取失敗，請手動輸入';
+                    }
+                },
+                (err) => {
+                    console.warn('定位授權被拒或超時', err);
+                    if (!isSilent) alert('無法取得 GPS 定位資訊，請確認手機已允許瀏覽器存取位置權限。');
+                    statusMsg.textContent = '';
+                },
+                { timeout: 8000 }
+            );
+        }
+
         function setupFormListeners() {
-            // 切換「今日無出工」
             document.getElementById('isNoWork').addEventListener('change', (e) => {
                 const normalFields = document.getElementById('normalWorkFields');
                 const noWorkGroup = document.getElementById('noWorkReasonGroup');
@@ -356,12 +409,10 @@
                     document.getElementById('temp').required = true; 
                     document.getElementById('humidity').required = true; 
                     document.getElementById('wind').required = true;
-                    // 觸發「無用料」事件以還原狀態
                     document.getElementById('noMaterial').dispatchEvent(new Event('change'));
                 }
             });
 
-            // 切換「今日無用料」
             document.getElementById('noMaterial').addEventListener('change', (e) => {
                 const list = document.getElementById('dailyMaterialsList');
                 const addBtn = document.getElementById('addMaterialBtn');
@@ -376,18 +427,15 @@
                 }
             });
 
-            // 當切換「進場類型」時，自動更新畫面上的餘額顯示文字
             document.getElementById('issueType').addEventListener('change', () => {
                 document.querySelectorAll('#issueMaterialsList .quantity-input').forEach(input => {
                     updateBalanceDisplay(input);
                 });
             });
 
-            // 表單送出綁定
             document.getElementById('reportForm').addEventListener('submit', handleDailyReportSubmit);
             document.getElementById('issueForm').addEventListener('submit', handleMaterialIssueSubmit);
             
-            // 頁籤切換時重新計算餘額顯示
             document.querySelectorAll('button[data-bs-toggle="tab"]').forEach(tab => {
                 tab.addEventListener('shown.bs.tab', () => {
                     document.querySelectorAll('.quantity-input').forEach(input => {
@@ -398,7 +446,7 @@
         }
 
         // ==========================================
-        // 動態新增表單列
+        // 👷 施工廠商列表管理
         // ==========================================
         function addContractorRow() {
             const container = document.getElementById('contractorList');
@@ -406,7 +454,7 @@
             row.className = 'contractor-row row g-2 mb-2 align-items-center';
             row.innerHTML = `
                 <div class="col-6">
-                    <input type="text" class="form-control contractor-name" placeholder="廠商名稱" required>
+                    <input type="text" class="form-control contractor-name" placeholder="施工廠商名稱" required>
                 </div>
                 <div class="col-4">
                     <div class="input-group">
@@ -444,7 +492,6 @@
             `;
             container.appendChild(row);
             
-            // 填入材料下拉選項
             const select = row.querySelector('.material-select');
             let optionsHtml = '<option value="">請選擇標準材料...</option>';
             
@@ -459,9 +506,6 @@
             select.innerHTML = optionsHtml;
         }
 
-        // ==========================================
-        // 即時材料餘額防呆邏輯
-        // ==========================================
         function handleMaterialChange(selectElement) {
             const row = selectElement.closest('.material-row');
             if (selectElement.value) {
@@ -475,7 +519,6 @@
             const select = row.querySelector('.material-select');
             const infoDiv = row.querySelector('.material-balance-info');
             
-            // 檢查是否有選取材料與餘額資料
             if (!select.value) { 
                 infoDiv.style.display = 'none'; 
                 return; 
@@ -486,7 +529,6 @@
                 return; 
             }
 
-            // 計算預期餘額
             const inputQty = Number(row.querySelector('.quantity-input').value) || 0;
             const pkgQty = Number(select.options[select.selectedIndex].dataset.pkgQty) || 1;
             const baseUnit = select.options[select.selectedIndex].dataset.baseUnit;
@@ -498,7 +540,6 @@
             infoDiv.style.display = 'block';
             
             if (isIssueMode) {
-                // 進場模式邏輯：顯示新增量
                 const issueTypeValue = document.getElementById('issueType').value;
                 const issueLabel = issueTypeValue === 'OPENING' ? '本次開工首批進場' : '本次追加進場';
                 
@@ -509,7 +550,6 @@
                     <strong>登記後預計剩餘：</strong> ${balanceData.remainingBaseQuantity + currentUsageBaseQty} ${baseUnit}
                 `;
             } else {
-                // 日報模式邏輯：顯示扣減量與負數警告
                 if (expectedRemaining < 0 && inputQty > 0) {
                     infoDiv.className = 'material-balance-info material-balance-warning mt-2';
                     infoDiv.innerHTML = `
@@ -530,9 +570,6 @@
             }
         }
 
-        // ==========================================
-        // 擷取資料與重複選取防呆
-        // ==========================================
         function extractMaterialItems(containerId) {
             const rows = document.querySelectorAll(`#${containerId} .material-row`);
             const materials = [];
@@ -544,7 +581,6 @@
                 const quantity = row.querySelector('.quantity-input').value;
                 
                 if (select.value) {
-                    // 防範同表單選到相同材料
                     if (selectedIds.has(select.value)) {
                         hasDuplicate = true;
                     }
@@ -567,13 +603,9 @@
             return materials;
         }
 
-        // ==========================================
-        // 表單提交：施工日報
-        // ==========================================
         async function handleDailyReportSubmit(e) {
             e.preventDefault();
             
-            // 阻擋重複提交鎖
             if (isSubmitting) return;
             isSubmitting = true;
             
@@ -584,34 +616,35 @@
             }
 
             try {
-                showLoading(true);
+                showLoading(true, '日報歸檔中...');
                 const isNoWork = document.getElementById('isNoWork').checked;
                 
                 const payload = {
                     formType: 'daily_report', 
                     projectId: currentProjectId, 
                     projectName: currentProjectName,
-                    reporterName: document.getElementById('reporterName').value, 
+                    reporterName: document.getElementById('reporterName').value.trim(), 
                     date: document.getElementById('reportDate').value,
                     isNoWork: isNoWork, 
                     remarks: document.getElementById('remarks').value
                 };
 
+                if (!payload.reporterName) {
+                    throw new Error('請填寫填表人姓名');
+                }
+
                 if (isNoWork) {
-                    // 無出工狀態
                     payload.noWorkReason = document.getElementById('noWorkReason').value;
                     payload.contractor = '無'; 
-                    payload.workerCount = 0; 
+                    payload.workerCount = '共 0 人'; 
                     payload.progress = '本日無出工'; 
                     payload.materials = '無'; 
                     payload.materialItems = [];
                 } else {
-                    // 正常出工狀態
                     payload.temp = document.getElementById('temp').value; 
                     payload.humidity = document.getElementById('humidity').value; 
                     payload.wind = document.getElementById('wind').value;
                     
-                    // 整理施工廠商
                     const contractorItems = []; 
                     let contractorStrArr = []; 
                     let totalWorkers = 0;
@@ -627,14 +660,13 @@
                     });
                     
                     if (contractorItems.length === 0) {
-                        throw new Error('請填寫施工廠商');
+                        throw new Error('請填寫施工廠商與人數');
                     }
                     
                     payload.contractorItems = contractorItems; 
                     payload.contractor = contractorStrArr.join('\n'); 
                     payload.workerCount = `共 ${totalWorkers} 人`;
 
-                    // 整理工項與防呆
                     const workItems = [];
                     document.querySelectorAll('.work-item-cb:checked').forEach(cb => {
                         workItems.push(cb.value);
@@ -648,7 +680,6 @@
                     payload.workItems = workItems; 
                     payload.progress = workItems.map(w => `• ${w}`).join('\n') + (payload.workNotes ? `\n(補充: ${payload.workNotes})` : '') || '未填寫施作項目';
 
-                    // 處理用料
                     if (document.getElementById('noMaterial').checked) {
                         payload.materialItems = []; 
                         payload.materials = '無';
@@ -658,7 +689,6 @@
                     }
                 }
 
-                // 呼叫後端 API
                 const response = await fetch(`${API_BASE_URL}/api/submit-report`, { 
                     method: 'POST', 
                     headers: { 'Content-Type': 'application/json' }, 
@@ -669,12 +699,12 @@
                 if (result.success) {
                     const pushStatusStr = result.pushed ? '<span class="text-success">已發布至 LINE 群組</span>' : '<span class="text-danger">LINE 發布失敗 (不影響存檔)</span>';
                     
-                    // 替換成功畫面
                     document.body.innerHTML = `
                         <div class="container text-center pt-5">
                             <h2 class="text-success mb-4">✅ 日報送出成功！</h2>
                             <div class="card bg-light text-start p-4 mb-4 mx-auto" style="max-width:400px;">
                                 <p class="mb-2">📍 案場：<strong>${currentProjectName}</strong></p>
+                                <p class="mb-2">👤 填表：<strong>${payload.reporterName}</strong></p>
                                 <p class="mb-2">📅 日期：<strong>${payload.date}</strong></p>
                                 <hr>
                                 <p class="mb-1 text-muted small">📁 雲端歸檔：完成</p>
@@ -689,8 +719,6 @@
             } catch (error) { 
                 alert(`提交失敗：${error.message}`); 
                 showLoading(false); 
-                
-                // 失敗時解鎖，讓使用者可以再次點擊
                 isSubmitting = false;
                 if (submitButton) { 
                     submitButton.disabled = false; 
@@ -699,13 +727,9 @@
             }
         }
 
-        // ==========================================
-        // 表單提交：材料進場
-        // ==========================================
         async function handleMaterialIssueSubmit(e) {
             e.preventDefault();
             
-            // 阻擋重複提交鎖
             if (isSubmitting) return;
             isSubmitting = true;
             
@@ -716,7 +740,7 @@
             }
 
             try {
-                showLoading(true);
+                showLoading(true, '進場登記中...');
                 const materialItems = extractMaterialItems('issueMaterialsList');
                 if (materialItems.length === 0) {
                     throw new Error('請至少新增一項標準進場材料');
@@ -726,14 +750,17 @@
                     formType: 'material_issue', 
                     projectId: currentProjectId, 
                     projectName: currentProjectName,
-                    reporterName: document.getElementById('issueReporterName').value, 
+                    reporterName: document.getElementById('issueReporterName').value.trim(), 
                     date: document.getElementById('issueDate').value,
                     issueType: document.getElementById('issueType').value, 
                     materialItems: materialItems, 
                     remarks: document.getElementById('issueRemarks').value
                 };
 
-                // 呼叫後端 API
+                if (!payload.reporterName) {
+                    throw new Error('請填寫填表人姓名');
+                }
+
                 const response = await fetch(`${API_BASE_URL}/api/submit-report`, { 
                     method: 'POST', 
                     headers: { 'Content-Type': 'application/json' }, 
@@ -750,8 +777,6 @@
             } catch (error) { 
                 alert(`提交失敗：${error.message}`); 
                 showLoading(false); 
-                
-                // 失敗時解鎖
                 isSubmitting = false;
                 if (submitButton) { 
                     submitButton.disabled = false; 
