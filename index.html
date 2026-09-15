@@ -687,9 +687,11 @@
         document.getElementById('workNotes').value = draft.workNotes || '';
         document.getElementById('remarks').value = draft.remarks || '';
 
-        // ⭐ 完全補回草稿恢復機制
-        document.getElementById('reporterName').value = draft.reporterName || document.getElementById('reporterName').value;
-
+        // ⭐ 在 loadDraft 裡面強制把草稿的填表人補回來
+        if (draft.reporterName) {
+            document.getElementById('reporterName').value = draft.reporterName;
+        }
+        
         document.getElementById('contractorsContainer').innerHTML = '';
         if (Array.isArray(draft.contractorsList) && draft.contractorsList.length > 0) {
             draft.contractorsList.forEach(c => addContractorRow(c.name, c.customName, c.workers));
