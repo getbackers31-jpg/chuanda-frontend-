@@ -29,13 +29,14 @@
     .hidden { display:none !important; }
     .no-material-option { display:flex; align-items:center; font-weight:bold; color:#d9534f; margin-bottom:15px; background:#fdf5f5; padding:10px; border-radius:5px; border:1px solid #f5c6c6; }
     .no-material-option input { width:auto; margin-right:10px; transform:scale(1.3); }
+    .field-help { margin-top: 4px; color: #777; font-size: 13px; line-height: 1.5; }
     .readonly-input { background-color: #e9ecef; color: #495057; cursor: not-allowed; }
     @media (max-width:380px) { .checkbox-grid { grid-template-columns:1fr; } .flex-row { flex-direction:column; gap:4px; } }
   </style>
 </head>
 <body>
   <div class="container">
-    <h2 id="formTitle">👷 施工日報表 <span class="version-tag">v5.5</span></h2>
+    <h2 id="formTitle">👷 施工日報表 <span class="version-tag">v5.6</span></h2>
 
     <div style="display:flex; gap:10px; margin-bottom:15px;">
         <button type="button" id="btnDailyMode" class="btn btn-primary" style="flex:1; padding:10px; border:none; border-radius:5px; background:#00B900; color:white; font-weight:bold; cursor:pointer;" onclick="switchMode('daily_report')">📝 填寫施工日報</button>
@@ -58,11 +59,11 @@
       </div>
       
       <label for="reporterName">👤 填表人姓名</label>
-      <input type="text" id="reporterName" placeholder="請輸入您的姓名 (系統將自動記憶)" oninput="saveDraft()" required>
+      <input type="text" id="reporterName" placeholder="請輸入您的姓名 (系統將自動記憶)" oninput="saveDraft()" autocomplete="name" required>
 
       <div id="lockedProjectSection" class="hidden">
         <label for="lockedProjectName">📍 案場名稱</label>
-        <input type="text" id="lockedProjectName" class="readonly-input" readonly>
+        <input type="text" id="lockedProjectName" class="readonly-input" readonly disabled>
       </div>
 
       <div id="compatibleProjectSection">
@@ -113,7 +114,7 @@
       <div id="workAndMaterialSection" class="daily-only">
         <label>🛠️ 今日作業</label>
         <div class="checkbox-grid" id="workItemsGrid"></div>
-        <input type="text" id="customWorkItem" class="hidden" placeholder="請輸入其他作業項目" maxlength="100" oninput="saveDraft()" style="margin-top:10px">
+        <input type="text" id="customWorkItem" class="hidden" placeholder="請具體說明其他施作項目內容..." maxlength="100" oninput="saveDraft()" style="margin-top:10px">
         <textarea id="workNotes" rows="2" placeholder="作業補充（選填）" oninput="saveDraft()" style="margin-top:10px"></textarea>
         <div class="section-divider"></div>
       </div>
@@ -131,7 +132,7 @@
       </div>
 
       <label for="remarks">📝 備註（選填）</label>
-      <textarea id="remarks" rows="2" placeholder="天候影響、材料短缺、人員異動等狀況" oninput="saveDraft()"></textarea>
+      <textarea id="remarks" rows="2" placeholder="天候影響、材料短缺、人員異動等狀況" maxlength="500" oninput="saveDraft()"></textarea>
 
       <button type="button" id="submitButton" class="submit-btn" onclick="submitForm()">確認送出施工日報</button>
     </form>
@@ -194,7 +195,7 @@
             btnIssue.style.color = '#333';
             btnIssue.style.border = '1px solid #ccc';
             
-            formTitle.innerHTML = '👷 施工日報表 <span class="version-tag">v5.5</span>';
+            formTitle.innerHTML = '👷 施工日報表 <span class="version-tag">v5.6</span>';
             submitButton.textContent = '確認送出並發布至群組';
             submitButton.style.background = '#00B900';
             materialLabel.textContent = '📦 今日用料';
@@ -209,7 +210,7 @@
             btnIssue.style.color = 'white';
             btnIssue.style.border = 'none';
 
-            formTitle.innerHTML = '📦 材料進場登記表 <span class="version-tag">v5.5</span>';
+            formTitle.innerHTML = '📦 材料進場登記表 <span class="version-tag">v5.6</span>';
             submitButton.textContent = '確認送出材料進場紀錄';
             submitButton.style.background = '#28a745';
             materialLabel.textContent = '📦 進場材料清單';
@@ -284,19 +285,20 @@
     window.addEventListener('load', async () => {
       initializeStaticForm();
       const todayStr = getTaiwanDateString();
-      document.getElementById('reportDate').value = todayStr;
+      const dateInput = document.getElementById('reportDate');
+      if (dateInput) {
+          dateInput.value = todayStr;
+          dateInput.max = todayStr;
+      }
 
-      // ⭐ 先載入草稿，確保名字優先權
       loadDraft();
 
       try {
         await liff.init({ liffId: LIFF_ID });
         const profile = await liff.getProfile();
         const nameInput = document.getElementById('reporterName');
-        // ⭐ 只有在格子是空白時，才用 LINE 名字填入，不會覆蓋手動打的名字
         if (profile && !nameInput.value.trim()) {
             nameInput.value = profile.displayName;
-            saveDraft();
         }
       } catch (error) { console.warn('LIFF 初始化跳過：', error); }
 
@@ -671,7 +673,6 @@
 
         currentSubmissionId = String(draft.submissionId || createSubmissionId());
         
-        // ⭐ 恢復填表人姓名
         if (draft.reporterName) {
             document.getElementById('reporterName').value = draft.reporterName;
         }
@@ -695,7 +696,6 @@
             addContractorRow();
         }
 
-        // ⭐ 恢復勾選工項
         if (Array.isArray(draft.workItems)) {
             document.querySelectorAll('input[name="workItem"]').forEach(checkbox => {
                 checkbox.checked = draft.workItems.includes(checkbox.value);
