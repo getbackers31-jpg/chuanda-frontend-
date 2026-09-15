@@ -36,7 +36,7 @@
 </head>
 <body>
   <div class="container">
-    <h2 id="formTitle">👷 施工日報表 <span class="version-tag">v5.5</span></h2>
+    <h2 id="formTitle">👷 施工日報表 <span class="version-tag">v5.5(最終完全體)</span></h2>
 
     <div style="display:flex; gap:10px; margin-bottom:15px;">
         <button type="button" id="btnDailyMode" class="btn btn-primary" style="flex:1; padding:10px; border:none; border-radius:5px; background:#00B900; color:white; font-weight:bold; cursor:pointer;" onclick="switchMode('daily_report')">📝 填寫施工日報</button>
@@ -141,7 +141,7 @@
   <script>
     const LIFF_ID = '2011289657-vQgMb0eI';
     
-    // ⭐ API 網域設定 (已幫您改回正確的 Render 網址)
+    // ⭐ API 網域已改回 Render 伺服器
     const API_BASE_URL = 'https://gong-cheng-linechuan-jie.onrender.com';
     
     const API_URL = `${API_BASE_URL}/api/submit-report`;
@@ -290,8 +290,7 @@
       const dateInput = document.getElementById('reportDate');
       if (dateInput) {
           dateInput.value = todayStr;
-          // 防止使用者選到未來的日期
-          dateInput.max = todayStr;
+          dateInput.max = todayStr; // 防止選到未來時間
       }
 
       try {
@@ -684,6 +683,7 @@
         document.getElementById('workNotes').value = draft.workNotes || '';
         document.getElementById('remarks').value = draft.remarks || '';
 
+        // ⭐ 完全補回草稿恢復機制
         document.getElementById('reporterName').value = draft.reporterName || document.getElementById('reporterName').value;
 
         document.getElementById('contractorsContainer').innerHTML = '';
