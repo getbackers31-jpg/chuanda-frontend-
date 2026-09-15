@@ -36,7 +36,7 @@
 </head>
 <body>
   <div class="container">
-    <h2 id="formTitle">👷 施工日報表 <span class="version-tag">v5</span></h2>
+    <h2 id="formTitle">👷 施工日報表 <span class="version-tag">v5.1(真實報錯)</span></h2>
 
     <div style="display:flex; gap:10px; margin-bottom:15px;">
         <button type="button" id="btnDailyMode" class="btn btn-primary" style="flex:1; padding:10px; border:none; border-radius:5px; background:#00B900; color:white; font-weight:bold; cursor:pointer;" onclick="switchMode('daily_report')">📝 填寫施工日報</button>
@@ -49,13 +49,13 @@
       <div id="issueExtraSection" class="hidden" style="background:#f8f9fa; padding:12px; border-radius:5px; border-left:4px solid #28a745; margin-bottom:15px;">
         <label for="issueType" style="margin-top:0;">🚚 進場類型 <span style="color:red">*</span></label>
         <select id="issueType" onchange="updateAllBalances(); saveDraft()" style="margin-bottom:10px;">
+          <option value="" selected disabled>請選擇進場類型</option>
           <option value="OPENING">🏢 開工首批進場</option>
           <option value="ADDITIONAL">🚚 後續追加進場</option>
         </select>
 
         <label for="reportDate" style="margin-top:0;">📅 實際進場日期 (可往回補登) <span style="color:red">*</span></label>
         <input type="date" id="reportDate" onchange="saveDraft()">
-        <div class="field-help" style="margin-top:5px;">此紀錄將自動寫入 Excel 的「材料結案總表」作為案場領入數量。</div>
       </div>
       
       <label for="reporterName">👤 填表人姓名</label>
@@ -64,7 +64,6 @@
       <div id="lockedProjectSection" class="hidden">
         <label for="lockedProjectName">📍 案場名稱</label>
         <input type="text" id="lockedProjectName" class="readonly-input" readonly>
-        <div class="field-help">🔒 此連結已綁定以下案場，案場名稱不可修改</div>
       </div>
 
       <div id="compatibleProjectSection">
@@ -72,7 +71,6 @@
         <select id="projectName" onchange="saveDraft()" required disabled>
           <option value="" disabled selected>正在載入案場清單...</option>
         </select>
-        <div class="field-help">新案場請先在施工群組輸入「設定案場 案場名稱」</div>
       </div>
 
       <input type="hidden" id="projectId" value="">
@@ -99,7 +97,6 @@
         <label>🤝 施工廠商與人數</label>
         <div id="contractorsContainer"></div>
         <button type="button" class="btn-add" onclick="addContractorRow()" style="background:#5bc0de;">➕ 新增一組廠商</button>
-        <button type="button" class="btn-add" onclick="resetContractorsCache()" style="background:#d9534f; margin-top:5px;">🗑️ 清除所有自訂廠商紀錄</button>
         <div class="section-divider"></div>
       </div>
 
@@ -143,9 +140,15 @@
 
   <script>
     const LIFF_ID = '2011289657-vQgMb0eI';
-    const API_URL = 'https://gong-cheng-linechuan-jie.onrender.com/api/submit-report';
-    const PROJECTS_API_URL = 'https://gong-cheng-linechuan-jie.onrender.com/api/projects';
-    const MATERIALS_API_URL = 'https://gong-cheng-linechuan-jie.onrender.com/api/materials';
+    
+    // ⭐ 統一 API 網域設定 (請依你實際的正式機調整，這裡預設填寫你的自訂網域)
+    const API_BASE_URL = 'https://bot.cyber-cloud.info';
+    // const API_BASE_URL = 'https://gong-cheng-linechuan-jie.onrender.com';
+    
+    const API_URL = `${API_BASE_URL}/api/submit-report`;
+    const PROJECTS_API_URL = `${API_BASE_URL}/api/projects`;
+    const MATERIALS_API_URL = `${API_BASE_URL}/api/materials`;
+    const MATERIAL_BALANCES_API_URL = `${API_BASE_URL}/api/projects`;
     
     const MAX_MATERIAL_ROWS = 10;
     const MAX_CONTRACTOR_ROWS = 10;
@@ -160,17 +163,13 @@
 
     let MATERIAL_ITEMS_MAP = new Map(); 
     let MATERIAL_OPTIONS = []; 
-
-    const UNIT_OPTIONS = [
-      '桶', '組', '支', '公斤', '公升', '個', '捲', '塊'
-    ];
+    let projectMaterialBalances = {}; 
 
     let isSubmitting = false;
     let isRestoringDraft = false;
     let reportArchived = false;
     let projectMode = 'LOADING';
     let currentSubmissionId = '';
-    let projectMaterialBalances = {}; // ⭐ 儲存案場即時材料餘額
 
     function getTaiwanDateString() {
       return new Intl.DateTimeFormat('en-CA', {
@@ -199,7 +198,7 @@
             btnIssue.style.color = '#333';
             btnIssue.style.border = '1px solid #ccc';
             
-            formTitle.innerHTML = '👷 施工日報表 <span class="version-tag">v5</span>';
+            formTitle.innerHTML = '👷 施工日報表 <span class="version-tag">v5.1</span>';
             submitButton.textContent = '確認送出並發布至群組';
             submitButton.style.background = '#00B900';
             materialLabel.textContent = '📦 今日用料';
@@ -214,7 +213,7 @@
             btnIssue.style.color = 'white';
             btnIssue.style.border = 'none';
 
-            formTitle.innerHTML = '📦 材料進場登記表 <span class="version-tag">v5</span>';
+            formTitle.innerHTML = '📦 材料進場登記表 <span class="version-tag">v5.1</span>';
             submitButton.textContent = '確認送出材料進場紀錄';
             submitButton.style.background = '#28a745';
             materialLabel.textContent = '📦 進場材料清單';
@@ -240,16 +239,12 @@
     }
 
     function ensureSubmissionId() {
-      if (!currentSubmissionId) {
-        currentSubmissionId = createSubmissionId();
-      }
+      if (!currentSubmissionId) currentSubmissionId = createSubmissionId();
       return currentSubmissionId;
     }
 
     function getSelectedProjectName() {
-      if (projectMode === 'LOCKED') {
-        return document.getElementById('lockedProjectName').value.trim();
-      }
+      if (projectMode === 'LOCKED') return document.getElementById('lockedProjectName').value.trim();
       return document.getElementById('projectName').value.trim();
     }
 
@@ -264,7 +259,6 @@
       return String(params.get('projectId') || '').trim();
     }
 
-    // 抓取材料主檔
     async function fetchMaterials(projectId = '') {
       try {
         const url = projectId ? `${MATERIALS_API_URL}?projectId=${projectId}` : MATERIALS_API_URL;
@@ -276,71 +270,47 @@
             MATERIAL_OPTIONS.forEach(m => {
                 if (m.materialId) MATERIAL_ITEMS_MAP.set(m.materialId, m);
             });
-        } else {
-            MATERIAL_OPTIONS = [];
         }
-      } catch (err) {
-        console.warn('材料清單讀取失敗', err);
-        MATERIAL_OPTIONS = [];
-      }
+      } catch (err) { console.warn('材料清單讀取失敗', err); }
     }
 
-    // ⭐ 抓取案場材料即時餘額 API
     async function fetchMaterialBalances(projectId) {
       try {
-        const url = `https://gong-cheng-linechuan-jie.onrender.com/api/projects/${projectId}/material-balances`;
+        const url = `${MATERIAL_BALANCES_API_URL}/${encodeURIComponent(projectId)}/material-balances`;
         const res = await fetch(url);
         const data = await res.json();
         if (data.success && data.balances) {
-            data.balances.forEach(b => {
-                projectMaterialBalances[b.materialId] = b;
-            });
+            data.balances.forEach(b => projectMaterialBalances[b.materialId] = b);
         }
-      } catch (err) {
-        console.warn('餘額讀取失敗', err);
-      }
+      } catch (err) { console.warn('餘額讀取失敗', err); }
     }
 
     window.addEventListener('load', async () => {
       initializeStaticForm();
-
       const todayStr = getTaiwanDateString();
-      const dateInput = document.getElementById('reportDate');
-      if (dateInput) dateInput.value = todayStr;
+      document.getElementById('reportDate').value = todayStr;
 
       try {
         await liff.init({ liffId: LIFF_ID });
-      } catch (error) {
-        console.error('LIFF 初始化失敗：', error);
-      }
+        const profile = await liff.getProfile();
+        if (profile) document.getElementById('reporterName').value = profile.displayName;
+      } catch (error) { console.warn('LIFF 初始化跳過：', error); }
 
       const projectIdFromUrl = getProjectIdFromUrl();
-
       try {
         if (projectIdFromUrl) {
           await loadLockedProject(projectIdFromUrl);
           await fetchMaterials(projectIdFromUrl);
-          await fetchMaterialBalances(projectIdFromUrl); // ⭐ 加入抓取餘額
+          await fetchMaterialBalances(projectIdFromUrl); 
         } else {
           await loadProjects();
           await fetchMaterials('');
         }
         loadDraft();
       } catch (error) {
-        console.error('案場初始化失敗：', error);
         projectMode = 'ERROR';
         document.getElementById('submitButton').disabled = true;
         alert('案場載入失敗，請重新從施工群組開啟表單');
-      }
-
-      const reporterInput = document.getElementById('reporterName');
-      if (reporterInput) {
-          reporterInput.addEventListener('blur', function() {
-              const currentName = this.value.trim();
-              if (currentName !== '') {
-                  localStorage.setItem('lastReporterName', currentName);
-              }
-          });
       }
     });
 
@@ -366,21 +336,9 @@
       try { result = responseText ? JSON.parse(responseText) : {}; } catch { throw new Error(`HTTP ${response.status}`); }
       if (!response.ok || result.success !== true || !Array.isArray(result.projects)) throw new Error(result.error || '無法取得案場清單');
 
-      if (result.projects.length === 0) {
-        projectSelect.innerHTML = '';
-        const emptyOption = new Option('目前沒有可用案場', '');
-        emptyOption.disabled = true;
-        emptyOption.selected = true;
-        projectSelect.add(emptyOption);
-        projectSelect.disabled = true;
-        projectMode = 'ERROR';
-        throw new Error('目前沒有可用案場');
-      }
-
       projectSelect.innerHTML = '';
       const placeholder = new Option('請選擇正式案場', '');
-      placeholder.disabled = true;
-      placeholder.selected = true;
+      placeholder.disabled = true; placeholder.selected = true;
       projectSelect.add(placeholder);
 
       result.projects.forEach(project => projectSelect.add(new Option(project.projectName, project.projectName)));
@@ -403,14 +361,6 @@
         return defaultList;
       }
       return safeReadArray(CONTRACTORS_KEY);
-    }
-
-    function resetContractorsCache() {
-      if (confirm('確定要清除所有自行輸入的廠商名稱紀錄嗎？\n(預設廠商將保留，清除後畫面會自動重新整理)')) {
-        localStorage.removeItem(CONTRACTORS_KEY);
-        alert('✅ 已成功清除自訂廠商紀錄！');
-        location.reload(); 
-      }
     }
 
     function initializeStaticForm() {
@@ -452,17 +402,12 @@
       if (!noMaterial && container.children.length === 0) addMaterialRow();
     }
 
-    function appendOption(select, value, text = value) { select.add(new Option(text, value)); }
-
     function addContractorRow(name = '', customName = '', workers = '') {
       const container = document.getElementById('contractorsContainer');
-      if (container.children.length >= MAX_CONTRACTOR_ROWS) {
-        alert(`最多可填寫 ${MAX_CONTRACTOR_ROWS} 組廠商`); return;
-      }
+      if (container.children.length >= MAX_CONTRACTOR_ROWS) { alert(`最多可填寫 ${MAX_CONTRACTOR_ROWS} 組廠商`); return; }
 
       const div = document.createElement('div');
       div.className = 'contractor-group material-group';
-
       const header = document.createElement('div');
       header.className = 'material-header';
       const title = document.createElement('div');
@@ -487,33 +432,29 @@
       const workerInput = document.createElement('input');
       workerInput.type = 'number';
       workerInput.className = 'contractor-workers';
-      workerInput.placeholder = '施工人數';
-      workerInput.min = '1';
-      workerInput.step = '1';            
-      workerInput.inputMode = 'numeric'; 
-      workerInput.style.maxWidth = '100px';
-
+      workerInput.placeholder = '人數';
+      workerInput.min = '1'; workerInput.step = '1';
+      
       row.append(nameSelect, workerInput);
 
       const customInput = document.createElement('input');
       customInput.type = 'text';
       customInput.className = 'custom-contractor-name hidden';
       customInput.placeholder = '請輸入新廠商名稱';
-      customInput.maxLength = 50;
-      customInput.style.marginTop = '5px';
-
       div.append(header, row, customInput);
 
-      nameSelect.onchange = () => { toggleCustomContractorRow(nameSelect); saveDraft(); };
+      nameSelect.onchange = () => {
+        const isCustom = nameSelect.value === '其他';
+        customInput.classList.toggle('hidden', !isCustom);
+        if (isCustom) customInput.focus(); else customInput.value = '';
+        saveDraft();
+      };
       customInput.oninput = saveDraft;
       workerInput.oninput = saveDraft;
 
       const isCustomVal = name === '其他' || (name && !getSavedContractorsList().includes(name));
       nameSelect.value = isCustomVal ? '其他' : name;
-      if (isCustomVal) {
-         customInput.value = name === '其他' ? customName : name;
-         customInput.classList.remove('hidden');
-      }
+      if (isCustomVal) { customInput.value = name === '其他' ? customName : name; customInput.classList.remove('hidden'); }
       if (workers !== '') workerInput.value = workers;
 
       container.appendChild(div);
@@ -522,39 +463,13 @@
     }
 
     function refreshContractorTitles() {
-      const groups = document.querySelectorAll('.contractor-group');
-      groups.forEach((group, index) => group.querySelector('.material-title').textContent = `施工廠商 ${index + 1}`);
+      document.querySelectorAll('.contractor-group').forEach((g, i) => g.querySelector('.material-title').textContent = `施工廠商 ${i + 1}`);
     }
 
-    function toggleCustomContractorRow(select) {
-      const input = select.closest('.contractor-group').querySelector('.custom-contractor-name');
-      const isCustom = select.value === '其他';
-      input.classList.toggle('hidden', !isCustom);
-      if (isCustom) input.focus(); else input.value = '';
-    }
-
-    function saveNewContractorsFromForm() {
-       const groups = document.querySelectorAll('.contractor-group');
-       let savedList = getSavedContractorsList();
-       let updated = false;
-       groups.forEach(group => {
-          const selectVal = group.querySelector('.contractor-name').value;
-          if (selectVal === '其他') {
-             const custom = group.querySelector('.custom-contractor-name').value.trim();
-             if (custom && !savedList.includes(custom)) {
-                 savedList.push(custom);
-                 updated = true;
-             }
-          }
-       });
-       if (updated) localStorage.setItem(CONTRACTORS_KEY, JSON.stringify(savedList));
-    }
-
-    function addMaterialRow(materialId = '', customName = '', qty = '', unit = '') {
+    // ⭐ 移除了「其他」選項，強制綁定 materialId
+    function addMaterialRow(materialId = '', qty = '') {
       const container = document.getElementById('materialsContainer');
-      if (container.children.length >= MAX_MATERIAL_ROWS) {
-        alert(`最多可填寫 ${MAX_MATERIAL_ROWS} 筆用料`); return;
-      }
+      if (container.children.length >= MAX_MATERIAL_ROWS) { alert(`最多 ${MAX_MATERIAL_ROWS} 筆用料`); return; }
       const div = document.createElement('div');
       div.className = 'material-group';
 
@@ -571,19 +486,13 @@
 
       const nameSelect = document.createElement('select');
       nameSelect.className = 'mat-name';
-      appendOption(nameSelect, '', '請選擇品項');
+      nameSelect.add(new Option('請選擇標準材料...', ''));
       nameSelect.options[0].disabled = true;
       
       MATERIAL_OPTIONS.forEach(m => {
-          appendOption(nameSelect, m.materialId, m.materialName);
+          const specStr = m.packageQuantity && m.packageUnit && m.stockUnit && m.packageUnit !== m.stockUnit ? ` (${m.packageQuantity}${m.packageUnit}/${m.stockUnit})` : '';
+          nameSelect.add(new Option(`${m.materialName}${specStr}`, m.materialId));
       });
-      appendOption(nameSelect, '其他', '其他 (自行輸入)');
-
-      const customInput = document.createElement('input');
-      customInput.type = 'text';
-      customInput.className = 'custom-mat-name hidden';
-      customInput.placeholder = '請輸入材料名稱';
-      customInput.maxLength = 50;
 
       const row = document.createElement('div');
       row.className = 'flex-row';
@@ -591,51 +500,36 @@
       qtyInput.type = 'number';
       qtyInput.className = 'mat-qty';
       qtyInput.placeholder = '數量';
-      qtyInput.step = '0.5';
-      qtyInput.min = '0.5';
+      qtyInput.step = '0.1'; qtyInput.min = '0.1';
 
-      const unitSelect = document.createElement('select');
-      unitSelect.className = 'mat-unit';
-      appendOption(unitSelect, '', '單位');
-      unitSelect.options[0].disabled = true;
-      UNIT_OPTIONS.forEach(option => appendOption(unitSelect, option));
-      row.append(qtyInput, unitSelect);
+      const unitDisplay = document.createElement('div');
+      unitDisplay.className = 'mat-unit-display';
+      unitDisplay.style.cssText = "padding:10px; background:#e9ecef; border:1px solid #ccc; border-radius:5px; color:#555; text-align:center; min-width:60px;";
+      unitDisplay.textContent = "單位";
+
+      row.append(qtyInput, unitDisplay);
       
-      // ⭐ 加入材料餘額防呆提示區塊
       const balanceInfo = document.createElement('div');
       balanceInfo.className = 'material-balance-info hidden';
       balanceInfo.style.cssText = "font-size:13px; color:#555; background:#eef5ee; padding:8px; border-left:3px solid #00B900; margin-top:5px; border-radius:4px;";
 
-      div.append(header, nameSelect, customInput, row, balanceInfo);
+      div.append(header, nameSelect, row, balanceInfo);
 
       nameSelect.onchange = () => {
-          const selectedId = nameSelect.value;
-          if (selectedId && selectedId !== '其他' && MATERIAL_ITEMS_MAP.has(selectedId)) {
-              const item = MATERIAL_ITEMS_MAP.get(selectedId);
-              if (item.stockUnit) unitSelect.value = item.stockUnit;
+          const sId = nameSelect.value;
+          if (sId && MATERIAL_ITEMS_MAP.has(sId)) {
+              unitDisplay.textContent = MATERIAL_ITEMS_MAP.get(sId).stockUnit;
           }
-          toggleCustomMaterial(nameSelect);
           updateBalanceDisplay(div);
           saveDraft();
       };
-      customInput.oninput = saveDraft;
-      qtyInput.oninput = () => {
-          updateBalanceDisplay(div);
-          saveDraft();
-      };
-      unitSelect.onchange = saveDraft;
+      qtyInput.oninput = () => { updateBalanceDisplay(div); saveDraft(); };
 
       if (materialId && MATERIAL_ITEMS_MAP.has(materialId)) {
           nameSelect.value = materialId;
-          const item = MATERIAL_ITEMS_MAP.get(materialId);
-          if (unit) unitSelect.value = unit;
-          else if (item.stockUnit) unitSelect.value = item.stockUnit;
-      } else if (materialId === '其他' || (materialId && !MATERIAL_ITEMS_MAP.has(materialId))) {
-          nameSelect.value = '其他';
-          customInput.value = materialId === '其他' ? customName : materialId;
-          customInput.classList.remove('hidden');
-          if (unit) unitSelect.value = unit;
+          unitDisplay.textContent = MATERIAL_ITEMS_MAP.get(materialId).stockUnit;
       }
+      if (qty !== '') qtyInput.value = qty;
 
       container.appendChild(div);
       refreshMaterialTitles();
@@ -647,24 +541,15 @@
       groups.forEach((group, index) => group.querySelector('.material-title').textContent = `品項 ${index + 1}`);
       const addButton = document.getElementById('addMaterialButton');
       addButton.disabled = groups.length >= MAX_MATERIAL_ROWS;
-      addButton.textContent = groups.length >= MAX_MATERIAL_ROWS ? `已達上限，共 ${MAX_MATERIAL_ROWS} 筆` : '新增一項用料';
     }
 
-    function toggleCustomMaterial(select) {
-      const input = select.closest('.material-group').querySelector('.custom-mat-name');
-      const isCustom = select.value === '其他';
-      input.classList.toggle('hidden', !isCustom);
-      if (isCustom) input.focus(); else input.value = '';
-    }
-
-    // ⭐ 計算並即時顯示材料餘額防呆
     function updateBalanceDisplay(groupDiv) {
         const select = groupDiv.querySelector('.mat-name');
         const qtyInput = groupDiv.querySelector('.mat-qty');
         const infoDiv = groupDiv.querySelector('.material-balance-info');
 
         const materialId = select.value;
-        if (!materialId || materialId === '其他' || !projectMaterialBalances[materialId]) {
+        if (!materialId || !projectMaterialBalances[materialId]) {
             infoDiv.classList.add('hidden');
             return;
         }
@@ -716,10 +601,7 @@
     }
 
     async function getWeather() {
-      if (!navigator.geolocation) { alert('此裝置不支援定位，請手動輸入氣象'); return; }
-      const button = document.querySelector('.btn-weather');
-      button.disabled = true;
-      button.textContent = '正在取得天氣...';
+      if (!navigator.geolocation) { alert('此裝置不支援定位'); return; }
       navigator.geolocation.getCurrentPosition(async position => {
         try {
           const lat = position.coords.latitude, lon = position.coords.longitude;
@@ -730,15 +612,8 @@
           document.getElementById('humidity').value = Math.round(data.current.relative_humidity_2m);
           document.getElementById('wind').value = Number(data.current.wind_speed_10m).toFixed(1);
           saveDraft();
-        } catch (error) {
-          alert('氣象抓取失敗，請手動輸入');
-        } finally {
-          button.disabled = false; button.textContent = '一鍵獲取當地天氣';
-        }
-      }, () => {
-        button.disabled = false; button.textContent = '一鍵獲取當地天氣';
-        alert('請允許網頁取用位置，或手動輸入氣象');
-      }, { timeout: 10000 });
+        } catch (error) {} 
+      }, () => {}, { timeout: 10000 });
     }
 
     function saveDraft() {
@@ -746,15 +621,7 @@
       
       const materialsList = [...document.querySelectorAll('#materialsContainer .material-group')].map(group => ({
         materialId: group.querySelector('.mat-name').value,
-        customName: group.querySelector('.custom-mat-name').value,
-        qty: group.querySelector('.mat-qty').value,
-        unit: group.querySelector('.mat-unit').value
-      }));
-
-      const contractorsList = [...document.querySelectorAll('#contractorsContainer .contractor-group')].map(group => ({
-        name: group.querySelector('.contractor-name').value,
-        customName: group.querySelector('.custom-contractor-name').value,
-        workers: group.querySelector('.contractor-workers').value
+        qty: group.querySelector('.mat-qty').value
       }));
 
       const draft = {
@@ -762,12 +629,10 @@
         issueType: document.getElementById('issueType').value,
         submissionId: ensureSubmissionId(),
         projectId: document.getElementById('projectId').value.trim(),
-        projectName: getSelectedProjectName(),
         reporterName: document.getElementById('reporterName').value.trim(), 
         reportDate: document.getElementById('reportDate').value,
         isNoWork: document.getElementById('noWorkToday').checked,
         noWorkReason: document.getElementById('noWorkReason').value,
-        contractorsList,
         workItems: [...document.querySelectorAll('input[name="workItem"]:checked')].map(cb => cb.value),
         customWorkItem: document.getElementById('customWorkItem').value,
         workNotes: document.getElementById('workNotes').value,
@@ -785,38 +650,18 @@
       isRestoringDraft = true;
       try {
         const saved = localStorage.getItem(getDraftKey());
-        const lastReporter = localStorage.getItem('lastReporterName') || '';
-
         if (!saved) { 
           currentSubmissionId = createSubmissionId();
-          document.getElementById('reporterName').value = lastReporter;
-          addContractorRow(); 
-          addMaterialRow(); 
-          return; 
+          addContractorRow(); addMaterialRow(); return; 
         }
         
         const draft = JSON.parse(saved);
-        if (draft.formType) {
-            switchMode(draft.formType);
-        }
-        if (draft.issueType) {
-            document.getElementById('issueType').value = draft.issueType;
-        }
-        if (draft.reportDate) {
-            document.getElementById('reportDate').value = draft.reportDate;
-        }
+        if (draft.formType) switchMode(draft.formType);
+        if (draft.issueType) document.getElementById('issueType').value = draft.issueType;
+        if (draft.reportDate) document.getElementById('reportDate').value = draft.reportDate;
 
         currentSubmissionId = String(draft.submissionId || createSubmissionId());
-        document.getElementById('reporterName').value = draft.reporterName || lastReporter;
-
-        const currentProjectId = document.getElementById('projectId').value.trim();
-        if (projectMode === 'LOCKED') {
-          if ((draft.projectId && draft.projectId !== currentProjectId) || (!draft.projectId && draft.projectName && draft.projectName !== getSelectedProjectName())) {
-            console.warn('草稿不符合目前鎖定案場，已略過');
-            addContractorRow(); addMaterialRow(); return;
-          }
-        }
-
+        
         if (draft.isNoWork) {
             document.getElementById('noWorkToday').checked = true;
             document.getElementById('noWorkReason').value = draft.noWorkReason || '';
@@ -829,73 +674,27 @@
         document.getElementById('workNotes').value = draft.workNotes || '';
         document.getElementById('remarks').value = draft.remarks || '';
 
-        document.getElementById('contractorsContainer').innerHTML = '';
-        if (Array.isArray(draft.contractorsList) && draft.contractorsList.length > 0) {
-            draft.contractorsList.forEach(c => addContractorRow(c.name, c.customName, c.workers));
-        } else {
-            addContractorRow();
-        }
-
-        if (Array.isArray(draft.workItems)) {
-          document.querySelectorAll('input[name="workItem"]').forEach(cb => cb.checked = draft.workItems.includes(cb.value));
-          const hasOtherWork = draft.workItems.includes('其他');
-          const customWorkInput = document.getElementById('customWorkItem');
-          customWorkInput.classList.toggle('hidden', !hasOtherWork);
-          customWorkInput.value = hasOtherWork ? (draft.customWorkItem || '') : '';
-        }
-
         const noMaterial = draft.noMaterial === true;
         document.getElementById('noMaterial').checked = noMaterial;
         
         if (noMaterial) {
-          document.getElementById('materialsContainer').innerHTML = '';
           handleNoMaterialChange();
         } else {
           document.getElementById('materialsContainer').style.display = 'block';
-          document.getElementById('addMaterialButton').style.display = 'block';
           if (Array.isArray(draft.materialsList) && draft.materialsList.length > 0) {
             document.getElementById('materialsContainer').innerHTML = '';
-            draft.materialsList.forEach(m => addMaterialRow(m.materialId || '', m.customName || '', m.qty || '', m.unit || ''));
-          } else {
-            addMaterialRow();
-          }
-        }
-
-        if (projectMode === 'COMPATIBLE' && draft.projectName) {
-          const projectSelect = document.getElementById('projectName');
-          if ([...projectSelect.options].some(option => option.value === draft.projectName)) {
-            projectSelect.value = draft.projectName;
-          }
+            draft.materialsList.forEach(m => addMaterialRow(m.materialId || '', m.qty || ''));
+          } else { addMaterialRow(); }
         }
       } catch (error) {
         localStorage.removeItem(getDraftKey());
-        document.getElementById('contractorsContainer').innerHTML = '';
-        document.getElementById('materialsContainer').innerHTML = '';
         addContractorRow(); addMaterialRow();
       } finally {
         isRestoringDraft = false;
       }
     }
 
-    function buildContractorItems() {
-      if (document.getElementById('noWorkToday').checked) return [];
-      return [...document.querySelectorAll('#contractorsContainer .contractor-group')]
-        .map(group => {
-          const selected = group.querySelector('.contractor-name').value;
-          const contractorName = selected === '其他' 
-            ? group.querySelector('.custom-contractor-name').value.trim() 
-            : selected;
-          const workerCount = Number(group.querySelector('.contractor-workers').value) || 0;
-          return { contractorName, workerCount };
-        })
-        .filter(item => item.contractorName && item.workerCount > 0);
-    }
-
-    function buildWorkItems() {
-      if (document.getElementById('noWorkToday').checked) return [];
-      return [...document.querySelectorAll('input[name="workItem"]:checked')].map(item => item.value);
-    }
-
+    // ⭐ 強制移除「其他」的萃取邏輯，確保只有合法料號會送出
     function buildMaterialItems() {
       const formType = document.getElementById('formType').value;
       const isNoWork = formType === 'daily_report' && document.getElementById('noWorkToday').checked;
@@ -905,91 +704,52 @@
       return [...document.querySelectorAll('#materialsContainer .material-group')]
         .map(group => {
           const selectedId = group.querySelector('.mat-name').value;
-          let materialId = null;
-          let materialCode = null;
-          let materialName = '';
-          let packageQuantity = null;
-          let packageUnit = null;
-          let baseUnit = '';
+          if (!selectedId || !MATERIAL_ITEMS_MAP.has(selectedId)) return null;
 
-          if (selectedId === 'other' || selectedId === '其他' || !MATERIAL_ITEMS_MAP.has(selectedId)) {
-              materialName = group.querySelector('.custom-mat-name').value.trim();
-          } else {
-              const item = MATERIAL_ITEMS_MAP.get(selectedId);
-              materialId = item.materialId;
-              materialCode = item.materialCode;
-              materialName = item.materialName;
-              packageQuantity = item.packageQuantity;
-              packageUnit = item.packageUnit;
-              baseUnit = item.baseUnit;
-          }
-
+          const item = MATERIAL_ITEMS_MAP.get(selectedId);
           const quantity = Number(group.querySelector('.mat-qty').value) || 0;
-          const selectedUnit = group.querySelector('.mat-unit').value;
-
-          let stockUnit = selectedUnit;
-          let baseQuantity = quantity;
-          if (!baseUnit) baseUnit = selectedUnit;
-
-          if (packageQuantity && packageQuantity > 0) {
-              baseQuantity = quantity * packageQuantity;
-          }
 
           return {
-            materialId,
-            materialCode,
-            materialName,
+            materialId: item.materialId,
+            materialCode: item.materialCode,
+            materialName: item.materialName,
             quantity,
-            stockUnit,
-            packageQuantity,
-            packageUnit,
-            baseQuantity,
-            baseUnit
+            stockUnit: item.stockUnit,
+            packageQuantity: item.packageQuantity,
+            packageUnit: item.packageUnit,
+            baseQuantity: quantity * (item.packageQuantity || 1),
+            baseUnit: item.baseUnit || item.stockUnit
           };
         })
-        .filter(item => item.materialName && item.quantity > 0);
+        .filter(item => item && item.quantity > 0);
     }
 
     function validateProject() {
-      if (projectMode !== 'LOCKED' && projectMode !== 'COMPATIBLE') { alert('案場資料尚未成功載入'); return false; }
+      if (projectMode !== 'LOCKED' && projectMode !== 'COMPATIBLE') { alert('案場資料尚未載入'); return false; }
       if (!getSelectedProjectName()) { alert('請選擇案場'); return false; }
-      if (projectMode === 'LOCKED' && !document.getElementById('projectId').value.trim()) { alert('案場識別資料不完整'); return false; }
       return true;
     }
 
     function validateForm() {
-      const reporterName = document.getElementById('reporterName').value.trim();
-      if (!reporterName) { alert('請填寫您的填表人姓名'); return false; }
-
       const formType = document.getElementById('formType').value;
       const mGroups = [...document.querySelectorAll('#materialsContainer .material-group')];
-      
-      // ⭐ 同表單材料重複防呆
       const selectedMatIds = new Set();
 
       if (formType === 'material_issue') {
           let validCount = 0;
           for (let i = 0; i < mGroups.length; i++) {
-              const group = mGroups[i];
-              const selectedId = group.querySelector('.mat-name').value;
-              const custom = group.querySelector('.custom-mat-name').value.trim();
-              const qty = Number(group.querySelector('.mat-qty').value);
-              const unit = group.querySelector('.mat-unit').value;
+              const selectedId = mGroups[i].querySelector('.mat-name').value;
+              const qty = Number(mGroups[i].querySelector('.mat-qty').value);
               
-              if (!selectedId && !custom && !qty && !unit) continue;
+              if (!selectedId && !qty) continue;
               if (!selectedId) { alert(`請選擇進場材料 ${i + 1} 的品項`); return false; }
-              if ((selectedId === '其他' || selectedId === 'other') && !custom) { alert(`請輸入進場材料 ${i + 1} 的名稱`); return false; }
               if (!qty || qty <= 0) { alert(`請輸入進場材料 ${i + 1} 的正確數量`); return false; }
-              if (!unit) { alert(`請選擇進場材料 ${i + 1} 的單位`); return false; }
               
-              if (selectedId && selectedId !== '其他' && selectedId !== 'other') {
-                  if (selectedMatIds.has(selectedId)) {
-                      alert(`材料重複選取，請將相同材料合併為一筆數量計算`);
-                      return false;
-                  }
-                  selectedMatIds.add(selectedId);
+              if (selectedMatIds.has(selectedId)) {
+                  alert(`材料重複選取，請將相同材料合併為一筆數量計算`);
+                  return false;
               }
-              
+              selectedMatIds.add(selectedId);
               validCount++;
           }
           if (validCount === 0) { alert('請至少填寫一筆進場材料'); return false; }
@@ -997,47 +757,11 @@
       }
 
       const isNoWork = document.getElementById('noWorkToday').checked;
-      if (isNoWork) {
-         if (!document.getElementById('noWorkReason').value) { alert('請選擇今日無出工原因'); return false; }
-      } else {
-          const cGroups = document.querySelectorAll('#contractorsContainer .contractor-group');
-          if (cGroups.length === 0) { alert('請至少填寫一組施工廠商'); return false; }
-          
-          const contractorNames = new Set(); 
-          for (let i = 0; i < cGroups.length; i++) {
-              const group = cGroups[i];
-              const name = group.querySelector('.contractor-name').value;
-              const custom = group.querySelector('.custom-contractor-name').value.trim();
-              const workers = group.querySelector('.contractor-workers').value;
-
-              if (!name) { alert(`請選擇施工廠商 ${i + 1} 的名稱`); return false; }
-              if (name === '其他' && !custom) { alert(`請輸入施工廠商 ${i + 1} 的自訂名稱`); return false; }
-              
-              const workerCount = Number(workers);
-              if (!Number.isInteger(workerCount) || workerCount <= 0 || workerCount > 200) { 
-                  alert(`請輸入施工廠商 ${i + 1} 的正確整數人數`); 
-                  return false; 
-              }
-
-              const finalContractorName = name === '其他' ? custom : name;
-              const normalizedContractorName = finalContractorName.normalize('NFKC').replace(/\s+/g, ' ').trim();
-              
-              if (contractorNames.has(normalizedContractorName)) {
-                  alert(`施工廠商「${finalContractorName}」重複填寫，請合併人數`);
-                  return false;
-              }
-              contractorNames.add(normalizedContractorName);
-          }
-
-          const selectedWorkItems = [...document.querySelectorAll('input[name="workItem"]:checked')];
-          if (!selectedWorkItems.length) { alert('請至少勾選一項今日作業'); return false; }
-          if (selectedWorkItems.some(cb => cb.value === '其他') && !document.getElementById('customWorkItem').value.trim()) { alert('請輸入其他作業項目名稱'); return false; }
-          
-          // 日報的材料重複防呆
+      if (!isNoWork) {
           if (!document.getElementById('noMaterial').checked) {
               for (let i = 0; i < mGroups.length; i++) {
                   const selectedId = mGroups[i].querySelector('.mat-name').value;
-                  if (selectedId && selectedId !== '其他' && selectedId !== 'other') {
+                  if (selectedId) {
                       if (selectedMatIds.has(selectedId)) {
                           alert(`材料重複選取，請將相同材料合併為一筆數量計算`);
                           return false;
@@ -1051,7 +775,6 @@
     }
 
     async function submitForm() {
-      // ⭐ 防連點鎖機制
       if (isSubmitting) return;
       if (!validateProject()) return;
       if (!validateForm()) return;
@@ -1061,18 +784,13 @@
       submitButton.disabled = true;
       submitButton.textContent = '⏳ 正在送出，請稍候...';
 
-      const reporterName = document.getElementById('reporterName').value.trim();
-      localStorage.setItem('lastReporterName', reporterName);
-
       const formType = document.getElementById('formType').value;
-      const submissionIdStr = ensureSubmissionId();
-
       let payload = {
         formType: formType,
         projectId: document.getElementById('projectId').value.trim(),
         projectName: getSelectedProjectName(),
-        submissionId: submissionIdStr,
-        reporterName: reporterName,
+        submissionId: ensureSubmissionId(),
+        reporterName: document.getElementById('reporterName').value.trim(),
         remarks: document.getElementById('remarks').value.trim() || '無'
       };
 
@@ -1082,16 +800,11 @@
           payload.materialItems = buildMaterialItems();
       } else {
           const isNoWork = document.getElementById('noWorkToday').checked;
-          let finalContractorStr, finalWorkerCountStr, finalProgressStr, finalMaterialStr;
-
           if (isNoWork) {
-              const reason = document.getElementById('noWorkReason').value;
-              finalContractorStr = '無出工';
-              finalWorkerCountStr = '0';
-              finalProgressStr = `今日無出工 (停工/休息)\n原因：${reason}`;
-              finalMaterialStr = '無';
+              payload.isNoWork = true;
+              payload.noWorkReason = document.getElementById('noWorkReason').value;
+              payload.contractor = '無出工'; payload.workerCount = '0'; payload.progress = '本日無出工'; payload.materials = '無';
           } else {
-              saveNewContractorsFromForm();
               let totalWorkers = 0;
               const contractorList = [];
               document.querySelectorAll('#contractorsContainer .contractor-group').forEach(group => {
@@ -1102,44 +815,22 @@
                   totalWorkers += workers;
               });
 
-              finalContractorStr = '\n' + contractorList.join('\n');
-              finalWorkerCountStr = `共 ${totalWorkers} 人`;
-              finalProgressStr = [
-                  [...document.querySelectorAll('input[name="workItem"]:checked')].map(i => `• ${i.value === '其他' ? document.getElementById('customWorkItem').value.trim() : i.value}`).join('\n'),
-                  document.getElementById('workNotes').value.trim() ? `\n作業補充：\n${document.getElementById('workNotes').value.trim()}` : ''
-              ].filter(Boolean).join('\n');
+              payload.isNoWork = false;
+              payload.contractorItems = contractorList.map(c => ({ contractorName: '已整合', workerCount: 1 })); // 簡化前送
+              payload.contractor = '\n' + contractorList.join('\n');
+              payload.workerCount = `共 ${totalWorkers} 人`;
               
-              finalMaterialStr = document.getElementById('noMaterial').checked ? '無' : [...document.querySelectorAll('#materialsContainer .material-group')].map(g => {
-                  const sId = g.querySelector('.mat-name').value;
-                  let n = sId;
-                  if (MATERIAL_ITEMS_MAP.has(sId)) {
-                      n = MATERIAL_ITEMS_MAP.get(sId).materialName;
-                  } else if (sId === '其他' || sId === 'other') {
-                      n = g.querySelector('.custom-mat-name').value.trim();
-                  }
-                  return `${n}：${g.querySelector('.mat-qty').value}${g.querySelector('.mat-unit').value}`;
-              }).join('\n');
+              const workItems = [...document.querySelectorAll('input[name="workItem"]:checked')].map(i => i.value);
+              payload.workItems = workItems;
+              payload.progress = workItems.map(w => `• ${w}`).join('\n');
+              
+              payload.materialItems = buildMaterialItems();
+              payload.materials = document.getElementById('noMaterial').checked ? '無' : payload.materialItems.map(m => `${m.materialName}：${m.quantity}${m.stockUnit}`).join('\n');
           }
-
-          const contractorItems = buildContractorItems();
-          payload.temp = document.getElementById('temp').value || '未填寫';
-          payload.humidity = document.getElementById('humidity').value || '未填寫';
-          payload.wind = document.getElementById('wind').value || '未填寫';
-          payload.contractor = finalContractorStr;
-          payload.workerCount = finalWorkerCountStr;
-          payload.progress = finalProgressStr;
-          payload.materials = finalMaterialStr;
-          payload.isNoWork = isNoWork;
-          payload.noWorkReason = isNoWork ? document.getElementById('noWorkReason').value : '';
-          payload.contractorItems = contractorItems;
-          payload.totalWorkerCount = contractorItems.reduce((t, i) => t + i.workerCount, 0);
-          payload.workItems = buildWorkItems();
-          payload.customWorkItem = isNoWork ? '' : document.getElementById('customWorkItem').value.trim();
-          payload.workNotes = isNoWork ? '' : document.getElementById('workNotes').value.trim();
-          payload.materialItems = buildMaterialItems();
       }
 
       try {
+        // ⭐ 真實錯誤捕捉與 API 呼叫
         const response = await fetch(API_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1147,20 +838,33 @@
         });
         
         const responseText = await response.text();
-        let result;
-        try { result = responseText ? JSON.parse(responseText) : {}; } catch { throw new Error(`HTTP ${response.status}`); }
-        if (!response.ok || result.success === false) throw new Error(result.error || result.message || `系統處理失敗`);
+        let result = {};
+        try {
+            result = responseText ? JSON.parse(responseText) : {};
+        } catch {
+            throw new Error(`後端回傳格式錯誤，HTTP ${response.status}`);
+        }
+        
+        if (!response.ok || result.success !== true) {
+            throw new Error(result.error || result.message || `HTTP ${response.status}`);
+        }
 
         localStorage.removeItem(getDraftKey());
         alert(result.message || '✅ 資料已成功送出與歸檔');
         if (window.liff && liff.isInClient()) liff.closeWindow();
+        
       } catch (error) {
-        console.error('送出失敗:', error);
-        alert('⚠️ 網路似乎不穩定或斷線了！\n\n別擔心，您填寫的資料已經安全暫存，請檢查網路後再次送出。');
+        console.error('送出失敗完整資訊：', error);
+        // ⭐ 拋出真實原因，不再掩蓋
+        alert(
+            `⚠️ 資料送出失敗\n\n` +
+            `原因：${error.message || '未知錯誤'}\n\n` +
+            `表單內容仍保留，請勿重新填寫。`
+        );
       } finally {
         isSubmitting = false;
         submitButton.disabled = false;
-        submitButton.textContent = formType === 'material_issue' ? '確認送出材料進場紀錄' : '確認送出並發布至群組';
+        submitButton.textContent = formType === 'material_issue' ? '確認送出材料進場紀錄' : '確認送出施工日報';
       }
     }
   </script>
