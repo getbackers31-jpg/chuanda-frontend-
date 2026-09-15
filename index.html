@@ -36,7 +36,7 @@
 </head>
 <body>
   <div class="container">
-    <h2 id="formTitle">👷 施工日報表 <span class="version-tag">v5.6</span></h2>
+    <h2 id="formTitle">👷 施工日報表 <span class="version-tag">v5.7</span></h2>
 
     <div style="display:flex; gap:10px; margin-bottom:15px;">
         <button type="button" id="btnDailyMode" class="btn btn-primary" style="flex:1; padding:10px; border:none; border-radius:5px; background:#00B900; color:white; font-weight:bold; cursor:pointer;" onclick="switchMode('daily_report')">📝 填寫施工日報</button>
@@ -140,8 +140,6 @@
 
   <script>
     const LIFF_ID = '2011289657-vQgMb0eI';
-    
-    // ⭐ API 網域已改回 Render 伺服器
     const API_BASE_URL = 'https://gong-cheng-linechuan-jie.onrender.com';
     
     const API_URL = `${API_BASE_URL}/api/submit-report`;
@@ -197,7 +195,7 @@
             btnIssue.style.color = '#333';
             btnIssue.style.border = '1px solid #ccc';
             
-            formTitle.innerHTML = '👷 施工日報表 <span class="version-tag">v5.6</span>';
+            formTitle.innerHTML = '👷 施工日報表 <span class="version-tag">v5.7</span>';
             submitButton.textContent = '確認送出並發布至群組';
             submitButton.style.background = '#00B900';
             materialLabel.textContent = '📦 今日用料';
@@ -212,7 +210,7 @@
             btnIssue.style.color = 'white';
             btnIssue.style.border = 'none';
 
-            formTitle.innerHTML = '📦 材料進場登記表 <span class="version-tag">v5.6</span>';
+            formTitle.innerHTML = '📦 材料進場登記表 <span class="version-tag">v5.7</span>';
             submitButton.textContent = '確認送出材料進場紀錄';
             submitButton.style.background = '#28a745';
             materialLabel.textContent = '📦 進場材料清單';
@@ -290,16 +288,23 @@
       const dateInput = document.getElementById('reportDate');
       if (dateInput) {
           dateInput.value = todayStr;
-          dateInput.max = todayStr; // 防止選到未來時間
+          dateInput.max = todayStr;
+      }
+
+      // ⭐ 1. 網頁一載入，優先讀取「永久記憶」的名字
+      const savedReporterName = localStorage.getItem('savedReporterName');
+      if (savedReporterName) {
+          document.getElementById('reporterName').value = savedReporterName;
       }
 
       try {
         await liff.init({ liffId: LIFF_ID });
         const profile = await liff.getProfile();
-        // ⭐ 改為：如果畫面上已經有記憶的值，就不要被 LIFF 覆蓋；如果空白才填入 LINE 名字
         const nameInput = document.getElementById('reporterName');
+        // ⭐ 如果畫面上是空白的（代表沒有永久記憶），才用 LINE 的名字
         if (profile && !nameInput.value.trim()) {
             nameInput.value = profile.displayName;
+            localStorage.setItem('savedReporterName', profile.displayName);
         }
       } catch (error) { console.warn('LIFF 初始化跳過：', error); }
 
@@ -625,6 +630,12 @@
     function saveDraft() {
       if (isRestoringDraft || reportArchived || (projectMode !== 'LOCKED' && projectMode !== 'COMPATIBLE')) return;
       
+      // ⭐ 2. 只要有打字，就立刻更新永久記憶
+      const reporterNameVal = document.getElementById('reporterName').value.trim();
+      if (reporterNameVal) {
+          localStorage.setItem('savedReporterName', reporterNameVal);
+      }
+
       const materialsList = [...document.querySelectorAll('#materialsContainer .material-group')].map(group => ({
         materialId: group.querySelector('.mat-name').value,
         qty: group.querySelector('.mat-qty').value
@@ -641,7 +652,6 @@
         issueType: document.getElementById('issueType').value,
         submissionId: ensureSubmissionId(),
         projectId: document.getElementById('projectId').value.trim(),
-        reporterName: document.getElementById('reporterName').value.trim(), 
         reportDate: document.getElementById('reportDate').value,
         isNoWork: document.getElementById('noWorkToday').checked,
         noWorkReason: document.getElementById('noWorkReason').value,
@@ -687,11 +697,6 @@
         document.getElementById('workNotes').value = draft.workNotes || '';
         document.getElementById('remarks').value = draft.remarks || '';
 
-        // ⭐ 在 loadDraft 裡面強制把草稿的填表人補回來
-        if (draft.reporterName) {
-            document.getElementById('reporterName').value = draft.reporterName;
-        }
-        
         document.getElementById('contractorsContainer').innerHTML = '';
         if (Array.isArray(draft.contractorsList) && draft.contractorsList.length > 0) {
             draft.contractorsList.forEach(c => addContractorRow(c.name, c.customName, c.workers));
@@ -955,6 +960,10 @@
             throw new Error(result.error || result.message || `HTTP ${response.status}`);
         }
 
+        // ⭐ 3. 送出成功時，保留永久記憶，只刪除當天的草稿
+        const finalName = document.getElementById('reporterName').value.trim();
+        if (finalName) localStorage.setItem('savedReporterName', finalName);
+        
         localStorage.removeItem(getDraftKey());
         alert(result.message || '✅ 資料已成功送出與歸檔');
         if (window.liff && liff.isInClient()) liff.closeWindow();
