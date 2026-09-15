@@ -36,7 +36,7 @@
 </head>
 <body>
   <div class="container">
-    <h2 id="formTitle">👷 施工日報表 <span class="version-tag">v5.2(修正)</span></h2>
+    <h2 id="formTitle">👷 施工日報表 <span class="version-tag">v5.3</span></h2>
 
     <div style="display:flex; gap:10px; margin-bottom:15px;">
         <button type="button" id="btnDailyMode" class="btn btn-primary" style="flex:1; padding:10px; border:none; border-radius:5px; background:#00B900; color:white; font-weight:bold; cursor:pointer;" onclick="switchMode('daily_report')">📝 填寫施工日報</button>
@@ -195,7 +195,7 @@
             btnIssue.style.color = '#333';
             btnIssue.style.border = '1px solid #ccc';
             
-            formTitle.innerHTML = '👷 施工日報表 <span class="version-tag">v5.2</span>';
+            formTitle.innerHTML = '👷 施工日報表 <span class="version-tag">v5.3</span>';
             submitButton.textContent = '確認送出並發布至群組';
             submitButton.style.background = '#00B900';
             materialLabel.textContent = '📦 今日用料';
@@ -210,7 +210,7 @@
             btnIssue.style.color = 'white';
             btnIssue.style.border = 'none';
 
-            formTitle.innerHTML = '📦 材料進場登記表 <span class="version-tag">v5.2</span>';
+            formTitle.innerHTML = '📦 材料進場登記表 <span class="version-tag">v5.3</span>';
             submitButton.textContent = '確認送出材料進場紀錄';
             submitButton.style.background = '#28a745';
             materialLabel.textContent = '📦 進場材料清單';
@@ -620,6 +620,13 @@
         qty: group.querySelector('.mat-qty').value
       }));
 
+      // ⭐ 補回儲存廠商草稿的功能
+      const contractorsList = [...document.querySelectorAll('#contractorsContainer .contractor-group')].map(group => ({
+        name: group.querySelector('.contractor-name').value,
+        customName: group.querySelector('.custom-contractor-name')?.value.trim() || '',
+        workers: group.querySelector('.contractor-workers').value
+      }));
+
       const draft = {
         formType: document.getElementById('formType').value,
         issueType: document.getElementById('issueType').value,
@@ -629,6 +636,7 @@
         reportDate: document.getElementById('reportDate').value,
         isNoWork: document.getElementById('noWorkToday').checked,
         noWorkReason: document.getElementById('noWorkReason').value,
+        contractorsList, // ⭐ 補回儲存廠商草稿的功能
         workItems: [...document.querySelectorAll('input[name="workItem"]:checked')].map(cb => cb.value),
         customWorkItem: document.getElementById('customWorkItem').value,
         workNotes: document.getElementById('workNotes').value,
@@ -670,6 +678,14 @@
         document.getElementById('workNotes').value = draft.workNotes || '';
         document.getElementById('remarks').value = draft.remarks || '';
 
+        // ⭐ 補回恢復廠商草稿的功能
+        document.getElementById('contractorsContainer').innerHTML = '';
+        if (Array.isArray(draft.contractorsList) && draft.contractorsList.length > 0) {
+            draft.contractorsList.forEach(c => addContractorRow(c.name, c.customName, c.workers));
+        } else {
+            addContractorRow();
+        }
+
         const noMaterial = draft.noMaterial === true;
         document.getElementById('noMaterial').checked = noMaterial;
         
@@ -684,6 +700,7 @@
         }
       } catch (error) {
         localStorage.removeItem(getDraftKey());
+        document.getElementById('contractorsContainer').innerHTML = '';
         addContractorRow(); addMaterialRow();
       } finally {
         isRestoringDraft = false;
@@ -725,7 +742,6 @@
       return true;
     }
 
-    // ⭐ 補回完整的前端驗證邏輯
     function validateForm() {
       const reporterName = document.getElementById('reporterName').value.trim();
       if (!reporterName) { alert('請填寫您的填表人姓名'); return false; }
@@ -734,7 +750,14 @@
       const mGroups = [...document.querySelectorAll('#materialsContainer .material-group')];
       const selectedMatIds = new Set();
 
+      // ⭐ 加入材料進場雙重防呆
       if (formType === 'material_issue') {
+          const issueType = document.getElementById('issueType').value;
+          const reportDate = document.getElementById('reportDate').value;
+
+          if (!issueType) { alert('請選擇進場類型'); return false; }
+          if (!reportDate) { alert('請選擇實際進場日期'); return false; }
+
           let validCount = 0;
           for (let i = 0; i < mGroups.length; i++) {
               const selectedId = mGroups[i].querySelector('.mat-name').value;
@@ -857,7 +880,6 @@
               const contractorItems = [];
               const contractorListStr = [];
               
-              // ⭐ 修正 6：收集真實的 contractorItems 陣列
               document.querySelectorAll('#contractorsContainer .contractor-group').forEach(group => {
                   const select = group.querySelector('.contractor-name').value;
                   const name = select === '其他' ? group.querySelector('.custom-contractor-name').value.trim() : select;
