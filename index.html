@@ -296,7 +296,11 @@
       try {
         await liff.init({ liffId: LIFF_ID });
         const profile = await liff.getProfile();
-        if (profile) document.getElementById('reporterName').value = profile.displayName;
+        // ⭐ 改為：如果畫面上已經有記憶的值，就不要被 LIFF 覆蓋；如果空白才填入 LINE 名字
+        const nameInput = document.getElementById('reporterName');
+        if (profile && !nameInput.value.trim()) {
+            nameInput.value = profile.displayName;
+        }
       } catch (error) { console.warn('LIFF 初始化跳過：', error); }
 
       const projectIdFromUrl = getProjectIdFromUrl();
