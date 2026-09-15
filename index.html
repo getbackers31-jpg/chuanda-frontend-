@@ -36,7 +36,7 @@
 </head>
 <body>
   <div class="container">
-    <h2 id="formTitle">👷 施工日報表 <span class="version-tag">v5.3</span></h2>
+    <h2 id="formTitle">👷 施工日報表 <span class="version-tag">v5.5</span></h2>
 
     <div style="display:flex; gap:10px; margin-bottom:15px;">
         <button type="button" id="btnDailyMode" class="btn btn-primary" style="flex:1; padding:10px; border:none; border-radius:5px; background:#00B900; color:white; font-weight:bold; cursor:pointer;" onclick="switchMode('daily_report')">📝 填寫施工日報</button>
@@ -59,11 +59,11 @@
       </div>
       
       <label for="reporterName">👤 填表人姓名</label>
-      <input type="text" id="reporterName" placeholder="請輸入您的姓名 (系統將自動記憶)" oninput="saveDraft()" required>
+      <input type="text" id="reporterName" placeholder="請輸入您的姓名 (系統將自動記憶)" oninput="saveDraft()" autocomplete="name" required>
 
       <div id="lockedProjectSection" class="hidden">
         <label for="lockedProjectName">📍 案場名稱</label>
-        <input type="text" id="lockedProjectName" class="readonly-input" readonly>
+        <input type="text" id="lockedProjectName" class="readonly-input" readonly disabled>
       </div>
 
       <div id="compatibleProjectSection">
@@ -114,7 +114,7 @@
       <div id="workAndMaterialSection" class="daily-only">
         <label>🛠️ 今日作業</label>
         <div class="checkbox-grid" id="workItemsGrid"></div>
-        <input type="text" id="customWorkItem" class="hidden" placeholder="請輸入其他作業項目" maxlength="100" oninput="saveDraft()" style="margin-top:10px">
+        <input type="text" id="customWorkItem" class="hidden" placeholder="請具體說明其他施作項目內容..." maxlength="100" oninput="saveDraft()" style="margin-top:10px">
         <textarea id="workNotes" rows="2" placeholder="作業補充（選填）" oninput="saveDraft()" style="margin-top:10px"></textarea>
         <div class="section-divider"></div>
       </div>
@@ -132,7 +132,7 @@
       </div>
 
       <label for="remarks">📝 備註（選填）</label>
-      <textarea id="remarks" rows="2" placeholder="天候影響、材料短缺、人員異動等狀況" oninput="saveDraft()"></textarea>
+      <textarea id="remarks" rows="2" placeholder="天候影響、材料短缺、人員異動等狀況" maxlength="500" oninput="saveDraft()"></textarea>
 
       <button type="button" id="submitButton" class="submit-btn" onclick="submitForm()">確認送出施工日報</button>
     </form>
@@ -140,6 +140,8 @@
 
   <script>
     const LIFF_ID = '2011289657-vQgMb0eI';
+    
+    // ⭐ API 網域設定 (請確認是否與你 Render 上正式運作的網址相符)
     const API_BASE_URL = 'https://bot.cyber-cloud.info';
     
     const API_URL = `${API_BASE_URL}/api/submit-report`;
@@ -195,7 +197,7 @@
             btnIssue.style.color = '#333';
             btnIssue.style.border = '1px solid #ccc';
             
-            formTitle.innerHTML = '👷 施工日報表 <span class="version-tag">v5.3</span>';
+            formTitle.innerHTML = '👷 施工日報表 <span class="version-tag">v5.5</span>';
             submitButton.textContent = '確認送出並發布至群組';
             submitButton.style.background = '#00B900';
             materialLabel.textContent = '📦 今日用料';
@@ -210,7 +212,7 @@
             btnIssue.style.color = 'white';
             btnIssue.style.border = 'none';
 
-            formTitle.innerHTML = '📦 材料進場登記表 <span class="version-tag">v5.3</span>';
+            formTitle.innerHTML = '📦 材料進場登記表 <span class="version-tag">v5.5</span>';
             submitButton.textContent = '確認送出材料進場紀錄';
             submitButton.style.background = '#28a745';
             materialLabel.textContent = '📦 進場材料清單';
@@ -285,7 +287,12 @@
     window.addEventListener('load', async () => {
       initializeStaticForm();
       const todayStr = getTaiwanDateString();
-      document.getElementById('reportDate').value = todayStr;
+      const dateInput = document.getElementById('reportDate');
+      if (dateInput) {
+          dateInput.value = todayStr;
+          // 防止使用者選到未來的日期
+          dateInput.max = todayStr;
+      }
 
       try {
         await liff.init({ liffId: LIFF_ID });
@@ -620,7 +627,6 @@
         qty: group.querySelector('.mat-qty').value
       }));
 
-      // ⭐ 補回儲存廠商草稿的功能
       const contractorsList = [...document.querySelectorAll('#contractorsContainer .contractor-group')].map(group => ({
         name: group.querySelector('.contractor-name').value,
         customName: group.querySelector('.custom-contractor-name')?.value.trim() || '',
@@ -636,7 +642,7 @@
         reportDate: document.getElementById('reportDate').value,
         isNoWork: document.getElementById('noWorkToday').checked,
         noWorkReason: document.getElementById('noWorkReason').value,
-        contractorsList, // ⭐ 補回儲存廠商草稿的功能
+        contractorsList, 
         workItems: [...document.querySelectorAll('input[name="workItem"]:checked')].map(cb => cb.value),
         customWorkItem: document.getElementById('customWorkItem').value,
         workNotes: document.getElementById('workNotes').value,
@@ -678,12 +684,23 @@
         document.getElementById('workNotes').value = draft.workNotes || '';
         document.getElementById('remarks').value = draft.remarks || '';
 
-        // ⭐ 補回恢復廠商草稿的功能
+        document.getElementById('reporterName').value = draft.reporterName || document.getElementById('reporterName').value;
+
         document.getElementById('contractorsContainer').innerHTML = '';
         if (Array.isArray(draft.contractorsList) && draft.contractorsList.length > 0) {
             draft.contractorsList.forEach(c => addContractorRow(c.name, c.customName, c.workers));
         } else {
             addContractorRow();
+        }
+
+        if (Array.isArray(draft.workItems)) {
+            document.querySelectorAll('input[name="workItem"]').forEach(checkbox => {
+                checkbox.checked = draft.workItems.includes(checkbox.value);
+            });
+            const hasOther = draft.workItems.includes('其他');
+            const customWorkInput = document.getElementById('customWorkItem');
+            customWorkInput.classList.toggle('hidden', !hasOther);
+            customWorkInput.value = hasOther ? (draft.customWorkItem || '') : '';
         }
 
         const noMaterial = draft.noMaterial === true;
@@ -750,7 +767,6 @@
       const mGroups = [...document.querySelectorAll('#materialsContainer .material-group')];
       const selectedMatIds = new Set();
 
-      // ⭐ 加入材料進場雙重防呆
       if (formType === 'material_issue') {
           const issueType = document.getElementById('issueType').value;
           const reportDate = document.getElementById('reportDate').value;
