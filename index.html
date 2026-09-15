@@ -140,6 +140,8 @@
 
   <script>
     const LIFF_ID = '2011289657-vQgMb0eI';
+    
+    // ⭐ API 網域已改回 Render 伺服器
     const API_BASE_URL = 'https://gong-cheng-linechuan-jie.onrender.com';
     
     const API_URL = `${API_BASE_URL}/api/submit-report`;
@@ -288,14 +290,13 @@
       const dateInput = document.getElementById('reportDate');
       if (dateInput) {
           dateInput.value = todayStr;
-          dateInput.max = todayStr;
+          dateInput.max = todayStr; // 防止選到未來時間
       }
-
-      loadDraft();
 
       try {
         await liff.init({ liffId: LIFF_ID });
         const profile = await liff.getProfile();
+        // ⭐ 改為：如果畫面上已經有記憶的值，就不要被 LIFF 覆蓋；如果空白才填入 LINE 名字
         const nameInput = document.getElementById('reporterName');
         if (profile && !nameInput.value.trim()) {
             nameInput.value = profile.displayName;
@@ -312,6 +313,7 @@
           await loadProjects();
           await fetchMaterials('');
         }
+        loadDraft();
       } catch (error) {
         projectMode = 'ERROR';
         document.getElementById('submitButton').disabled = true;
@@ -673,10 +675,6 @@
 
         currentSubmissionId = String(draft.submissionId || createSubmissionId());
         
-        if (draft.reporterName) {
-            document.getElementById('reporterName').value = draft.reporterName;
-        }
-
         if (draft.isNoWork) {
             document.getElementById('noWorkToday').checked = true;
             document.getElementById('noWorkReason').value = draft.noWorkReason || '';
@@ -689,6 +687,11 @@
         document.getElementById('workNotes').value = draft.workNotes || '';
         document.getElementById('remarks').value = draft.remarks || '';
 
+        // ⭐ 在 loadDraft 裡面強制把草稿的填表人補回來
+        if (draft.reporterName) {
+            document.getElementById('reporterName').value = draft.reporterName;
+        }
+        
         document.getElementById('contractorsContainer').innerHTML = '';
         if (Array.isArray(draft.contractorsList) && draft.contractorsList.length > 0) {
             draft.contractorsList.forEach(c => addContractorRow(c.name, c.customName, c.workers));
