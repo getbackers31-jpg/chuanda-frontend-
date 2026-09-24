@@ -89,7 +89,7 @@
     }
 
     function filterItems() {
-        const keyword = document.getElementById('searchInput'].value.toLowerCase();
+        const keyword = document.getElementById('searchInput').value.toLowerCase();
         const filtered = allItems.filter(item => 
             item.materialName.toLowerCase().includes(keyword) || 
             (item.materialCode && item.materialCode.toLowerCase().includes(keyword))
