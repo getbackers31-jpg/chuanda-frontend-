@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>云說工程 - 庫存總表</title>
+  <style>
+    body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background:#f4f7f6; padding:15px; color:#333; margin:0; }
+    .container { background:white; padding:20px; border-radius:10px; box-shadow:0 4px 8px rgba(0,0,0,.1); max-width:600px; margin:auto; }
+    h2 { text-align:center; color:#00B900; margin-top:0; font-size:22px; }
+    .search-box { width:100%; padding:12px; border:1px solid #ccc; border-radius:5px; box-sizing:border-box; font-size:16px; margin-bottom:15px; background:#fafafa; }
+    .inventory-list { display: flex; flex-direction: column; gap: 10px; }
+    .item-card { background:#fff; border:1px solid #eee; border-left:5px solid #00B900; padding:12px; border-radius:5px; box-shadow:0 1px 3px rgba(0,0,0,0.05); }
+    .item-card.low { border-left-color: #ffc107; background: #fffdf5; }
+    .item-card.out { border-left-color: #6c757d; background: #f8f9fa; opacity: 0.8; }
+    .item-card.error { border-left-color: #dc3545; background: #fff5f5; }
+    .item-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px; }
+    .item-title { font-weight: bold; font-size: 16px; color: #222; }
+    .item-qty { font-size: 18px; font-weight: bold; color: #00B900; }
+    .low .item-qty { color: #d39e00; }
+    .out .item-qty { color: #6c757d; }
+    .error .item-qty { color: #dc3545; }
+    .item-details { font-size: 13px; color: #777; display: flex; justify-content: space-between; }
+    .loading { text-align: center; color: #666; padding: 20px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>📦 倉庫庫存總表</h2>
+    
+    <!-- 搜尋框 -->
+    <input type="text" id="searchInput" class="search-box" placeholder="🔍 搜尋品項名稱或料號..." oninput="filterItems()">
+
+    <div id="loading" class="loading">⏳ 正在從 OneDrive 讀取最新庫存...</div>
+    <div id="inventoryList" class="inventory-list"></div>
+  </div>
+
+  <script>
+    const API_URL = 'https://gong-cheng-linechuan-jie.onrender.com/api/materials';
+    let allItems = [];
+
+    window.onload = async () => {
+      try {
+        const response = await fetch(API_URL);
+        const data = await response.json();
+        
+        if (data.success) {
+            allItems = data.materials.filter(m => m.inventoryManaged !== false);
+            renderItems(allItems);
+        } else {
+            document.getElementById('loading').textContent = '❌ 讀取失敗，請確認系統狀態。';
+        }
+      } catch (error) {
+        document.getElementById('loading').textContent = '❌ 網路連線錯誤。';
+      }
+    };
+
+    function renderItems(items) {
+        const listDiv = document.getElementById('inventoryList');
+        document.getElementById('loading').style.display = 'none';
+        listDiv.innerHTML = '';
+
+        if(items.length === 0) {
+            listDiv.innerHTML = '<div class="loading">沒有找到符合的品項</div>';
+            return;
+        }
+
+        items.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'item-card';
+            
+            let statusText = '正常';
+            if (item.stockStatus === 'LOW_STOCK') { card.classList.add('low'); statusText = '⚠️ 偏低'; }
+            else if (item.stockStatus === 'OUT_OF_STOCK' || item.stockQuantity === 0) { card.classList.add('out'); statusText = '⚪ 缺貨'; }
+            else if (item.stockStatus === 'REVIEW_REQUIRED' || item.stockQuantity < 0) { card.classList.add('error'); statusText = '🚨 異常'; }
+
+            card.innerHTML = `
+                <div class="item-header">
+                    <div class="item-title">${item.materialName}</div>
+                    <div class="item-qty">${item.stockQuantity} <span style="font-size:14px; font-weight:normal;">${item.stockUnit}</span></div>
+                </div>
+                <div class="item-details">
+                    <span>料號: ${item.materialCode || '無'}</span>
+                    <span>${statusText} (換算: ${item.stockBaseQuantity} ${item.baseUnit})</span>
+                </div>
+            `;
+            listDiv.appendChild(card);
+        });
+    }
+
+    function filterItems() {
+        const keyword = document.getElementById('searchInput'].value.toLowerCase();
+        const filtered = allItems.filter(item => 
+            item.materialName.toLowerCase().includes(keyword) || 
+            (item.materialCode && item.materialCode.toLowerCase().includes(keyword))
+        );
+        renderItems(filtered);
+    }
+  </script>
+</body>
+</html>
