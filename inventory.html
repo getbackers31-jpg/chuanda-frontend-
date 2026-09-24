@@ -15,19 +15,23 @@
     .item-card.out { border-left-color: #6c757d; background: #f8f9fa; opacity: 0.8; }
     .item-card.error { border-left-color: #dc3545; background: #fff5f5; }
     
-    .item-image-wrapper { flex-shrink: 0; width: 60px; height: 60px; border-radius: 8px; overflow: hidden; border: 1px solid #e0e0e0; background: #fff; display: flex; justify-content: center; align-items: center; }
-    .item-image { width: 100%; height: 100%; object-fit: cover; }
+    /* 👇 照片區塊放大到 85px，增加 padding 讓照片有呼吸空間 */
+    .item-image-wrapper { flex-shrink: 0; width: 85px; height: 85px; border-radius: 8px; overflow: hidden; border: 1px solid #e0e0e0; background: #fff; display: flex; justify-content: center; align-items: center; padding: 2px; }
+    /* 👇 魔法屬性 object-fit: contain 保證整張照片完整顯示不裁切 */
+    .item-image { width: 100%; height: 100%; object-fit: contain; }
     
     .item-content { flex: 1; min-width: 0; }
-    .item-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px; }
-    .item-title { font-weight: bold; font-size: 16px; color: #222; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 10px; }
+    .item-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px; gap: 10px; }
+    /* 👇 拿掉文字隱藏和刪節號，讓長檔名可以自然換行顯示完整 */
+    .item-title { font-weight: bold; font-size: 16px; color: #222; line-height: 1.4; word-wrap: break-word; }
     
-    .item-qty { font-size: 18px; font-weight: bold; color: #00B900; white-space: nowrap; }
+    .item-qty { font-size: 18px; font-weight: bold; color: #00B900; white-space: nowrap; flex-shrink: 0; }
     .low .item-qty { color: #d39e00; }
     .out .item-qty { color: #6c757d; }
     .error .item-qty { color: #dc3545; }
     
-    .item-details { font-size: 13px; color: #777; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 5px; }
+    /* 👇 讓細節資訊在手機上改為上下排列，畫面更清爽 */
+    .item-details { font-size: 13px; color: #777; display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
     .loading { text-align: center; color: #666; padding: 20px; }
   </style>
 </head>
@@ -43,7 +47,6 @@
     const API_URL = 'https://gong-cheng-linechuan-jie.onrender.com/api/materials';
     let allItems = [];
 
-    // 狀態排序權重：異常優先(1) -> 偏低(2) -> 正常(3) -> 缺貨墊底(4)
     const STATUS_ORDER = {
         'REVIEW_REQUIRED': 1,
         'LOW_STOCK': 2,
@@ -98,20 +101,16 @@
             else if (item.stockStatus === 'REVIEW_REQUIRED' || item.stockQuantity < 0) { card.classList.add('error'); statusText = '🚨 異常'; }
 
             const defaultImg = 'https://cdn-icons-png.flaticon.com/512/2543/2543354.png';
-            
-            // 👇 魔法在這裡：網址已經幫你加上 /images/ 了！它會用庫存編碼自動進資料夾找對應的 .jpg 照片
             const autoImgUrl = `https://getbackers31-jpg.github.io/chuanda-frontend-/images/${item.materialCode}.jpg`;
-            
             const imgUrl = item.imageUrl ? item.imageUrl : autoImgUrl;
-            const imgPadding = '0'; 
 
             card.innerHTML = `
-                <div class="item-image-wrapper" style="padding: ${imgPadding};">
-                    <img src="${imgUrl}" class="item-image" alt="材料照片" onerror="this.onerror=null; this.src='${defaultImg}'; this.parentNode.style.padding='10px';">
+                <div class="item-image-wrapper">
+                    <img src="${imgUrl}" class="item-image" alt="材料照片" onerror="this.onerror=null; this.src='${defaultImg}'; this.style.padding='10px';">
                 </div>
                 <div class="item-content">
                     <div class="item-header">
-                        <div class="item-title" title="${item.materialName}">${item.materialName}</div>
+                        <div class="item-title">${item.materialName}</div>
                         <div class="item-qty">${item.stockQuantity} <span style="font-size:14px; font-weight:normal;">${item.stockUnit}</span></div>
                     </div>
                     <div class="item-details">
