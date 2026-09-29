@@ -1,455 +1,1035 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>云說工程小幫手</title>
-    <!-- 引入 Bootstrap 5 以獲得優良的手機版面體驗 -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-    <style>
-        body { background-color: #f4f6f9; padding-bottom: 40px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-        .card { border-radius: 12px; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        .card-header { background-color: #fff; border-bottom: 1px solid #eee; border-radius: 12px 12px 0 0 !important; font-weight: bold; color: #333; }
-        .form-label { font-weight: 600; color: #555; font-size: 0.9rem; margin-top: 10px; }
-        .btn-line { background-color: #06C755; color: white; font-weight: bold; border-radius: 8px; }
-        .btn-line:hover { background-color: #05b34c; color: white; }
-        
-        /* 💡 供應商直送專用警告橫幅 */
-        .direct-warning-banner {
-            background-color: #fff3cd; border-left: 5px solid #ffc107; padding: 12px 16px; border-radius: 6px; font-size: 0.9rem; color: #856404; margin-bottom: 16px; line-height: 1.5;
-        }
-
-        /* 載入中遮罩 */
-        #loadingOverlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 9999; display: none; flex-direction: column; justify-content: center; align-items: center;
-        }
-        .spinner-border { color: #06C755; }
-        
-        .dynamic-row { background-color: #fafafa; padding: 12px; border-radius: 8px; border: 1px dashed #ddd; margin-bottom: 10px; position: relative; }
-        .remove-btn { position: absolute; top: 10px; right: 10px; font-size: 0.8rem; padding: 2px 8px; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>云說工程 - 施工日報與材料進場表</title>
+  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background:#f4f7f6; padding:15px; color:#333; margin:0; }
+    .container { background:white; padding:20px; border-radius:10px; box-shadow:0 4px 8px rgba(0,0,0,.1); max-width:500px; margin:auto; position: relative; }
+    h2 { text-align:center; color:#00B900; margin-top:0; font-size:22px; position: relative; }
+    .version-tag { font-size: 10px; color: #ccc; position: absolute; right: 0; bottom: 0; font-weight: normal; }
+    label { font-weight:bold; display:block; margin-top:15px; margin-bottom:5px; color:#444; }
+    select, textarea, input[type="text"], input[type="number"], input[type="date"] { width:100%; padding:10px; border:1px solid #ccc; border-radius:5px; box-sizing:border-box; font-size:16px; background:#fafafa; margin-bottom:5px; }
+    .flex-row { display:flex; gap:10px; margin-bottom:5px; }
+    .flex-row > * { flex:1; min-width:0; }
+    .btn-weather { background:#17a2b8; color:white; border:0; padding:9px; border-radius:5px; cursor:pointer; font-size:14px; width:100%; margin-bottom:10px; }
+    .btn-weather:disabled, .btn-add:disabled, .submit-btn:disabled { background:#ccc; cursor:not-allowed; }
+    .checkbox-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; background:#f9f9f9; padding:10px; border-radius:5px; border:1px solid #eee; }
+    .checkbox-label { display:flex; align-items:center; font-weight:normal; margin:0; font-size:15px; }
+    .checkbox-label input { margin-right:8px; transform:scale(1.2); }
+    .material-group { background:#f9f9f9; padding:10px; border-radius:5px; border:1px solid #eee; margin-bottom:10px; }
+    .material-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; }
+    .material-title { font-size:14px; font-weight:bold; color:#666; }
+    .remove-material-button { color:#d9534f; border:0; background:none; font-weight:bold; cursor:pointer; }
+    .btn-add { background:#6c757d; color:white; border:0; padding:9px; border-radius:5px; cursor:pointer; font-size:14px; width:100%; margin-bottom:10px; }
+    .submit-btn { width:100%; background:#00B900; color:white; border:0; padding:12px; font-size:18px; border-radius:5px; margin-top:20px; cursor:pointer; font-weight:bold; }
+    .section-divider { border-bottom:2px dashed #ddd; margin:20px 0; }
+    .hidden { display:none !important; }
+    .no-material-option { display:flex; align-items:center; font-weight:bold; color:#d9534f; margin-bottom:15px; background:#fdf5f5; padding:10px; border-radius:5px; border:1px solid #f5c6c6; }
+    .no-material-option input { width:auto; margin-right:10px; transform:scale(1.3); }
+    .field-help { margin-top: 4px; color: #777; font-size: 13px; line-height: 1.5; }
+    .readonly-input { background-color: #e9ecef; color: #495057; cursor: not-allowed; }
+    @media (max-width:380px) { .checkbox-grid { grid-template-columns:1fr; } .flex-row { flex-direction:column; gap:4px; } }
+  </style>
 </head>
 <body>
+  <div class="container">
+    <h2 id="formTitle">👷 施工日報表 <span class="version-tag">v5.7</span></h2>
 
-<div id="loadingOverlay">
-    <div class="spinner-border" role="status"></div>
-    <div class="mt-3 fw-bold text-secondary" id="loadingText">資料處理中...</div>
-</div>
-
-<div class="container mt-3">
-    <h4 class="mb-4 text-center fw-bold" style="color: #333;">👷 云說工程小幫手</h4>
-
-    <!-- 頁籤切換 -->
-    <ul class="nav nav-pills nav-fill mb-3" id="app-tabs" role="tablist">
-        <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="tab-daily" data-bs-toggle="pill" data-bs-target="#panel-daily" type="button" role="tab">📝 施工日報</button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="tab-direct" data-bs-toggle="pill" data-bs-target="#panel-direct" type="button" role="tab">📦 供應商直送</button>
-        </li>
-    </ul>
-
-    <!-- 共用資訊區塊 -->
-    <div class="card">
-        <div class="card-body pb-2">
-            <div class="mb-2">
-                <label class="form-label mt-0">📍 選擇案場</label>
-                <select class="form-select" id="projectSelect" onchange="loadMaterials()"><option value="">載入中...</option></select>
-            </div>
-            <div class="row">
-                <div class="col-6">
-                    <label class="form-label">📅 日期</label>
-                    <input type="date" class="form-control" id="reportDate">
-                </div>
-                <div class="col-6">
-                    <label class="form-label">👤 填表人</label>
-                    <input type="text" class="form-control" id="reporterName" readonly>
-                </div>
-            </div>
-        </div>
+    <div style="display:flex; gap:10px; margin-bottom:15px;">
+        <button type="button" id="btnDailyMode" class="btn btn-primary" style="flex:1; padding:10px; border:none; border-radius:5px; background:#00B900; color:white; font-weight:bold; cursor:pointer;" onclick="switchMode('daily_report')">📝 填寫施工日報</button>
+        <!-- 💡 按鈕更名為「登記供應商直送」 -->
+        <button type="button" id="btnIssueMode" class="btn btn-outline-secondary" style="flex:1; padding:10px; border:1px solid #ccc; border-radius:5px; background:#e9ecef; color:#333; font-weight:bold; cursor:pointer;" onclick="switchMode('material_issue')">📦 登記供應商直送</button>
     </div>
 
-    <!-- 內容區 -->
-    <div class="tab-content" id="nav-tabContent">
+    <form id="dailyReportForm">
+      <input type="hidden" id="formType" value="daily_report">
+
+      <div id="issueExtraSection" class="hidden" style="background:#f8f9fa; padding:12px; border-radius:5px; border-left:4px solid #28a745; margin-bottom:15px;">
         
-        <!-- 📝 施工日報面板 -->
-        <div class="tab-pane fade show active" id="panel-daily" role="tabpanel">
-            <div class="card">
-                <div class="card-header">施工狀況</div>
-                <div class="card-body">
-                    <div class="form-check form-switch mb-3">
-                        <input class="form-check-input" type="checkbox" id="isNoWork" onchange="toggleNoWork()">
-                        <label class="form-check-label fw-bold" for="isNoWork" id="noWorkLabel">今日有施工</label>
-                    </div>
-
-                    <!-- 無出工原因 -->
-                    <div id="noWorkSection" style="display: none;">
-                        <label class="form-label">無出工原因</label>
-                        <input type="text" class="form-control" id="noWorkReason" placeholder="例如：天候不佳、業主停工">
-                    </div>
-
-                    <!-- 施工細節 -->
-                    <div id="workSection">
-                        <div class="row mb-3">
-                            <div class="col-4"><label class="form-label mt-0">氣溫(°C)</label><input type="number" class="form-control" id="weatherTemp"></div>
-                            <div class="col-4"><label class="form-label mt-0">濕度(%)</label><input type="number" class="form-control" id="weatherHum"></div>
-                            <div class="col-4"><label class="form-label mt-0">風速</label><input type="text" class="form-control" id="weatherWind"></div>
-                        </div>
-
-                        <label class="form-label">施工廠商與人數</label>
-                        <div id="contractorList"></div>
-                        <button type="button" class="btn btn-sm btn-outline-secondary mb-3 w-100" onclick="addContractorRow()">+ 新增廠商</button>
-
-                        <label class="form-label">今日施工項目 (可多選)</label>
-                        <div id="workItemsCheckboxes" class="mb-2"></div>
-                        <input type="text" class="form-control mb-3" id="customWorkItem" placeholder="其他施工項目補充...">
-
-                        <label class="form-label">今日材料耗用</label>
-                        <div id="dailyMaterialList"></div>
-                        <button type="button" class="btn btn-sm btn-outline-secondary mb-3 w-100" onclick="addMaterialRow('dailyMaterialList')">+ 新增材料耗用</button>
-                        
-                        <label class="form-label">作業補充說明</label>
-                        <textarea class="form-control" id="workNotes" rows="2" placeholder="施工細節或異常狀況..."></textarea>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="card">
-                <div class="card-body py-2">
-                    <label class="form-label mt-0">日報總備註</label>
-                    <textarea class="form-control" id="dailyRemarks" rows="2"></textarea>
-                </div>
-            </div>
-            <button class="btn btn-line w-100 py-3 fs-5" onclick="submitDailyReport()">📤 送出施工日報</button>
+        <!-- 💡 第一層防呆：加入警告橫幅 -->
+        <div style="background-color: #fff3cd; border-left: 5px solid #ffc107; padding: 12px 16px; border-radius: 6px; font-size: 0.9rem; color: #856404; margin-bottom: 16px; line-height: 1.5;">
+            <strong>⚠️ 此功能只適用於「供應商直接送到工地」的材料。</strong><br><br>
+            如果材料是從公司大倉庫領出帶過去的，請一律使用網頁版系統的「領至案場」，請勿在此重複登記，以免庫存錯亂。
         </div>
 
+        <label for="issueType" style="margin-top:0;">🚚 進場類型 <span style="color:red">*</span></label>
+        <select id="issueType" onchange="updateAllBalances(); saveDraft()" style="margin-bottom:10px;">
+          <option value="" selected disabled>請選擇進場類型</option>
+          <option value="OPENING">🏢 開工首批進場</option>
+          <option value="ADDITIONAL">🚚 後續追加進場</option>
+        </select>
 
-        <!-- 📦 供應商直送面板 -->
-        <div class="tab-pane fade" id="panel-direct" role="tabpanel">
-            
-            <!-- 第一層防呆：明確的警告橫幅 -->
-            <div class="direct-warning-banner">
-                <strong>⚠️ 此功能只適用於「供應商直接送到工地」的材料。</strong><br><br>
-                如果材料是從公司大倉庫領出帶過去的，請一律使用網頁版系統的「領至案場」，請勿在此重複登記，以免庫存錯亂。
-            </div>
+        <label for="reportDate" style="margin-top:0;">📅 實際進場日期 (可往回補登) <span style="color:red">*</span></label>
+        <input type="date" id="reportDate" onchange="saveDraft()">
+      </div>
+      
+      <label for="reporterName">👤 填表人姓名</label>
+      <input type="text" id="reporterName" placeholder="請輸入您的姓名 (系統將自動記憶)" oninput="saveDraft()" autocomplete="name" required>
 
-            <div class="card">
-                <div class="card-body">
-                    <div class="mb-3">
-                        <label class="form-label mt-0">進場類型</label>
-                        <select class="form-select" id="directIssueType">
-                            <option value="OPENING">開工首批進場</option>
-                            <option value="ADDITIONAL">追加進場</option>
-                        </select>
-                    </div>
+      <div id="lockedProjectSection" class="hidden">
+        <label for="lockedProjectName">📍 案場名稱</label>
+        <input type="text" id="lockedProjectName" class="readonly-input" readonly disabled>
+      </div>
 
-                    <label class="form-label">進場材料與數量</label>
-                    <div id="directMaterialList"></div>
-                    <button type="button" class="btn btn-sm btn-outline-secondary mb-3 w-100" onclick="addMaterialRow('directMaterialList')">+ 新增進場材料</button>
-                    
-                    <label class="form-label">備註 (選填)</label>
-                    <textarea class="form-control" id="directRemarks" rows="2" placeholder="例如：立邦廠商早上直送"></textarea>
-                </div>
-            </div>
-            <!-- 按鈕正名 -->
-            <button class="btn btn-warning w-100 py-3 fs-5 fw-bold" onclick="submitDirectIssue()">確認登記供應商直送</button>
+      <div id="compatibleProjectSection">
+        <label for="projectName">📍 案場名稱</label>
+        <select id="projectName" onchange="saveDraft()" required disabled>
+          <option value="" disabled selected>正在載入案場清單...</option>
+        </select>
+      </div>
+
+      <input type="hidden" id="projectId" value="">
+
+      <div class="daily-only">
+        <label class="no-material-option" style="margin-top:15px; background:#fff3f3; border-color:#ffcccc; color:#cc0000;">
+          <input type="checkbox" id="noWorkToday" onchange="handleNoWorkChange(); saveDraft()">今日無出工 (停工/休息)
+        </label>
+      </div>
+
+      <div id="noWorkReasonSection" class="hidden">
+        <select id="noWorkReason" onchange="saveDraft()" style="border-color:#ffcccc; background:#fffcfc;">
+          <option value="" disabled selected>請選擇無出工原因</option>
+          <option value="天候因素 (下雨/颱風等)">天候因素 (下雨/颱風等)</option>
+          <option value="例假日休息">例假日休息</option>
+          <option value="現場無施工安排">現場無施工安排</option>
+          <option value="停工/待料">停工/待料</option>
+          <option value="其他">其他 (請於最下方備註說明)</option>
+        </select>
+        <div class="section-divider"></div>
+      </div>
+
+      <div id="contractorSection" class="daily-only">
+        <label>🤝 施工廠商與人數</label>
+        <div id="contractorsContainer"></div>
+        <button type="button" class="btn-add" onclick="addContractorRow()" style="background:#5bc0de;">➕ 新增一組廠商</button>
+        <div class="section-divider"></div>
+      </div>
+
+      <div class="daily-only">
+        <label>🌤️ 氣象資訊</label>
+        <button type="button" class="btn-weather" onclick="getWeather()">一鍵獲取當地天氣</button>
+        <div class="flex-row">
+          <input type="number" id="temp" placeholder="溫度(度)" step="0.1" oninput="saveDraft()">
+          <input type="number" id="humidity" placeholder="濕度(%)" min="0" max="100" step="1" oninput="saveDraft()">
+          <input type="number" id="wind" placeholder="風速(m/s)" min="0" step="0.1" oninput="saveDraft()">
         </div>
+        <div class="section-divider"></div>
+      </div>
 
-    </div>
-</div>
+      <div id="workAndMaterialSection" class="daily-only">
+        <label>🛠️ 今日作業</label>
+        <div class="checkbox-grid" id="workItemsGrid"></div>
+        <input type="text" id="customWorkItem" class="hidden" placeholder="請具體說明其他施作項目內容..." maxlength="100" oninput="saveDraft()" style="margin-top:10px">
+        <textarea id="workNotes" rows="2" placeholder="作業補充（選填）" oninput="saveDraft()" style="margin-top:10px"></textarea>
+        <div class="section-divider"></div>
+      </div>
 
-<script>
-    // ==========================================
-    // ⚙️ 環境設定 (已經為你填入專屬網址與 ID)
-    // ==========================================
-    const API_BASE_URL = 'https://gong-cheng-linechuan-jie.onrender.com'; 
-    const LIFF_ID = '2011289657-dSXS9DVe'; 
+      <div id="materialSectionContainer">
+        <label id="materialLabel">📦 今日用料</label>
+        <div id="noMaterialWrapper" class="daily-only">
+          <label class="no-material-option">
+            <input type="checkbox" id="noMaterial" onchange="handleNoMaterialChange(); saveDraft()">今日無用料
+          </label>
+        </div>
+        <div id="materialsContainer"></div>
+        <button type="button" id="addMaterialButton" class="btn-add" onclick="addMaterialRow()">新增一項用料</button>
+        <div class="section-divider"></div>
+      </div>
 
-    let globalMaterials = [];
-    const workItemOptions = ["放樣", "底漆施作", "中塗施作", "面漆施作", "清潔收尾", "查驗點交"];
+      <label for="remarks">📝 備註（選填）</label>
+      <textarea id="remarks" rows="2" placeholder="天候影響、材料短缺、人員異動等狀況" maxlength="500" oninput="saveDraft()"></textarea>
 
-    // 啟動 LIFF 與載入資料
-    async function initLiff() {
-        try {
-            await liff.init({ liffId: LIFF_ID });
-            if (liff.isLoggedIn()) {
-                const profile = await liff.getProfile();
-                document.getElementById('reporterName').value = profile.displayName;
+      <button type="button" id="submitButton" class="submit-btn" onclick="submitForm()">確認送出施工日報</button>
+    </form>
+  </div>
+
+  <script>
+    const LIFF_ID = '2011289657-dSXS9DVe';
+    const API_BASE_URL = 'https://gong-cheng-linechuan-jie.onrender.com';
+    
+    const API_URL = `${API_BASE_URL}/api/submit-report`;
+    const PROJECTS_API_URL = `${API_BASE_URL}/api/projects`;
+    const MATERIALS_API_URL = `${API_BASE_URL}/api/materials`;
+    const MATERIAL_BALANCES_API_URL = `${API_BASE_URL}/api/projects`;
+    
+    const MAX_MATERIAL_ROWS = 10;
+    const MAX_CONTRACTOR_ROWS = 10;
+    const CONTRACTORS_KEY = 'savedContractors';
+
+    const workItemsList = [
+      '材料進場', '現場放樣', '鷹架搭設', '鷹架拆除', '水刀除鏽',
+      '手動工具除鏽', '底漆施工', '中塗漆施工', '面漆施工', '底漆修補',
+      '中塗漆修補', '面漆修補', '底漆膜厚檢測', '中塗漆膜厚檢測',
+      '面漆膜厚檢測', '缺失改善', '現場清潔', '等待驗收', '完成驗收', '其他'
+    ];
+
+    let MATERIAL_ITEMS_MAP = new Map(); 
+    let MATERIAL_OPTIONS = []; 
+    let projectMaterialBalances = {}; 
+
+    let isSubmitting = false;
+    let isRestoringDraft = false;
+    let reportArchived = false;
+    let projectMode = 'LOADING';
+    let currentSubmissionId = '';
+
+    function getTaiwanDateString() {
+      return new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Taipei',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      }).format(new Date());
+    }
+
+    function switchMode(mode) {
+        document.getElementById('formType').value = mode;
+        const btnDaily = document.getElementById('btnDailyMode');
+        const btnIssue = document.getElementById('btnIssueMode');
+        const dailyOnlyElements = document.querySelectorAll('.daily-only');
+        const issueExtraSection = document.getElementById('issueExtraSection');
+        const formTitle = document.getElementById('formTitle');
+        const submitButton = document.getElementById('submitButton');
+        const materialLabel = document.getElementById('materialLabel');
+
+        if (mode === 'daily_report') {
+            btnDaily.style.background = '#00B900';
+            btnDaily.style.color = 'white';
+            btnDaily.style.border = 'none';
+            btnIssue.style.background = '#e9ecef';
+            btnIssue.style.color = '#333';
+            btnIssue.style.border = '1px solid #ccc';
+            
+            formTitle.innerHTML = '👷 施工日報表 <span class="version-tag">v5.7</span>';
+            submitButton.textContent = '確認送出施工日報';
+            submitButton.style.background = '#00B900';
+            materialLabel.textContent = '📦 今日用料';
+
+            issueExtraSection.classList.add('hidden');
+            dailyOnlyElements.forEach(el => el.classList.remove('hidden'));
+        } else {
+            btnDaily.style.background = '#e9ecef';
+            btnDaily.style.color = '#333';
+            btnDaily.style.border = '1px solid #ccc';
+            btnIssue.style.background = '#28a745';
+            btnIssue.style.color = 'white';
+            btnIssue.style.border = 'none';
+
+            formTitle.innerHTML = '📦 供應商直送登記表 <span class="version-tag">v5.7</span>';
+            // 💡 改為供應商直送按鈕
+            submitButton.textContent = '確認登記供應商直送';
+            submitButton.style.background = '#28a745';
+            materialLabel.textContent = '📦 進場材料清單';
+
+            issueExtraSection.classList.remove('hidden');
+            dailyOnlyElements.forEach(el => el.classList.add('hidden'));
+        }
+        updateAllBalances();
+        saveDraft();
+    }
+
+    function updateAllBalances() {
+        document.querySelectorAll('#materialsContainer .material-group').forEach(group => {
+            updateBalanceDisplay(group);
+        });
+    }
+
+    function createSubmissionId() {
+      if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+        return window.crypto.randomUUID();
+      }
+      return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2);
+    }
+
+    function ensureSubmissionId() {
+      if (!currentSubmissionId) currentSubmissionId = createSubmissionId();
+      return currentSubmissionId;
+    }
+
+    function getSelectedProjectName() {
+      if (projectMode === 'LOCKED') return document.getElementById('lockedProjectName').value.trim();
+      return document.getElementById('projectName').value.trim();
+    }
+
+    function getDraftKey() {
+      const projectId = document.getElementById('projectId').value.trim();
+      if (projectId) return `dailyReportDraft:${projectId}`;
+      return 'dailyReportDraft';
+    }
+
+    function getProjectIdFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+      return String(params.get('projectId') || '').trim();
+    }
+
+    async function fetchMaterials(projectId = '') {
+      try {
+        const url = projectId ? `${MATERIALS_API_URL}?projectId=${projectId}` : MATERIALS_API_URL;
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.success && Array.isArray(data.materials) && data.materials.length > 0) {
+            MATERIAL_OPTIONS = data.materials;
+            MATERIAL_ITEMS_MAP.clear();
+            MATERIAL_OPTIONS.forEach(m => {
+                if (m.materialId) MATERIAL_ITEMS_MAP.set(m.materialId, m);
+            });
+        }
+      } catch (err) { console.warn('材料清單讀取失敗', err); }
+    }
+
+    async function fetchMaterialBalances(projectId) {
+      try {
+        const url = `${MATERIAL_BALANCES_API_URL}/${encodeURIComponent(projectId)}/material-balances`;
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.success && data.balances) {
+            data.balances.forEach(b => projectMaterialBalances[b.materialId] = b);
+        }
+      } catch (err) { console.warn('餘額讀取失敗', err); }
+    }
+
+    window.addEventListener('load', async () => {
+      initializeStaticForm();
+      const todayStr = getTaiwanDateString();
+      const dateInput = document.getElementById('reportDate');
+      if (dateInput) {
+          dateInput.value = todayStr;
+          dateInput.max = todayStr;
+      }
+
+      // ⭐ 1. 網頁一載入，優先讀取「永久記憶」的名字
+      const savedReporterName = localStorage.getItem('savedReporterName');
+      if (savedReporterName) {
+          document.getElementById('reporterName').value = savedReporterName;
+      }
+
+      try {
+        await liff.init({ liffId: LIFF_ID });
+        const profile = await liff.getProfile();
+        const nameInput = document.getElementById('reporterName');
+        // ⭐ 如果畫面上是空白的（代表沒有永久記憶），才用 LINE 的名字
+        if (profile && !nameInput.value.trim()) {
+            nameInput.value = profile.displayName;
+            localStorage.setItem('savedReporterName', profile.displayName);
+        }
+      } catch (error) { console.warn('LIFF 初始化跳過：', error); }
+
+      const projectIdFromUrl = getProjectIdFromUrl();
+      try {
+        if (projectIdFromUrl) {
+          await loadLockedProject(projectIdFromUrl);
+          await fetchMaterials(projectIdFromUrl);
+          await fetchMaterialBalances(projectIdFromUrl); 
+        } else {
+          await loadProjects();
+          await fetchMaterials('');
+        }
+        loadDraft();
+      } catch (error) {
+        projectMode = 'ERROR';
+        document.getElementById('submitButton').disabled = true;
+        alert('案場載入失敗，請重新從施工群組開啟表單');
+      }
+    });
+
+    async function loadLockedProject(projectId) {
+      const response = await fetch(`${PROJECTS_API_URL}/${encodeURIComponent(projectId)}`);
+      const responseText = await response.text();
+      let result;
+      try { result = responseText ? JSON.parse(responseText) : {}; } catch { throw new Error(`HTTP ${response.status}`); }
+      if (!response.ok || result.success !== true || !result.project) throw new Error(result.error || '找不到指定案場');
+
+      document.getElementById('projectId').value = result.project.projectId;
+      document.getElementById('lockedProjectName').value = result.project.projectName;
+      document.getElementById('compatibleProjectSection').classList.add('hidden');
+      document.getElementById('lockedProjectSection').classList.remove('hidden');
+      projectMode = 'LOCKED';
+    }
+
+    async function loadProjects() {
+      const projectSelect = document.getElementById('projectName');
+      const response = await fetch(PROJECTS_API_URL);
+      const responseText = await response.text();
+      let result;
+      try { result = responseText ? JSON.parse(responseText) : {}; } catch { throw new Error(`HTTP ${response.status}`); }
+      if (!response.ok || result.success !== true || !Array.isArray(result.projects)) throw new Error(result.error || '無法取得案場清單');
+
+      projectSelect.innerHTML = '';
+      const placeholder = new Option('請選擇正式案場', '');
+      placeholder.disabled = true; placeholder.selected = true;
+      projectSelect.add(placeholder);
+
+      result.projects.forEach(project => projectSelect.add(new Option(project.projectName, project.projectName)));
+      projectSelect.disabled = false;
+      projectMode = 'COMPATIBLE';
+    }
+
+    function safeReadArray(key) {
+      try {
+        const value = JSON.parse(localStorage.getItem(key) || '[]');
+        return Array.isArray(value) ? value : [];
+      } catch { return []; }
+    }
+
+    function getSavedContractorsList() {
+      let savedStr = localStorage.getItem(CONTRACTORS_KEY);
+      if (!savedStr) {
+        const defaultList = ['容煜', '詮達'];
+        localStorage.setItem(CONTRACTORS_KEY, JSON.stringify(defaultList));
+        return defaultList;
+      }
+      return safeReadArray(CONTRACTORS_KEY);
+    }
+
+    function initializeStaticForm() {
+      const grid = document.getElementById('workItemsGrid');
+      workItemsList.forEach(item => {
+        const label = document.createElement('label');
+        label.className = 'checkbox-label';
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.name = 'workItem';
+        checkbox.value = item;
+        checkbox.addEventListener('change', handleWorkItemChange);
+        label.append(checkbox, document.createTextNode(` ${item}`));
+        grid.appendChild(label);
+      });
+    }
+
+    function handleWorkItemChange() {
+      if (isRestoringDraft) return;
+      const otherChecked = [...document.querySelectorAll('input[name="workItem"]:checked')].some(cb => cb.value === '其他');
+      const input = document.getElementById('customWorkItem');
+      input.classList.toggle('hidden', !otherChecked);
+      if (!otherChecked) input.value = '';
+      saveDraft();
+    }
+
+    function handleNoWorkChange() {
+      const isNoWork = document.getElementById('noWorkToday').checked;
+      document.getElementById('noWorkReasonSection').classList.toggle('hidden', !isNoWork);
+      document.getElementById('contractorSection').classList.toggle('hidden', isNoWork);
+    }
+
+    function handleNoMaterialChange() {
+      const noMaterial = document.getElementById('noMaterial').checked;
+      const container = document.getElementById('materialsContainer');
+      const addButton = document.getElementById('addMaterialButton');
+      container.style.display = noMaterial ? 'none' : 'block';
+      addButton.style.display = noMaterial ? 'none' : 'block';
+      if (!noMaterial && container.children.length === 0) addMaterialRow();
+    }
+
+    function addContractorRow(name = '', customName = '', workers = '') {
+      const container = document.getElementById('contractorsContainer');
+      if (container.children.length >= MAX_CONTRACTOR_ROWS) { alert(`最多可填寫 ${MAX_CONTRACTOR_ROWS} 組廠商`); return; }
+
+      const div = document.createElement('div');
+      div.className = 'contractor-group material-group';
+      const header = document.createElement('div');
+      header.className = 'material-header';
+      const title = document.createElement('div');
+      title.className = 'material-title';
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.className = 'remove-material-button';
+      removeBtn.textContent = '移除';
+      removeBtn.onclick = () => { div.remove(); refreshContractorTitles(); saveDraft(); };
+      header.append(title, removeBtn);
+
+      const row = document.createElement('div');
+      row.className = 'flex-row';
+
+      const nameSelect = document.createElement('select');
+      nameSelect.className = 'contractor-name';
+      nameSelect.add(new Option('請選擇廠商', ''));
+      nameSelect.options[0].disabled = true;
+      getSavedContractorsList().forEach(c => nameSelect.add(new Option(c, c)));
+      nameSelect.add(new Option('其他 (自行輸入)', '其他'));
+
+      const workerInput = document.createElement('input');
+      workerInput.type = 'number';
+      workerInput.className = 'contractor-workers';
+      workerInput.placeholder = '人數';
+      workerInput.min = '1'; workerInput.step = '1';
+      
+      row.append(nameSelect, workerInput);
+
+      const customInput = document.createElement('input');
+      customInput.type = 'text';
+      customInput.className = 'custom-contractor-name hidden';
+      customInput.placeholder = '請輸入新廠商名稱';
+      div.append(header, row, customInput);
+
+      nameSelect.onchange = () => {
+        const isCustom = nameSelect.value === '其他';
+        customInput.classList.toggle('hidden', !isCustom);
+        if (isCustom) customInput.focus(); else customInput.value = '';
+        saveDraft();
+      };
+      customInput.oninput = saveDraft;
+      workerInput.oninput = saveDraft;
+
+      const isCustomVal = name === '其他' || (name && !getSavedContractorsList().includes(name));
+      nameSelect.value = isCustomVal ? '其他' : name;
+      if (isCustomVal) { customInput.value = name === '其他' ? customName : name; customInput.classList.remove('hidden'); }
+      if (workers !== '') workerInput.value = workers;
+
+      container.appendChild(div);
+      refreshContractorTitles();
+      if (!isRestoringDraft) saveDraft();
+    }
+
+    function refreshContractorTitles() {
+      document.querySelectorAll('.contractor-group').forEach((g, i) => g.querySelector('.material-title').textContent = `施工廠商 ${i + 1}`);
+    }
+
+    function addMaterialRow(materialId = '', qty = '') {
+      const container = document.getElementById('materialsContainer');
+      if (container.children.length >= MAX_MATERIAL_ROWS) { alert(`最多 ${MAX_MATERIAL_ROWS} 筆用料`); return; }
+      const div = document.createElement('div');
+      div.className = 'material-group';
+
+      const header = document.createElement('div');
+      header.className = 'material-header';
+      const title = document.createElement('div');
+      title.className = 'material-title';
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.className = 'remove-material-button';
+      removeBtn.textContent = '移除';
+      removeBtn.onclick = () => { div.remove(); refreshMaterialTitles(); saveDraft(); };
+      header.append(title, removeBtn);
+
+      const nameSelect = document.createElement('select');
+      nameSelect.className = 'mat-name';
+      nameSelect.add(new Option('請選擇標準材料...', ''));
+      nameSelect.options[0].disabled = true;
+      
+      MATERIAL_OPTIONS.forEach(m => {
+          const specStr = m.packageQuantity && m.packageUnit && m.stockUnit && m.packageUnit !== m.stockUnit ? ` (${m.packageQuantity}${m.packageUnit}/${m.stockUnit})` : '';
+          nameSelect.add(new Option(`${m.materialName}${specStr}`, m.materialId));
+      });
+
+      const row = document.createElement('div');
+      row.className = 'flex-row';
+      const qtyInput = document.createElement('input');
+      qtyInput.type = 'number';
+      qtyInput.className = 'mat-qty';
+      qtyInput.placeholder = '數量';
+      qtyInput.step = '0.1'; qtyInput.min = '0.1';
+
+      const unitDisplay = document.createElement('div');
+      unitDisplay.className = 'mat-unit-display';
+      unitDisplay.style.cssText = "padding:10px; background:#e9ecef; border:1px solid #ccc; border-radius:5px; color:#555; text-align:center; min-width:60px;";
+      unitDisplay.textContent = "單位";
+
+      row.append(qtyInput, unitDisplay);
+      
+      const balanceInfo = document.createElement('div');
+      balanceInfo.className = 'material-balance-info hidden';
+      balanceInfo.style.cssText = "font-size:13px; color:#555; background:#eef5ee; padding:8px; border-left:3px solid #00B900; margin-top:5px; border-radius:4px;";
+
+      div.append(header, nameSelect, row, balanceInfo);
+
+      nameSelect.onchange = () => {
+          const sId = nameSelect.value;
+          if (sId && MATERIAL_ITEMS_MAP.has(sId)) {
+              unitDisplay.textContent = MATERIAL_ITEMS_MAP.get(sId).stockUnit;
+          }
+          updateBalanceDisplay(div);
+          saveDraft();
+      };
+      qtyInput.oninput = () => { updateBalanceDisplay(div); saveDraft(); };
+
+      if (materialId && MATERIAL_ITEMS_MAP.has(materialId)) {
+          nameSelect.value = materialId;
+          unitDisplay.textContent = MATERIAL_ITEMS_MAP.get(materialId).stockUnit;
+      }
+      if (qty !== '') qtyInput.value = qty;
+
+      container.appendChild(div);
+      refreshMaterialTitles();
+      if (!isRestoringDraft) saveDraft();
+    }
+
+    function refreshMaterialTitles() {
+      const groups = document.querySelectorAll('#materialsContainer .material-group');
+      groups.forEach((group, index) => group.querySelector('.material-title').textContent = `品項 ${index + 1}`);
+      const addButton = document.getElementById('addMaterialButton');
+      addButton.disabled = groups.length >= MAX_MATERIAL_ROWS;
+    }
+
+    function updateBalanceDisplay(groupDiv) {
+        const select = groupDiv.querySelector('.mat-name');
+        const qtyInput = groupDiv.querySelector('.mat-qty');
+        const infoDiv = groupDiv.querySelector('.material-balance-info');
+
+        const materialId = select.value;
+        if (!materialId || !projectMaterialBalances[materialId]) {
+            infoDiv.classList.add('hidden');
+            return;
+        }
+
+        const balanceData = projectMaterialBalances[materialId];
+        const inputQty = Number(qtyInput.value) || 0;
+        const itemMap = MATERIAL_ITEMS_MAP.get(materialId);
+        const pkgQty = itemMap && itemMap.packageQuantity ? Number(itemMap.packageQuantity) : 1;
+        const baseUnit = itemMap ? (itemMap.baseUnit || itemMap.stockUnit) : '';
+
+        const currentUsageBaseQty = inputQty * pkgQty;
+        const currentRemaining = balanceData.remainingBaseQuantity;
+        const expectedRemaining = currentRemaining - currentUsageBaseQty;
+        const formType = document.getElementById('formType').value;
+
+        infoDiv.classList.remove('hidden');
+
+        if (formType === 'material_issue') {
+            const issueType = document.getElementById('issueType').value;
+            const issueLabel = issueType === 'OPENING' ? '本次開工首批進場' : '本次追加進場';
+            infoDiv.style.borderLeftColor = '#00B900';
+            infoDiv.style.backgroundColor = '#eef5ee';
+            infoDiv.innerHTML = `
+                <strong>目前案場剩餘：</strong> ${currentRemaining} ${baseUnit}<br>
+                <span style="color: #00B900;"><strong>${issueLabel}：</strong> +${currentUsageBaseQty} ${baseUnit}</span><br>
+                <strong>登記後預計剩餘：</strong> ${currentRemaining + currentUsageBaseQty} ${baseUnit}
+            `;
+        } else {
+            if (expectedRemaining < 0 && inputQty > 0) {
+                infoDiv.style.borderLeftColor = '#dc3545';
+                infoDiv.style.backgroundColor = '#fff3f3';
+                infoDiv.innerHTML = `
+                    <strong>目前案場剩餘：</strong> ${currentRemaining} ${baseUnit}<br>
+                    <strong>本次預計耗用：</strong> -${currentUsageBaseQty} ${baseUnit}<br>
+                    <strong>送出後預計剩餘：</strong> <span style="color: #dc3545; font-weight: bold;">${expectedRemaining} ${baseUnit}</span><br>
+                    <div style="margin-top: 4px; font-size: 12px; color: #dc3545;">⚠️ 送出後請確認是否漏登進場單據</div>
+                `;
             } else {
-                liff.login();
+                infoDiv.style.borderLeftColor = '#00B900';
+                infoDiv.style.backgroundColor = '#eef5ee';
+                infoDiv.innerHTML = `
+                    <strong>案場累計進場：</strong> ${balanceData.issuedBaseQuantity} ${baseUnit}<br>
+                    <strong>先前已耗用：</strong> ${balanceData.consumedBaseQuantity} ${baseUnit}<br>
+                    <strong>目前理論剩餘：</strong> ${currentRemaining} ${baseUnit}<br>
+                    <span style="color: #007bff;"><strong>送出後預計剩餘：</strong> ${expectedRemaining} ${baseUnit}</span>
+                `;
             }
-        } catch (e) {
-            console.error('LIFF Init Error:', e);
-            document.getElementById('reporterName').value = '網頁測試員';
         }
     }
 
-    async function loadInitialData() {
-        document.getElementById('reportDate').value = new Date().toISOString().split('T')[0];
-        
+    async function getWeather() {
+      if (!navigator.geolocation) { alert('此裝置不支援定位'); return; }
+      navigator.geolocation.getCurrentPosition(async position => {
         try {
-            // 載入專案
-            const projRes = await fetch(`${API_BASE_URL}/api/projects`);
-            const projData = await projRes.json();
-            const select = document.getElementById('projectSelect');
-            select.innerHTML = '<option value="">請選擇案場...</option>';
-            if (projData.success) {
-                projData.projects.forEach(p => {
-                    select.innerHTML += `<option value="${p.projectId}">${p.projectName}</option>`;
-                });
-            }
+          const lat = position.coords.latitude, lon = position.coords.longitude;
+          const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m&wind_speed_unit=ms&timezone=Asia%2FTaipei`);
+          if (!res.ok) throw new Error('氣象服務錯誤');
+          const data = await res.json();
+          document.getElementById('temp').value = Number(data.current.temperature_2m).toFixed(1);
+          document.getElementById('humidity').value = Math.round(data.current.relative_humidity_2m);
+          document.getElementById('wind').value = Number(data.current.wind_speed_10m).toFixed(1);
+          saveDraft();
+        } catch (error) {} 
+      }, () => {}, { timeout: 10000 });
+    }
 
-            // 渲染施工項目 Checkbox
-            const workDiv = document.getElementById('workItemsCheckboxes');
-            workItemOptions.forEach((item, idx) => {
-                workDiv.innerHTML += `
-                    <div class="form-check form-check-inline">
-                        <input class="form-check-input work-item-cb" type="checkbox" value="${item}" id="workCb${idx}">
-                        <label class="form-check-label" for="workCb${idx}">${item}</label>
-                    </div>`;
-            });
-            
+    function saveDraft() {
+      if (isRestoringDraft || reportArchived || (projectMode !== 'LOCKED' && projectMode !== 'COMPATIBLE')) return;
+      
+      // ⭐ 2. 只要有打字，就立刻更新永久記憶
+      const reporterNameVal = document.getElementById('reporterName').value.trim();
+      if (reporterNameVal) {
+          localStorage.setItem('savedReporterName', reporterNameVal);
+      }
+
+      const materialsList = [...document.querySelectorAll('#materialsContainer .material-group')].map(group => ({
+        materialId: group.querySelector('.mat-name').value,
+        qty: group.querySelector('.mat-qty').value
+      }));
+
+      const contractorsList = [...document.querySelectorAll('#contractorsContainer .contractor-group')].map(group => ({
+        name: group.querySelector('.contractor-name').value,
+        customName: group.querySelector('.custom-contractor-name')?.value.trim() || '',
+        workers: group.querySelector('.contractor-workers').value
+      }));
+
+      const draft = {
+        formType: document.getElementById('formType').value,
+        issueType: document.getElementById('issueType').value,
+        submissionId: ensureSubmissionId(),
+        projectId: document.getElementById('projectId').value.trim(),
+        reportDate: document.getElementById('reportDate').value,
+        isNoWork: document.getElementById('noWorkToday').checked,
+        noWorkReason: document.getElementById('noWorkReason').value,
+        contractorsList, 
+        workItems: [...document.querySelectorAll('input[name="workItem"]:checked')].map(cb => cb.value),
+        customWorkItem: document.getElementById('customWorkItem').value,
+        workNotes: document.getElementById('workNotes').value,
+        noMaterial: document.getElementById('noMaterial').checked,
+        materialsList,
+        remarks: document.getElementById('remarks').value,
+        temp: document.getElementById('temp').value,
+        humidity: document.getElementById('humidity').value,
+        wind: document.getElementById('wind').value
+      };
+      localStorage.setItem(getDraftKey(), JSON.stringify(draft));
+    }
+
+    function loadDraft() {
+      isRestoringDraft = true;
+      try {
+        const saved = localStorage.getItem(getDraftKey());
+        if (!saved) { 
+          currentSubmissionId = createSubmissionId();
+          addContractorRow(); addMaterialRow(); return; 
+        }
+        
+        const draft = JSON.parse(saved);
+        if (draft.formType) switchMode(draft.formType);
+        if (draft.issueType) document.getElementById('issueType').value = draft.issueType;
+        if (draft.reportDate) document.getElementById('reportDate').value = draft.reportDate;
+
+        currentSubmissionId = String(draft.submissionId || createSubmissionId());
+        
+        if (draft.isNoWork) {
+            document.getElementById('noWorkToday').checked = true;
+            document.getElementById('noWorkReason').value = draft.noWorkReason || '';
+            handleNoWorkChange();
+        }
+
+        document.getElementById('temp').value = draft.temp || '';
+        document.getElementById('humidity').value = draft.humidity || '';
+        document.getElementById('wind').value = draft.wind || '';
+        document.getElementById('workNotes').value = draft.workNotes || '';
+        document.getElementById('remarks').value = draft.remarks || '';
+
+        document.getElementById('contractorsContainer').innerHTML = '';
+        if (Array.isArray(draft.contractorsList) && draft.contractorsList.length > 0) {
+            draft.contractorsList.forEach(c => addContractorRow(c.name, c.customName, c.workers));
+        } else {
             addContractorRow();
-        } catch (e) {
-            alert('無法載入案場清單：' + e.message);
         }
-    }
 
-    // 當案場改變時，載入該案場專屬與全域材料
-    async function loadMaterials() {
-        const projectId = document.getElementById('projectSelect').value;
-        if (!projectId) return;
-        
-        try {
-            const res = await fetch(`${API_BASE_URL}/api/materials?projectId=${projectId}`);
-            const data = await res.json();
-            if (data.success) {
-                globalMaterials = data.materials;
-                document.getElementById('dailyMaterialList').innerHTML = '';
-                document.getElementById('directMaterialList').innerHTML = '';
-            }
-        } catch (e) {
-            console.error('材料載入失敗', e);
-        }
-    }
-
-    // UI 動態增減欄位
-    function toggleNoWork() {
-        const isNoWork = document.getElementById('isNoWork').checked;
-        document.getElementById('noWorkLabel').innerText = isNoWork ? '🛑 今日無出工' : '✅ 今日有施工';
-        document.getElementById('noWorkLabel').style.color = isNoWork ? '#dc3545' : '#06C755';
-        document.getElementById('noWorkSection').style.display = isNoWork ? 'block' : 'none';
-        document.getElementById('workSection').style.display = isNoWork ? 'none' : 'block';
-    }
-
-    function addContractorRow() {
-        const container = document.getElementById('contractorList');
-        const rowId = 'contractor_' + Date.now();
-        const html = `
-            <div class="row dynamic-row" id="${rowId}">
-                <button type="button" class="btn btn-outline-danger remove-btn" onclick="document.getElementById('${rowId}').remove()">X</button>
-                <div class="col-8">
-                    <label class="form-label mt-0 text-muted" style="font-size:0.8rem">廠商名稱</label>
-                    <input type="text" class="form-control contractor-name" placeholder="例: 泥作李班長">
-                </div>
-                <div class="col-4">
-                    <label class="form-label mt-0 text-muted" style="font-size:0.8rem">人數</label>
-                    <input type="number" class="form-control contractor-count" placeholder="0">
-                </div>
-            </div>`;
-        container.insertAdjacentHTML('beforeend', html);
-    }
-
-    function addMaterialRow(containerId) {
-        const container = document.getElementById(containerId);
-        if (globalMaterials.length === 0) { alert('請先選擇案場以載入材料'); return; }
-
-        const rowId = 'mat_' + Date.now();
-        let optionsHtml = '<option value="">請選擇材料...</option>';
-        globalMaterials.forEach(m => {
-            optionsHtml += `<option value="${m.materialId}">${m.materialName} (${m.stockUnit})</option>`;
-        });
-
-        const html = `
-            <div class="row dynamic-row" id="${rowId}">
-                <button type="button" class="btn btn-outline-danger remove-btn" onclick="document.getElementById('${rowId}').remove()">X</button>
-                <div class="col-8">
-                    <select class="form-select material-select">${optionsHtml}</select>
-                </div>
-                <div class="col-4">
-                    <input type="number" class="form-control material-qty" placeholder="數量" step="0.1">
-                </div>
-            </div>`;
-        container.insertAdjacentHTML('beforeend', html);
-    }
-
-    function generateUUID() {
-        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-            var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
-            return v.toString(16);
-        });
-    }
-
-    function showLoading(show, text = '處理中...') {
-        document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none';
-        document.getElementById('loadingText').innerText = text;
-    }
-
-    // 收集共同欄位
-    function getBasePayload() {
-        const projectSelect = document.getElementById('projectSelect');
-        if (!projectSelect.value) throw new Error("請選擇案場");
-
-        return {
-            projectId: projectSelect.value,
-            projectName: projectSelect.options[projectSelect.selectedIndex].text,
-            reporterName: document.getElementById('reporterName').value,
-            date: document.getElementById('reportDate').value,
-            submissionId: generateUUID() // 防網路重試重複
-        };
-    }
-
-    // 取得指定區塊的材料陣列
-    function getMaterialsFromUI(containerId) {
-        const rows = document.getElementById(containerId).querySelectorAll('.dynamic-row');
-        let items = [];
-        rows.forEach(row => {
-            const matId = row.querySelector('.material-select').value;
-            const qty = row.querySelector('.material-qty').value;
-            if (matId && qty && Number(qty) > 0) {
-                items.push({ materialId: matId, quantity: Number(qty) });
-            }
-        });
-        return items;
-    }
-
-    // ==========================================
-    // 📤 送出【施工日報】
-    // ==========================================
-    async function submitDailyReport() {
-        try {
-            let payload = getBasePayload();
-            payload.formType = 'daily_report';
-            payload.isNoWork = document.getElementById('isNoWork').checked;
-            payload.remarks = document.getElementById('dailyRemarks').value;
-
-            if (payload.isNoWork) {
-                payload.noWorkReason = document.getElementById('noWorkReason').value;
-                if (!payload.noWorkReason) throw new Error("請填寫無出工原因");
-            } else {
-                payload.temp = document.getElementById('weatherTemp').value;
-                payload.humidity = document.getElementById('weatherHum').value;
-                payload.wind = document.getElementById('weatherWind').value;
-                payload.workNotes = document.getElementById('workNotes').value;
-                payload.customWorkItem = document.getElementById('customWorkItem').value;
-
-                // 收集施工項目
-                payload.workItems = Array.from(document.querySelectorAll('.work-item-cb:checked')).map(cb => cb.value);
-
-                // 收集廠商陣列
-                payload.contractorItems = [];
-                document.getElementById('contractorList').querySelectorAll('.dynamic-row').forEach(row => {
-                    const name = row.querySelector('.contractor-name').value.trim();
-                    const count = Number(row.querySelector('.contractor-count').value);
-                    if (name && count > 0) payload.contractorItems.push({ contractorName: name, workerCount: count });
-                });
-
-                if (payload.contractorItems.length === 0) throw new Error("有施工時，請至少填寫一組廠商與人數");
-
-                // 收集材料陣列
-                payload.materialItems = getMaterialsFromUI('dailyMaterialList');
-            }
-
-            await executeSubmit(payload);
-
-        } catch (e) { alert(e.message); }
-    }
-
-    // ==========================================
-    // 📦 送出【供應商直送】(包含第三層防呆攔截)
-    // ==========================================
-    async function submitDirectIssue() {
-        try {
-            let payload = getBasePayload();
-            payload.formType = 'material_issue';
-            payload.issueType = document.getElementById('directIssueType').value;
-            payload.remarks = document.getElementById('directRemarks').value;
-            payload.materialItems = getMaterialsFromUI('directMaterialList');
-            
-            // 預設為不強制放行
-            payload.forceDirectIssue = false;
-
-            if (payload.materialItems.length === 0) throw new Error("請至少新增一項進場材料");
-
-            await executeSubmit(payload);
-
-        } catch (e) { alert(e.message); }
-    }
-
-    // 共用後端呼叫邏輯 (409 攔截重點)
-    async function executeSubmit(payload) {
-        showLoading(true, '資料寫入同步中...');
-
-        try {
-            const response = await fetch(`${API_BASE_URL}/api/submit-report`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+        if (Array.isArray(draft.workItems)) {
+            document.querySelectorAll('input[name="workItem"]').forEach(checkbox => {
+                checkbox.checked = draft.workItems.includes(checkbox.value);
             });
-
-            const result = await response.json();
-            showLoading(false);
-
-            // 💡 第三層防呆：攔截 409 狀態碼並跳出二次確認框
-            if (response.status === 409 && result.requiresConfirmation) {
-                // 組合警告清單文字
-                let matchInfo = result.matches.map(m => `• ${m.materialName}：${m.quantity} ${m.stockUnit}`).join('\n');
-                
-                const confirmForce = confirm(
-                    `⚠️ 發現疑似重複進場紀錄\n\n` +
-                    `系統偵測到今天已經有一筆來自「公司大倉庫」的相同材料撥入紀錄：\n\n${matchInfo}\n\n` +
-                    `👉 目前您正在使用的是：「廠商直接送達工地」\n\n` +
-                    `如果這確實是「另一批額外送來」的材料，請點擊【確定】繼續登記。\n` +
-                    `如果您剛才已經在網頁版操作過「領至案場」，請點擊【取消】並刪除這筆登記。`
-                );
-
-                if (confirmForce) {
-                    // 使用者點擊確定，夾帶強制通行證重新遞交
-                    payload.forceDirectIssue = true;
-                    await executeSubmit(payload); // 遞迴呼叫重新送出
-                }
-                return; // 若取消則直接中止
-            }
-
-            if (result.success) {
-                alert(`✅ 處理成功\n${result.message || ''}`);
-                if (liff.isLoggedIn()) liff.closeWindow();
-                else window.location.reload();
-            } else {
-                alert(`❌ 處理失敗：${result.error}`);
-            }
-
-        } catch (error) {
-            showLoading(false);
-            alert('連線伺服器發生異常，請檢查網路狀態：' + error.message);
+            const hasOther = draft.workItems.includes('其他');
+            const customWorkInput = document.getElementById('customWorkItem');
+            customWorkInput.classList.toggle('hidden', !hasOther);
+            customWorkInput.value = hasOther ? (draft.customWorkItem || '') : '';
         }
+
+        const noMaterial = draft.noMaterial === true;
+        document.getElementById('noMaterial').checked = noMaterial;
+        
+        if (noMaterial) {
+          handleNoMaterialChange();
+        } else {
+          document.getElementById('materialsContainer').style.display = 'block';
+          if (Array.isArray(draft.materialsList) && draft.materialsList.length > 0) {
+            document.getElementById('materialsContainer').innerHTML = '';
+            draft.materialsList.forEach(m => addMaterialRow(m.materialId || '', m.qty || ''));
+          } else { addMaterialRow(); }
+        }
+      } catch (error) {
+        localStorage.removeItem(getDraftKey());
+        document.getElementById('contractorsContainer').innerHTML = '';
+        addContractorRow(); addMaterialRow();
+      } finally {
+        isRestoringDraft = false;
+      }
     }
 
-    // 啟動腳本
-    initLiff().then(loadInitialData);
+    function buildMaterialItems() {
+      const formType = document.getElementById('formType').value;
+      const isNoWork = formType === 'daily_report' && document.getElementById('noWorkToday').checked;
+      const isNoMaterial = formType === 'daily_report' && document.getElementById('noMaterial').checked;
+      if (isNoWork || isNoMaterial) return [];
 
-    // 綁定 Bootstrap 頁籤樣式切換色 (日報綠色 / 供應商橘色)
-    document.getElementById('tab-direct').addEventListener('click', () => {
-        document.body.style.borderTop = "5px solid #ffc107";
-    });
-    document.getElementById('tab-daily').addEventListener('click', () => {
-        document.body.style.borderTop = "5px solid #06C755";
-    });
+      return [...document.querySelectorAll('#materialsContainer .material-group')]
+        .map(group => {
+          const selectedId = group.querySelector('.mat-name').value;
+          if (!selectedId || !MATERIAL_ITEMS_MAP.has(selectedId)) return null;
 
-</script>
+          const item = MATERIAL_ITEMS_MAP.get(selectedId);
+          const quantity = Number(group.querySelector('.mat-qty').value) || 0;
 
-<!-- 引入 Bootstrap JS (頁籤切換必須) -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+          return {
+            materialId: item.materialId,
+            materialCode: item.materialCode,
+            materialName: item.materialName,
+            quantity,
+            stockUnit: item.stockUnit,
+            packageQuantity: item.packageQuantity,
+            packageUnit: item.packageUnit,
+            baseQuantity: quantity * (item.packageQuantity || 1),
+            baseUnit: item.baseUnit || item.stockUnit
+          };
+        })
+        .filter(item => item && item.quantity > 0);
+    }
+
+    function validateProject() {
+      if (projectMode !== 'LOCKED' && projectMode !== 'COMPATIBLE') { alert('案場資料尚未載入'); return false; }
+      if (!getSelectedProjectName()) { alert('請選擇案場'); return false; }
+      return true;
+    }
+
+    function validateForm() {
+      const reporterName = document.getElementById('reporterName').value.trim();
+      if (!reporterName) { alert('請填寫您的填表人姓名'); return false; }
+
+      const formType = document.getElementById('formType').value;
+      const mGroups = [...document.querySelectorAll('#materialsContainer .material-group')];
+      const selectedMatIds = new Set();
+
+      if (formType === 'material_issue') {
+          const issueType = document.getElementById('issueType').value;
+          const reportDate = document.getElementById('reportDate').value;
+
+          if (!issueType) { alert('請選擇進場類型'); return false; }
+          if (!reportDate) { alert('請選擇實際進場日期'); return false; }
+
+          let validCount = 0;
+          for (let i = 0; i < mGroups.length; i++) {
+              const selectedId = mGroups[i].querySelector('.mat-name').value;
+              const qty = Number(mGroups[i].querySelector('.mat-qty').value);
+              
+              if (!selectedId && !qty) continue;
+              if (!selectedId) { alert(`請選擇進場材料 ${i + 1} 的品項`); return false; }
+              if (!qty || qty <= 0) { alert(`請輸入進場材料 ${i + 1} 的正確數量`); return false; }
+              
+              if (selectedMatIds.has(selectedId)) {
+                  alert(`材料重複選取，請將相同材料合併為一筆數量計算`);
+                  return false;
+              }
+              selectedMatIds.add(selectedId);
+              validCount++;
+          }
+          if (validCount === 0) { alert('請至少填寫一筆進場材料'); return false; }
+          return true;
+      }
+
+      const isNoWork = document.getElementById('noWorkToday').checked;
+      if (isNoWork) {
+         if (!document.getElementById('noWorkReason').value) { alert('請選擇今日無出工原因'); return false; }
+      } else {
+          const cGroups = document.querySelectorAll('#contractorsContainer .contractor-group');
+          if (cGroups.length === 0) { alert('請至少填寫一組施工廠商'); return false; }
+          
+          const contractorNames = new Set(); 
+          for (let i = 0; i < cGroups.length; i++) {
+              const group = cGroups[i];
+              const name = group.querySelector('.contractor-name').value;
+              const custom = group.querySelector('.custom-contractor-name')?.value.trim() || '';
+              const workers = group.querySelector('.contractor-workers').value;
+
+              if (!name) { alert(`請選擇施工廠商 ${i + 1} 的名稱`); return false; }
+              if (name === '其他' && !custom) { alert(`請輸入施工廠商 ${i + 1} 的自訂名稱`); return false; }
+              
+              const workerCount = Number(workers);
+              if (!Number.isInteger(workerCount) || workerCount <= 0 || workerCount > 200) { 
+                  alert(`請輸入施工廠商 ${i + 1} 的正確整數人數`); 
+                  return false; 
+              }
+
+              const finalContractorName = name === '其他' ? custom : name;
+              const normalizedContractorName = finalContractorName.normalize('NFKC').replace(/\s+/g, ' ').trim();
+              
+              if (contractorNames.has(normalizedContractorName)) {
+                  alert(`施工廠商「${finalContractorName}」重複填寫，請合併人數`);
+                  return false;
+              }
+              contractorNames.add(normalizedContractorName);
+          }
+
+          const selectedWorkItems = [...document.querySelectorAll('input[name="workItem"]:checked')];
+          const workNotes = document.getElementById('workNotes').value.trim();
+          
+          if (selectedWorkItems.length === 0 && !workNotes) { 
+              alert('請選擇施工作業項目或填寫作業內容補充'); return false; 
+          }
+          if (selectedWorkItems.some(cb => cb.value === '其他') && !document.getElementById('customWorkItem').value.trim()) { 
+              alert('請輸入其他作業項目名稱'); return false; 
+          }
+          
+          if (!document.getElementById('noMaterial').checked) {
+              let matValidCount = 0;
+              for (let i = 0; i < mGroups.length; i++) {
+                  const selectedId = mGroups[i].querySelector('.mat-name').value;
+                  const qty = Number(mGroups[i].querySelector('.mat-qty').value);
+                  
+                  if (!selectedId && !qty) continue;
+                  if (!selectedId) { alert(`請選擇用料 ${i + 1} 的品項`); return false; }
+                  if (!qty || qty <= 0) { alert(`請輸入用料 ${i + 1} 的正確數量`); return false; }
+                  
+                  if (selectedMatIds.has(selectedId)) {
+                      alert(`材料重複選取，請將相同材料合併為一筆數量計算`);
+                      return false;
+                  }
+                  selectedMatIds.add(selectedId);
+                  matValidCount++;
+              }
+              if (matValidCount === 0) { alert('請選擇今日用料，或勾選「今日無用料」'); return false; }
+          }
+      }
+      return true;
+    }
+
+    async function submitForm() {
+      if (isSubmitting) return;
+      if (!validateProject()) return;
+      if (!validateForm()) return;
+
+      const submitButton = document.getElementById('submitButton');
+      isSubmitting = true;
+      submitButton.disabled = true;
+      submitButton.textContent = '⏳ 正在送出，請稍候...';
+
+      const formType = document.getElementById('formType').value;
+      let payload = {
+        formType: formType,
+        projectId: document.getElementById('projectId').value.trim(),
+        projectName: getSelectedProjectName(),
+        submissionId: ensureSubmissionId(),
+        reporterName: document.getElementById('reporterName').value.trim(),
+        remarks: document.getElementById('remarks').value.trim() || '無'
+      };
+
+      if (formType === 'material_issue') {
+          payload.issueType = document.getElementById('issueType').value;
+          payload.date = document.getElementById('reportDate').value;
+          payload.materialItems = buildMaterialItems();
+          // 💡 新增：預設為不強制放行
+          payload.forceDirectIssue = false; 
+      } else {
+          const isNoWork = document.getElementById('noWorkToday').checked;
+          if (isNoWork) {
+              payload.isNoWork = true;
+              payload.noWorkReason = document.getElementById('noWorkReason').value;
+              payload.contractor = '無出工'; payload.workerCount = '0'; payload.progress = '本日無出工'; payload.materials = '無';
+              payload.contractorItems = [];
+          } else {
+              let totalWorkers = 0;
+              const contractorItems = [];
+              const contractorListStr = [];
+              
+              document.querySelectorAll('#contractorsContainer .contractor-group').forEach(group => {
+                  const select = group.querySelector('.contractor-name').value;
+                  const name = select === '其他' ? group.querySelector('.custom-contractor-name').value.trim() : select;
+                  const workers = Number(group.querySelector('.contractor-workers').value);
+                  
+                  if (name && Number.isInteger(workers) && workers > 0) {
+                      contractorItems.push({ contractorName: name, workerCount: workers });
+                      contractorListStr.push(`• ${name}（${workers}人）`);
+                      totalWorkers += workers;
+                  }
+              });
+
+              payload.isNoWork = false;
+              payload.contractorItems = contractorItems;
+              payload.contractor = '\n' + contractorListStr.join('\n');
+              payload.workerCount = `共 ${totalWorkers} 人`;
+              
+              const workItems = [...document.querySelectorAll('input[name="workItem"]:checked')].map(i => i.value);
+              const customWork = document.getElementById('customWorkItem').value.trim();
+              payload.workItems = workItems;
+              payload.customWorkItem = customWork;
+              payload.workNotes = document.getElementById('workNotes').value.trim();
+              
+              let progressStr = workItems.map(w => `• ${w === '其他' ? customWork : w}`).join('\n');
+              if (payload.workNotes) {
+                  progressStr += (progressStr ? '\n' : '') + `(補充: ${payload.workNotes})`;
+              }
+              payload.progress = progressStr || '未填寫施作項目';
+              
+              payload.materialItems = buildMaterialItems();
+              payload.materials = document.getElementById('noMaterial').checked ? '無' : payload.materialItems.map(m => `${m.materialName}：${m.quantity}${m.stockUnit}`).join('\n');
+          }
+      }
+
+      try {
+        let response = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        
+        let responseText = await response.text();
+        let result = {};
+        try {
+            result = responseText ? JSON.parse(responseText) : {};
+        } catch {
+            throw new Error(`後端回傳格式錯誤，HTTP ${response.status}`);
+        }
+
+        // 💡 新增：攔截 409 疑似重複防呆邏輯
+        if (response.status === 409 && result.requiresConfirmation) {
+            let matchInfo = result.matches.map(m => `• ${m.materialName}：${m.quantity} ${m.stockUnit}`).join('\n');
+            
+            const confirmForce = confirm(
+                `⚠️ 發現疑似重複進場紀錄\n\n` +
+                `今天已經有一筆來自「公司倉庫」的相同材料撥入紀錄：\n${matchInfo}\n\n` +
+                `👉 目前您正在登記：「供應商直送」\n\n` +
+                `如果這確實是另一批額外送來的材料，請點擊【確定】繼續登記。\n` +
+                `如果是不小心重複登記，請點擊【取消】。`
+            );
+
+            if (confirmForce) {
+                // 使用者點擊確定，夾帶強制通行證重新遞交
+                payload.forceDirectIssue = true;
+                submitButton.textContent = '⏳ 強制寫入中...';
+                
+                // 再次呼叫同一支 API 送出
+                response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                responseText = await response.text();
+                try {
+                    result = responseText ? JSON.parse(responseText) : {};
+                } catch {
+                    throw new Error(`後端回傳格式錯誤，HTTP ${response.status}`);
+                }
+            } else {
+                // 使用者點擊取消，中斷送出流程
+                isSubmitting = false;
+                submitButton.disabled = false;
+                submitButton.textContent = '確認登記供應商直送';
+                return;
+            }
+        }
+        
+        if (!response.ok || result.success !== true) {
+            throw new Error(result.error || result.message || `HTTP ${response.status}`);
+        }
+
+        // ⭐ 3. 送出成功時，保留永久記憶，只刪除當天的草稿
+        const finalName = document.getElementById('reporterName').value.trim();
+        if (finalName) localStorage.setItem('savedReporterName', finalName);
+        
+        localStorage.removeItem(getDraftKey());
+        alert(result.message || '✅ 資料已成功送出與歸檔');
+        if (window.liff && liff.isInClient()) liff.closeWindow();
+        
+      } catch (error) {
+        console.error('送出失敗完整資訊：', error);
+        alert(
+            `⚠️ 資料送出失敗\n\n` +
+            `原因：${error.message || '未知錯誤'}\n\n` +
+            `表單內容仍保留，請勿重新填寫。`
+        );
+      } finally {
+        isSubmitting = false;
+        submitButton.disabled = false;
+        submitButton.textContent = formType === 'material_issue' ? '確認登記供應商直送' : '確認送出施工日報';
+      }
+    }
+  </script>
 </body>
 </html>
