@@ -131,7 +131,8 @@
 
         <div class="form-group">
           <label id="qtyLabel">數量</label>
-          <input type="number" id="txQuantity" class="form-control" placeholder="輸入數字" step="1" min="0">
+          <!-- 支援小數點數量，step 設為 0.1 -->
+          <input type="number" id="txQuantity" class="form-control" placeholder="輸入數字" step="0.1" min="0">
         </div>
 
         <div class="form-group">
@@ -149,25 +150,40 @@
 
   <script>
     const API_BASE_URL = 'https://gong-cheng-linechuan-jie.onrender.com';
-    const LIFF_ID = '2011289657-dSXS9DVe'; // 已經更新為你的全新 LIFF ID
+    const LIFF_ID = '2011289657-dSXS9DVe'; 
 
     let allItems = [];
     let allProjects = [];
     let lineIdToken = '';
 
+    // 🌟 防網路瞬斷重複送出用的專屬 ID
+    let currentWarehouseSubmissionId = '';
+
+    function createWarehouseSubmissionId() {
+        if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+            return window.crypto.randomUUID();
+        }
+        return (Date.now().toString(36) + '-' + Math.random().toString(36).slice(2));
+    }
+
+    function ensureWarehouseSubmissionId() {
+        if (!currentWarehouseSubmissionId) {
+            currentWarehouseSubmissionId = createWarehouseSubmissionId();
+        }
+        return currentWarehouseSubmissionId;
+    }
+
     const STATUS_ORDER = { 'REVIEW_REQUIRED': 1, 'LOW_STOCK': 2, 'NORMAL': 3, 'OUT_OF_STOCK': 4 };
 
     window.onload = async () => {
-      // 1. 強制登入機制：確保無論從哪裡點開，都能拿到授權金鑰
+      // 1. 強制登入機制
       try {
         await liff.init({ liffId: LIFF_ID });
         if (!liff.isLoggedIn()) {
-          // 如果沒登入，強制導向 LINE 登入畫面
           liff.login({ redirectUri: window.location.href });
-          return; // 停止往下執行，等待網頁重新載入
+          return; 
         }
         
-        // 成功登入，取得 Token 並顯示右下角按鈕
         lineIdToken = liff.getIDToken() || '';
         document.getElementById('fabBtn').style.display = 'flex';
         
@@ -187,10 +203,11 @@
 
     async function fetchInventory() {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/materials`);
+        // 🌟 改接我們後端剛寫好的倉庫專用 API
+        const response = await fetch(`${API_BASE_URL}/api/warehouse/inventory`);
         const data = await response.json();
         if (data.success) {
-            allItems = data.materials.filter(m => m.inventoryManaged !== false);
+            allItems = data.items.filter(m => m.inventoryManaged !== false);
             sortItems(allItems);
             renderItems(allItems);
             populateMaterialSelect();
@@ -328,7 +345,9 @@
             return;
         }
 
-        // 如果搜尋框有字，自動選取該材料
+        // 🌟 每次打開彈窗，產生新的防重覆 ID
+        currentWarehouseSubmissionId = createWarehouseSubmissionId();
+
         const searchKeyword = document.getElementById('searchInput').value.toLowerCase();
         if (searchKeyword) {
             const matched = allItems.find(m => m.materialName.toLowerCase().includes(searchKeyword));
@@ -344,7 +363,7 @@
         document.getElementById('txQuantity').value = '';
         document.getElementById('txRemarks').value = '';
         
-        handleTypeChange(); // 初始化欄位顯示狀態
+        handleTypeChange(); 
         document.getElementById('txModal').style.display = 'flex';
     }
 
@@ -369,6 +388,28 @@
             return alert('請選擇對應的案場');
         }
 
+        // 🌟 送出前預覽與確認防呆
+        const selectedMaterial = allItems.find(m => m.materialId === materialId);
+        const currentQty = Number(selectedMaterial.stockQuantity || 0);
+        const inputQty = Number(quantity);
+        let expectedQty = 0;
+
+        if (type === 'WAREHOUSE_ADJUSTMENT') {
+            expectedQty = inputQty;
+        } else if (type === 'PROJECT_TRANSFER_OUT') {
+            expectedQty = currentQty - inputQty;
+        } else {
+            expectedQty = currentQty + inputQty;
+        }
+
+        const confirmed = confirm(
+            `材料：${selectedMaterial.materialName}\n` +
+            `目前庫存：${currentQty} ${selectedMaterial.stockUnit}\n` +
+            `異動後將變為：${expectedQty} ${selectedMaterial.stockUnit}\n\n` +
+            `確定送出？`
+        );
+        if (!confirmed) return;
+
         // 保存姓名
         localStorage.setItem('warehouse_operator_name', operatorName);
 
@@ -377,7 +418,8 @@
         btnSubmit.textContent = '處理中...';
 
         const payload = {
-            submissionId: crypto.randomUUID(),
+            // 🌟 呼叫確保 ID 函式，防止網路重試產生不同 ID
+            submissionId: ensureWarehouseSubmissionId(),
             transactionType: type,
             materialId,
             operatorName,
@@ -409,13 +451,18 @@
             const result = await response.json();
             
             if (response.ok && result.success) {
+                // 🌟 成功寫入後，清空這組 ID
+                currentWarehouseSubmissionId = '';
+                
                 alert(result.duplicate ? '此異動先前已成功完成' : '✅ 庫存異動成功！');
                 closeModal();
                 await fetchInventory(); // 重新讀取庫存
             } else {
+                // 🌟 失敗時不要清空 ID，讓重新點擊送出時沿用同一個 ID
                 alert('❌ 失敗: ' + (result.error || '可能權限不足，請確認您的 LINE ID 已加入白名單'));
             }
         } catch (error) {
+            // 網路連線錯誤時也不清空 ID
             alert('❌ 網路錯誤，請確認連線。');
         } finally {
             btnSubmit.disabled = false;
