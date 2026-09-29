@@ -36,11 +36,10 @@
 </head>
 <body>
   <div class="container">
-    <h2 id="formTitle">👷 施工日報表 <span class="version-tag">v5.7</span></h2>
+    <h2 id="formTitle">👷 施工日報表 <span class="version-tag">v5.8</span></h2>
 
     <div style="display:flex; gap:10px; margin-bottom:15px;">
         <button type="button" id="btnDailyMode" class="btn btn-primary" style="flex:1; padding:10px; border:none; border-radius:5px; background:#00B900; color:white; font-weight:bold; cursor:pointer;" onclick="switchMode('daily_report')">📝 填寫施工日報</button>
-        <!-- 💡 按鈕更名為「登記供應商直送」 -->
         <button type="button" id="btnIssueMode" class="btn btn-outline-secondary" style="flex:1; padding:10px; border:1px solid #ccc; border-radius:5px; background:#e9ecef; color:#333; font-weight:bold; cursor:pointer;" onclick="switchMode('material_issue')">📦 登記供應商直送</button>
     </div>
 
@@ -48,8 +47,7 @@
       <input type="hidden" id="formType" value="daily_report">
 
       <div id="issueExtraSection" class="hidden" style="background:#f8f9fa; padding:12px; border-radius:5px; border-left:4px solid #28a745; margin-bottom:15px;">
-        
-        <!-- 💡 第一層防呆：加入警告橫幅 -->
+        <!-- 第一層防呆：警告橫幅 -->
         <div style="background-color: #fff3cd; border-left: 5px solid #ffc107; padding: 12px 16px; border-radius: 6px; font-size: 0.9rem; color: #856404; margin-bottom: 16px; line-height: 1.5;">
             <strong>⚠️ 此功能只適用於「供應商直接送到工地」的材料。</strong><br><br>
             如果材料是從公司大倉庫領出帶過去的，請一律使用網頁版系統的「領至案場」，請勿在此重複登記，以免庫存錯亂。
@@ -76,7 +74,8 @@
 
       <div id="compatibleProjectSection">
         <label for="projectName">📍 案場名稱</label>
-        <select id="projectName" onchange="saveDraft()" required disabled>
+        <!-- 💡 修正：手動選擇案場時也會觸發餘額更新 -->
+        <select id="projectName" onchange="handleProjectChange()" required disabled>
           <option value="" disabled selected>正在載入案場清單...</option>
         </select>
       </div>
@@ -203,7 +202,7 @@
             btnIssue.style.color = '#333';
             btnIssue.style.border = '1px solid #ccc';
             
-            formTitle.innerHTML = '👷 施工日報表 <span class="version-tag">v5.7</span>';
+            formTitle.innerHTML = '👷 施工日報表 <span class="version-tag">v5.8</span>';
             submitButton.textContent = '確認送出施工日報';
             submitButton.style.background = '#00B900';
             materialLabel.textContent = '📦 今日用料';
@@ -218,8 +217,7 @@
             btnIssue.style.color = 'white';
             btnIssue.style.border = 'none';
 
-            formTitle.innerHTML = '📦 供應商直送登記表 <span class="version-tag">v5.7</span>';
-            // 💡 改為供應商直送按鈕
+            formTitle.innerHTML = '📦 供應商直送登記表 <span class="version-tag">v5.8</span>';
             submitButton.textContent = '確認登記供應商直送';
             submitButton.style.background = '#28a745';
             materialLabel.textContent = '📦 進場材料清單';
@@ -249,9 +247,11 @@
       return currentSubmissionId;
     }
 
+    // 💡 修正：當專案名稱變更為儲存 projectId 時，正確抓取文字名稱
     function getSelectedProjectName() {
       if (projectMode === 'LOCKED') return document.getElementById('lockedProjectName').value.trim();
-      return document.getElementById('projectName').value.trim();
+      const select = document.getElementById('projectName');
+      return select.options[select.selectedIndex]?.text.trim() || '';
     }
 
     function getDraftKey() {
@@ -260,9 +260,17 @@
       return 'dailyReportDraft';
     }
 
+    // 💡 強化：不僅捕捉網址列，也捕捉 LIFF 內部可能隱藏的 liff.state 參數
     function getProjectIdFromUrl() {
-      const params = new URLSearchParams(window.location.search);
-      return String(params.get('projectId') || '').trim();
+        const params = new URLSearchParams(window.location.search);
+        let pid = params.get('projectId');
+        
+        if (!pid && params.has('liff.state')) {
+            const stateStr = params.get('liff.state');
+            const stateParams = new URLSearchParams(stateStr.startsWith('?') ? stateStr : '?' + stateStr);
+            pid = stateParams.get('projectId');
+        }
+        return String(pid || '').trim();
     }
 
     async function fetchMaterials(projectId = '') {
@@ -286,6 +294,7 @@
         const res = await fetch(url);
         const data = await res.json();
         if (data.success && data.balances) {
+            projectMaterialBalances = {}; // 清空舊餘額
             data.balances.forEach(b => projectMaterialBalances[b.materialId] = b);
         }
       } catch (err) { console.warn('餘額讀取失敗', err); }
@@ -300,7 +309,6 @@
           dateInput.max = todayStr;
       }
 
-      // ⭐ 1. 網頁一載入，優先讀取「永久記憶」的名字
       const savedReporterName = localStorage.getItem('savedReporterName');
       if (savedReporterName) {
           document.getElementById('reporterName').value = savedReporterName;
@@ -310,7 +318,6 @@
         await liff.init({ liffId: LIFF_ID });
         const profile = await liff.getProfile();
         const nameInput = document.getElementById('reporterName');
-        // ⭐ 如果畫面上是空白的（代表沒有永久記憶），才用 LINE 的名字
         if (profile && !nameInput.value.trim()) {
             nameInput.value = profile.displayName;
             localStorage.setItem('savedReporterName', profile.displayName);
@@ -362,9 +369,32 @@
       placeholder.disabled = true; placeholder.selected = true;
       projectSelect.add(placeholder);
 
-      result.projects.forEach(project => projectSelect.add(new Option(project.projectName, project.projectName)));
+      // 💡 修正：將下拉選單的值設為 projectId，以便手動選擇時也能抓取餘額
+      result.projects.forEach(project => {
+          projectSelect.add(new Option(project.projectName, project.projectId));
+      });
       projectSelect.disabled = false;
       projectMode = 'COMPATIBLE';
+    }
+
+    // 💡 新增：手動在下拉選單切換案場時，自動抓取該案場餘額
+    async function handleProjectChange() {
+        const select = document.getElementById('projectName');
+        const projectId = select.value;
+        if (!projectId) return;
+
+        document.getElementById('projectId').value = projectId;
+        
+        // 清空並重新載入該案場的材料與餘額
+        await fetchMaterials(projectId);
+        await fetchMaterialBalances(projectId);
+        
+        // 刷新材料列表，讓餘額顯示出來
+        document.getElementById('materialsContainer').innerHTML = '';
+        if (!document.getElementById('noMaterial').checked) {
+            addMaterialRow();
+        }
+        saveDraft();
     }
 
     function safeReadArray(key) {
@@ -639,7 +669,6 @@
     function saveDraft() {
       if (isRestoringDraft || reportArchived || (projectMode !== 'LOCKED' && projectMode !== 'COMPATIBLE')) return;
       
-      // ⭐ 2. 只要有打字，就立刻更新永久記憶
       const reporterNameVal = document.getElementById('reporterName').value.trim();
       if (reporterNameVal) {
           localStorage.setItem('savedReporterName', reporterNameVal);
@@ -904,8 +933,8 @@
           payload.issueType = document.getElementById('issueType').value;
           payload.date = document.getElementById('reportDate').value;
           payload.materialItems = buildMaterialItems();
-          // 💡 新增：預設為不強制放行
-          payload.forceDirectIssue = false; 
+          // 💡 確保傳送時帶有 false 預設值
+          payload.forceDirectIssue = false;
       } else {
           const isNoWork = document.getElementById('noWorkToday').checked;
           if (isNoWork) {
@@ -967,7 +996,7 @@
             throw new Error(`後端回傳格式錯誤，HTTP ${response.status}`);
         }
 
-        // 💡 新增：攔截 409 疑似重複防呆邏輯
+        // 💡 攔截 409 疑似重複防呆邏輯
         if (response.status === 409 && result.requiresConfirmation) {
             let matchInfo = result.matches.map(m => `• ${m.materialName}：${m.quantity} ${m.stockUnit}`).join('\n');
             
@@ -997,10 +1026,10 @@
                     throw new Error(`後端回傳格式錯誤，HTTP ${response.status}`);
                 }
             } else {
-                // 使用者點擊取消，中斷送出流程
+                // 取消則中斷送出流程
                 isSubmitting = false;
                 submitButton.disabled = false;
-                submitButton.textContent = '確認登記供應商直送';
+                submitButton.textContent = formType === 'material_issue' ? '確認登記供應商直送' : '確認送出施工日報';
                 return;
             }
         }
@@ -1009,7 +1038,6 @@
             throw new Error(result.error || result.message || `HTTP ${response.status}`);
         }
 
-        // ⭐ 3. 送出成功時，保留永久記憶，只刪除當天的草稿
         const finalName = document.getElementById('reporterName').value.trim();
         if (finalName) localStorage.setItem('savedReporterName', finalName);
         
