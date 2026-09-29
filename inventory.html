@@ -6,26 +6,17 @@
   <title>云說工程 - 庫存總表與異動</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
-    body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background:#f4f7f6; padding:0; color:#333; margin:0; }
+    body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background:#f4f7f6; padding:0; color:#333; margin:0; padding-bottom: 80px; }
     
-    /* 導覽列與按鈕區塊 */
+    /* 乾淨的導覽列 */
     .header-bar { background: white; padding: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 100; }
     h2 { text-align:center; color:#00B900; margin: 0 0 15px 0; font-size:20px; }
-    
-    .action-buttons { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-bottom: 15px; }
-    .btn { flex: 1; min-width: 45%; padding: 10px; border: none; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; color: white; transition: 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-    .btn:active { transform: scale(0.98); }
-    
-    .btn-purchase { background: #00B900; }
-    .btn-adjust { background: #6c757d; }
-    .btn-transfer { background: #0d6efd; }
-    .btn-return { background: #fd7e14; }
-
     .search-box { width:100%; padding:12px; border:1px solid #ccc; border-radius:8px; box-sizing:border-box; font-size:16px; background:#fafafa; }
     
     .container { padding: 15px; max-width: 600px; margin: auto; }
     .inventory-list { display: flex; flex-direction: column; gap: 10px; }
     
+    /* 庫存卡片 */
     .item-card { background:#fff; border:1px solid #eee; border-left:5px solid #00B900; padding:12px; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.05); display: flex; gap: 15px; align-items: center; cursor: pointer; transition: 0.2s; }
     .item-card:active { background: #f8f9fa; }
     .item-card.low { border-left-color: #ffc107; background: #fffdf5; }
@@ -46,55 +37,80 @@
     .item-details { font-size: 12px; color: #777; display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
     .loading { text-align: center; color: #666; padding: 20px; }
     
+    /* 🚀 懸浮新增按鈕 (Floating Action Button) */
+    .fab-btn {
+        position: fixed;
+        bottom: 25px;
+        right: 25px;
+        width: 60px;
+        height: 60px;
+        background-color: #00B900;
+        color: white;
+        border-radius: 50%;
+        display: none; /* 驗證過權限才顯示 */
+        justify-content: center;
+        align-items: center;
+        font-size: 32px;
+        box-shadow: 0 4px 12px rgba(0, 185, 0, 0.4);
+        cursor: pointer;
+        z-index: 900;
+        transition: transform 0.1s;
+    }
+    .fab-btn:active { transform: scale(0.92); }
+
     /* 彈出視窗 (Modal) */
     .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 15px; }
-    .modal { background: white; width: 100%; max-width: 400px; border-radius: 12px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
-    .modal-header { font-size: 18px; font-weight: bold; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
+    .modal { background: white; width: 100%; max-width: 400px; border-radius: 12px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto; }
+    .modal-header { font-size: 18px; font-weight: bold; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; color: #333; }
     .modal-body { display: flex; flex-direction: column; gap: 15px; }
     .modal-material-name { background: #f8f9fa; padding: 10px; border-radius: 6px; font-weight: bold; font-size: 15px; color: #333; border-left: 4px solid #00B900; }
     
     .form-group { display: flex; flex-direction: column; gap: 5px; }
     .form-group label { font-size: 14px; font-weight: bold; color: #555; }
-    .form-control { padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; width: 100%; box-sizing: border-box; }
+    .form-control { padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; width: 100%; box-sizing: border-box; background: #fff; }
     
     .modal-footer { display: flex; gap: 10px; margin-top: 20px; }
     .btn-cancel { background: #f1f3f5; color: #333; border: 1px solid #ddd; flex: 1; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; }
-    .btn-submit { flex: 2; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; color: white; border: none; }
-    
-    .auth-error { background: #fff3cd; color: #856404; padding: 10px; border-radius: 8px; margin-bottom: 15px; text-align: center; font-size: 14px; display: none; border: 1px solid #ffeeba; }
+    .btn-submit { background: #00B900; flex: 2; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; color: white; border: none; }
   </style>
 </head>
 <body>
 
+  <!-- 頂部導覽列 (只留標題與搜尋) -->
   <div class="header-bar">
     <h2>📦 倉庫庫存管理系統</h2>
-    
-    <div id="authErrorMsg" class="auth-error">⚠️ 目前僅能查看。如需修改，請在 LINE 點選連結並確保擁有權限。</div>
-    
-    <div class="action-buttons">
-      <button class="btn btn-purchase" onclick="openModal('PURCHASE_IN')">➕ 採購入庫</button>
-      <button class="btn btn-transfer" onclick="openModal('PROJECT_TRANSFER_OUT')">🚚 領至案場</button>
-      <button class="btn btn-return" onclick="openModal('PROJECT_RETURN')">↩️ 案場退回</button>
-      <button class="btn btn-adjust" onclick="openModal('WAREHOUSE_ADJUSTMENT')">🔄 盤點修正</button>
-    </div>
-    
     <input type="text" id="searchInput" class="search-box" placeholder="🔍 搜尋品項名稱或料號..." oninput="filterItems()">
   </div>
 
+  <!-- 庫存列表 -->
   <div class="container">
-    <div id="loading" class="loading">⏳ 正在從系統讀取最新庫存...</div>
+    <div id="loading" class="loading">⏳ 正在驗證安全授權並讀取庫存...</div>
     <div id="inventoryList" class="inventory-list"></div>
   </div>
+
+  <!-- 懸浮新增按鈕 (登入成功才顯示) -->
+  <div class="fab-btn" id="fabBtn" onclick="openModal()">＋</div>
 
   <!-- 異動表單 Modal -->
   <div class="modal-overlay" id="txModal">
     <div class="modal">
-      <div class="modal-header" id="modalTitle">標題</div>
+      <div class="modal-header">🔧 庫存異動登記</div>
       <div class="modal-body">
         
+        <!-- 將原本的四個按鈕變成下拉選單 -->
+        <div class="form-group">
+          <label>異動類型</label>
+          <select id="txTypeSelect" class="form-control" onchange="handleTypeChange()">
+            <option value="PURCHASE_IN">➕ 採購入庫 (倉庫增加)</option>
+            <option value="PROJECT_TRANSFER_OUT">🚚 領至案場 (倉庫扣除)</option>
+            <option value="PROJECT_RETURN">↩️ 案場退回 (倉庫增加)</option>
+            <option value="WAREHOUSE_ADJUSTMENT">🔄 盤點修正 (直接覆蓋數量)</option>
+          </select>
+        </div>
+
         <div class="form-group">
           <label>操作人姓名 (將自動記憶)</label>
-          <input type="text" id="operatorName" class="form-control" placeholder="例如: 王大明">
+          <input type="text" id="operatorName" class="form-control" placeholder="例如: 軒軒">
         </div>
 
         <div class="form-group" id="projectSelectGroup" style="display:none;">
@@ -126,42 +142,45 @@
       </div>
       <div class="modal-footer">
         <button class="btn-cancel" onclick="closeModal()">取消</button>
-        <button class="btn-submit" id="btnSubmit" onclick="submitTransaction()">送出</button>
+        <button class="btn-submit" id="btnSubmit" onclick="submitTransaction()">確認送出</button>
       </div>
     </div>
   </div>
 
   <script>
     const API_BASE_URL = 'https://gong-cheng-linechuan-jie.onrender.com';
-    const LIFF_ID = '2011289657-vQgMb0eI'; // 這是你目前綁定的 LIFF_ID
+    const LIFF_ID = '2011289657-vQgMb0eI'; 
 
     let allItems = [];
     let allProjects = [];
-    let currentTxType = '';
     let lineIdToken = '';
 
     const STATUS_ORDER = { 'REVIEW_REQUIRED': 1, 'LOW_STOCK': 2, 'NORMAL': 3, 'OUT_OF_STOCK': 4 };
 
     window.onload = async () => {
-      // 1. 嘗試初始化 LIFF 並取得 ID Token (供後端驗證權限)
+      // 1. 強制登入機制：確保無論從哪裡點開，都能拿到授權金鑰
       try {
         await liff.init({ liffId: LIFF_ID });
-        if (liff.isLoggedIn()) {
-          lineIdToken = liff.getIDToken() || '';
-        } else {
-          // 在外部瀏覽器打開時，不強迫登入，但只能看不能改
-          document.getElementById('authErrorMsg').style.display = 'block';
+        if (!liff.isLoggedIn()) {
+          // 如果沒登入，強制導向 LINE 登入畫面
+          liff.login({ redirectUri: window.location.href });
+          return; // 停止往下執行，等待網頁重新載入
         }
+        
+        // 成功登入，取得 Token 並顯示右下角按鈕
+        lineIdToken = liff.getIDToken() || '';
+        document.getElementById('fabBtn').style.display = 'flex';
+        
       } catch (err) {
         console.error('LIFF 初始化失敗', err);
-        document.getElementById('authErrorMsg').style.display = 'block';
+        alert('⚠️ 無法載入 LINE 安全授權，僅提供瀏覽模式。');
       }
 
       // 2. 載入上次填寫的姓名
       const savedName = localStorage.getItem('warehouse_operator_name');
       if (savedName) document.getElementById('operatorName').value = savedName;
 
-      // 3. 讀取庫存與案場
+      // 3. 讀取資料
       await fetchInventory();
       await fetchProjects();
     };
@@ -223,7 +242,10 @@
         items.forEach(item => {
             const card = document.createElement('div');
             card.className = 'item-card';
-            card.onclick = () => { document.getElementById('searchInput').value = item.materialName; filterItems(); };
+            card.onclick = () => { 
+                document.getElementById('searchInput').value = item.materialName; 
+                filterItems(); 
+            };
             
             let statusText = '正常';
             if (item.stockStatus === 'LOW_STOCK') { card.classList.add('low'); statusText = '⚠️ 偏低'; }
@@ -269,7 +291,7 @@
         allItems.forEach(m => {
             const opt = document.createElement('option');
             opt.value = m.materialId;
-            opt.textContent = `[${m.stockQuantity}${m.stockUnit}] ${m.materialName}`;
+            opt.textContent = `[庫存:${m.stockQuantity}] ${m.materialName}`;
             mSelect.appendChild(opt);
         });
     }
@@ -282,43 +304,28 @@
         const m = allItems.find(x => x.materialId === mId);
         if (m) {
             infoDiv.style.display = 'block';
-            infoDiv.innerHTML = `目前庫存：<b>${m.stockQuantity}</b> ${m.stockUnit}`;
+            infoDiv.innerHTML = `目前倉庫剩餘：<b>${m.stockQuantity}</b> ${m.stockUnit}`;
         }
     }
 
-    // Modal 控制邏輯
-    function openModal(type) {
-        if (!lineIdToken) {
-            alert('您目前未取得授權金鑰，或不是從 LINE 內開啟，無法修改庫存。');
-            return;
-        }
-
-        currentTxType = type;
-        const modal = document.getElementById('txModal');
-        const title = document.getElementById('modalTitle');
-        const btnSubmit = document.getElementById('btnSubmit');
+    // Modal 表單聯動邏輯
+    function handleTypeChange() {
+        const type = document.getElementById('txTypeSelect').value;
         const projGroup = document.getElementById('projectSelectGroup');
         const qtyLabel = document.getElementById('qtyLabel');
         
-        // 根據類型變化介面
         projGroup.style.display = (type === 'PROJECT_TRANSFER_OUT' || type === 'PROJECT_RETURN') ? 'flex' : 'none';
         
-        if (type === 'PURCHASE_IN') {
-            title.innerHTML = '➕ 採購入庫';
-            qtyLabel.textContent = '入庫數量';
-            btnSubmit.style.background = '#00B900';
-        } else if (type === 'WAREHOUSE_ADJUSTMENT') {
-            title.innerHTML = '🔄 盤點修正';
-            qtyLabel.textContent = '盤點後「實際總數量」';
-            btnSubmit.style.background = '#6c757d';
-        } else if (type === 'PROJECT_TRANSFER_OUT') {
-            title.innerHTML = '🚚 領至案場 (出庫)';
-            qtyLabel.textContent = '領出數量';
-            btnSubmit.style.background = '#0d6efd';
-        } else if (type === 'PROJECT_RETURN') {
-            title.innerHTML = '↩️ 案場退回 (入庫)';
-            qtyLabel.textContent = '退回數量';
-            btnSubmit.style.background = '#fd7e14';
+        if (type === 'PURCHASE_IN') qtyLabel.textContent = '入庫數量';
+        else if (type === 'WAREHOUSE_ADJUSTMENT') qtyLabel.textContent = '盤點後「實際總數量」';
+        else if (type === 'PROJECT_TRANSFER_OUT') qtyLabel.textContent = '領出數量';
+        else if (type === 'PROJECT_RETURN') qtyLabel.textContent = '退回數量';
+    }
+
+    function openModal() {
+        if (!lineIdToken) {
+            alert('尚未取得授權金鑰，無法修改庫存。');
+            return;
         }
 
         // 如果搜尋框有字，自動選取該材料
@@ -337,7 +344,8 @@
         document.getElementById('txQuantity').value = '';
         document.getElementById('txRemarks').value = '';
         
-        modal.style.display = 'flex';
+        handleTypeChange(); // 初始化欄位顯示狀態
+        document.getElementById('txModal').style.display = 'flex';
     }
 
     function closeModal() {
@@ -346,6 +354,7 @@
 
     // 送出 API
     async function submitTransaction() {
+        const type = document.getElementById('txTypeSelect').value;
         const operatorName = document.getElementById('operatorName').value.trim();
         const materialId = document.getElementById('materialSelect').value;
         const quantity = document.getElementById('txQuantity').value;
@@ -356,7 +365,7 @@
         if (!materialId) return alert('請選擇材料');
         if (!quantity || quantity === '') return alert('請填寫數量');
         
-        if ((currentTxType === 'PROJECT_TRANSFER_OUT' || currentTxType === 'PROJECT_RETURN') && !projectId) {
+        if ((type === 'PROJECT_TRANSFER_OUT' || type === 'PROJECT_RETURN') && !projectId) {
             return alert('請選擇對應的案場');
         }
 
@@ -367,19 +376,15 @@
         btnSubmit.disabled = true;
         btnSubmit.textContent = '處理中...';
 
-        // 產生前端防重複 ID
-        const submissionId = crypto.randomUUID();
-
         const payload = {
-            submissionId,
-            transactionType: currentTxType,
+            submissionId: crypto.randomUUID(),
+            transactionType: type,
             materialId,
             operatorName,
             remarks
         };
 
-        // 數量欄位因 API 規定而異
-        if (currentTxType === 'WAREHOUSE_ADJUSTMENT') {
+        if (type === 'WAREHOUSE_ADJUSTMENT') {
             payload.actualQuantity = Number(quantity);
         } else {
             payload.quantity = Number(quantity);
@@ -387,17 +392,16 @@
 
         if (projectId) payload.projectId = projectId;
 
-        // 決定打哪一支 API
         let endpoint = '/api/warehouse/transactions';
-        if (currentTxType === 'PROJECT_TRANSFER_OUT') endpoint = '/api/warehouse/project-transfer';
-        if (currentTxType === 'PROJECT_RETURN') endpoint = '/api/warehouse/project-return';
+        if (type === 'PROJECT_TRANSFER_OUT') endpoint = '/api/warehouse/project-transfer';
+        if (type === 'PROJECT_RETURN') endpoint = '/api/warehouse/project-return';
 
         try {
             const response = await fetch(API_BASE_URL + endpoint, {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${lineIdToken}` // 加入資安 Token
+                    'Authorization': `Bearer ${lineIdToken}` 
                 },
                 body: JSON.stringify(payload)
             });
@@ -407,16 +411,15 @@
             if (response.ok && result.success) {
                 alert(result.duplicate ? '此異動先前已成功完成' : '✅ 庫存異動成功！');
                 closeModal();
-                // 重新讀取庫存重新渲染
-                await fetchInventory(); 
+                await fetchInventory(); // 重新讀取庫存
             } else {
-                alert('❌ 失敗: ' + (result.error || '權限不足或系統錯誤'));
+                alert('❌ 失敗: ' + (result.error || '可能權限不足，請確認您的 LINE ID 已加入白名單'));
             }
         } catch (error) {
             alert('❌ 網路錯誤，請確認連線。');
         } finally {
             btnSubmit.disabled = false;
-            btnSubmit.textContent = '送出';
+            btnSubmit.textContent = '確認送出';
         }
     }
   </script>
