@@ -1,114 +1,193 @@
 <!doctype html>
 <html lang="zh-Hant">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#087f5b">
-<title>云說倉庫管理v1</title>
-<script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-<style>
-:root{
-  --green:#087f5b;--green2:#0ca678;--green3:#e6fcf5;
-  --blue:#1971c2;--bluebg:#e7f5ff;--orange:#e67700;--orangebg:#fff4e6;
-  --red:#c92a2a;--redbg:#fff5f5;--ink:#212529;--muted:#6c757d;
-  --line:#e9ecef;--bg:#f4f7f6;--white:#fff;--shadow:0 10px 30px rgba(33,37,41,.10);
-}
-*{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:"Segoe UI","Noto Sans TC",Arial,sans-serif;color:var(--ink);background:var(--bg)}
-button,input,select,textarea{font:inherit}.app{width:min(100%,560px);min-height:100vh;margin:auto;background:var(--white);box-shadow:var(--shadow)}
-.header{position:sticky;top:0;z-index:10;padding:calc(14px + env(safe-area-inset-top)) 16px 12px;background:linear-gradient(135deg,var(--green),var(--green2));color:#fff}
-.header-row{display:flex;align-items:center;justify-content:space-between;gap:12px}.title{font-size:20px;font-weight:800}.subtitle{margin-top:2px;font-size:12px;color:rgba(255,255,255,.82)}
-.icon-btn{width:42px;height:42px;border:0;border-radius:12px;background:rgba(255,255,255,.16);color:#fff;font-size:20px;cursor:pointer}
-.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:14px 14px 8px;background:#fff}.metric{padding:11px 8px;border:1px solid var(--line);border-radius:12px;text-align:center;background:#fff;cursor:pointer}.metric strong{display:block;font-size:21px}.metric span{font-size:12px;color:var(--muted)}.metric.warn strong{color:var(--orange)}.metric.danger strong{color:var(--red)}
-.search-wrap{padding:8px 14px}.search{display:flex;align-items:center;gap:8px;padding:0 12px;border:1px solid #ced4da;border-radius:12px;background:#fff}.search input{width:100%;padding:12px 0;border:0;outline:0;background:transparent}
-.filters{display:flex;gap:8px;overflow-x:auto;padding:4px 14px 12px;scrollbar-width:none}.chip{flex:none;padding:8px 12px;border:1px solid var(--line);border-radius:999px;background:#fff;color:#495057;font-size:13px;font-weight:700;cursor:pointer}.chip.active{border-color:var(--green);background:var(--green3);color:var(--green)}
-.notice{margin:0 14px 12px;padding:12px 13px;border-left:4px solid var(--blue);border-radius:10px;background:var(--bluebg);font-size:13px;line-height:1.55}.notice strong{color:var(--blue)}
-.list{padding:0 14px 96px}.card{margin-bottom:12px;padding:14px;border:1px solid var(--line);border-radius:15px;background:#fff;box-shadow:0 4px 16px rgba(33,37,41,.055)}
-.card-top{display:flex;align-items:flex-start;gap:11px}.thumb{display:grid;place-items:center;flex:none;width:52px;height:52px;border-radius:13px;background:linear-gradient(145deg,#edf2ff,#e7f5ff);font-size:27px}.meta{min-width:0;flex:1}.name{font-weight:800;line-height:1.35}.code{margin-top:3px;color:var(--muted);font-size:12px}.stock{text-align:right}.stock strong{display:block;font-size:23px;color:var(--green)}.stock span{font-size:12px;color:var(--muted)}
-.status{display:inline-flex;margin-top:7px;padding:4px 8px;border-radius:999px;font-size:11px;font-weight:800}.normal{background:var(--green3);color:var(--green)}.low{background:var(--orangebg);color:var(--orange)}.empty{background:var(--redbg);color:var(--red)}
-.card-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:13px}.small-btn{padding:9px 6px;border:1px solid var(--line);border-radius:10px;background:#fff;font-size:13px;font-weight:800;color:#495057;cursor:pointer}.small-btn.primary{border-color:#b2f2bb;background:#ebfbee;color:var(--green)}.small-btn:disabled{opacity:0.4;cursor:not-allowed}
-.nav{position:fixed;left:50%;bottom:0;z-index:20;width:min(100%,560px);transform:translateX(-50%);display:grid;grid-template-columns:repeat(3,1fr);padding:8px 8px calc(8px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:rgba(255,255,255,.96);backdrop-filter:blur(10px)}.nav-btn{padding:8px;border:0;background:transparent;color:var(--muted);font-size:12px;font-weight:700;cursor:pointer}.nav-btn span{display:block;font-size:21px;margin-bottom:2px}.nav-btn.active{color:var(--green)}
-.fab{position:fixed;right:max(18px,calc((100vw - 560px)/2 + 18px));bottom:calc(76px + env(safe-area-inset-bottom));z-index:21;width:58px;height:58px;border:0;border-radius:50%;box-shadow:0 8px 22px rgba(8,127,91,.3);background:var(--green);color:#fff;font-size:30px;cursor:pointer}
-.overlay{position:fixed;inset:0;z-index:100;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.52);opacity:1;visibility:visible;transition:.2s}.overlay.hidden{opacity:0;visibility:hidden;pointer-events:none}.sheet{width:min(100%,560px);max-height:92vh;overflow:auto;border-radius:20px 20px 0 0;background:#fff;padding-bottom:calc(18px + env(safe-area-inset-bottom));transform:translateY(0);transition:.2s}.overlay.hidden .sheet{transform:translateY(30px)}
-.handle{width:42px;height:5px;margin:10px auto;border-radius:99px;background:#dee2e6}.sheet-head{display:flex;align-items:center;justify-content:space-between;padding:4px 18px 13px;border-bottom:1px solid var(--line)}.sheet-title{font-size:19px;font-weight:800}.close{width:36px;height:36px;border:0;border-radius:50%;background:#f1f3f5;font-size:20px;cursor:pointer}
-.sheet-body{padding:16px 18px}.type-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin-bottom:16px}.type-btn{padding:13px 8px;border:1px solid var(--line);border-radius:12px;background:#fff;font-weight:800;cursor:pointer}.type-btn.active{border-color:var(--green);background:var(--green3);color:var(--green)}
-.field{margin-bottom:14px}.field label{display:block;margin-bottom:6px;font-size:13px;font-weight:800}.field input,.field select,.field textarea{width:100%;padding:12px;border:1px solid #ced4da;border-radius:10px;background:#fff;outline:0}.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(12,166,120,.12)}
-.preview{margin:4px 0 15px;padding:13px;border-radius:12px;background:#f8f9fa}.preview-row{display:flex;justify-content:space-between;gap:12px;padding:5px 0;font-size:14px}.preview-row.final{margin-top:5px;padding-top:10px;border-top:1px solid #dee2e6;font-weight:900}.preview-row.final span:last-child{color:var(--green)}
-.submit{width:100%;padding:13px;border:0;border-radius:11px;background:var(--green);color:#fff;font-size:16px;font-weight:900;cursor:pointer}.helper{margin-top:8px;color:var(--muted);font-size:12px;text-align:center;line-height:1.5}
-.toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));z-index:200;transform:translate(-50%,130px);width:min(calc(100% - 28px),500px);padding:13px;border-radius:11px;background:#1864ab;color:#fff;text-align:center;opacity:0;transition:.2s}.toast.show{transform:translate(-50%,0);opacity:1}
-@media(min-width:561px){body{padding:18px}.app{border-radius:18px;overflow:hidden;min-height:calc(100vh - 36px)}.nav{bottom:18px;border-radius:0 0 18px 18px}.sheet{margin-bottom:18px;border-radius:20px}}
-</style>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+    <meta name="theme-color" content="#087f5b">
+    <title>云說倉庫管理</title>
+    <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <style>
+        :root {
+            --green: #087f5b; --green2: #0ca678; --green3: #e6fcf5;
+            --blue: #1971c2; --bluebg: #e7f5ff; --orange: #e67700; --orangebg: #fff4e6;
+            --red: #c92a2a; --redbg: #fff5f5; --ink: #212529; --muted: #6c757d;
+            --line: #e9ecef; --bg: #f4f7f6; --white: #fff; --shadow: 0 10px 30px rgba(33,37,41,.10);
+        }
+        * { box-sizing: border-box; }
+        html, body { margin: 0; min-height: 100%; font-family: "Segoe UI", "Noto Sans TC", Arial, sans-serif; color: var(--ink); background: var(--bg); }
+        button, input, select, textarea { font: inherit; }
+        .app { width: min(100%, 560px); min-height: 100vh; margin: auto; background: var(--white); box-shadow: var(--shadow); }
+        .header { position: sticky; top: 0; z-index: 10; padding: calc(14px + env(safe-area-inset-top)) 16px 12px; background: linear-gradient(135deg, var(--green), var(--green2)); color: #fff; }
+        .header-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+        .title { font-size: 20px; font-weight: 800; }
+        .subtitle { margin-top: 2px; font-size: 12px; color: rgba(255,255,255,.82); }
+        .icon-btn { width: 42px; height: 42px; border: 0; border-radius: 12px; background: rgba(255,255,255,.16); color: #fff; font-size: 20px; cursor: pointer; }
+        .summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 14px 14px 8px; background: #fff; }
+        .metric { padding: 11px 8px; border: 1px solid var(--line); border-radius: 12px; text-align: center; background: #fff; cursor: pointer; }
+        .metric strong { display: block; font-size: 21px; }
+        .metric span { font-size: 12px; color: var(--muted); }
+        .metric.warn strong { color: var(--orange); }
+        .metric.danger strong { color: var(--red); }
+        .search-wrap { padding: 8px 14px; }
+        .search { display: flex; align-items: center; gap: 8px; padding: 0 12px; border: 1px solid #ced4da; border-radius: 12px; background: #fff; }
+        .search input { width: 100%; padding: 12px 0; border: 0; outline: 0; background: transparent; }
+        .filters { display: flex; gap: 8px; overflow-x: auto; padding: 4px 14px 12px; scrollbar-width: none; }
+        .chip { flex: none; padding: 8px 12px; border: 1px solid var(--line); border-radius: 999px; background: #fff; color: #495057; font-size: 13px; font-weight: 700; cursor: pointer; }
+        .chip.active { border-color: var(--green); background: var(--green3); color: var(--green); }
+        .notice { margin: 0 14px 12px; padding: 12px 13px; border-left: 4px solid var(--blue); border-radius: 10px; background: var(--bluebg); font-size: 13px; line-height: 1.55; }
+        .notice strong { color: var(--blue); }
+        .list { padding: 0 14px 96px; }
+        .card { margin-bottom: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 15px; background: #fff; box-shadow: 0 4px 16px rgba(33,37,41,.055); }
+        .card-top { display: flex; align-items: flex-start; gap: 11px; }
+        .thumb { display: grid; place-items: center; flex: none; width: 52px; height: 52px; border-radius: 13px; background: linear-gradient(145deg, #edf2ff, #e7f5ff); font-size: 27px; padding: 0; overflow: hidden; }
+        .meta { min-width: 0; flex: 1; }
+        .name { font-weight: 800; line-height: 1.35; }
+        .code { margin-top: 3px; color: var(--muted); font-size: 12px; }
+        .stock { text-align: right; }
+        .stock strong { display: block; font-size: 23px; color: var(--green); }
+        .stock span { font-size: 12px; color: var(--muted); }
+        .status { display: inline-flex; margin-top: 7px; padding: 4px 8px; border-radius: 999px; font-size: 11px; font-weight: 800; }
+        .normal { background: var(--green3); color: var(--green); }
+        .low { background: var(--orangebg); color: var(--orange); }
+        .empty { background: var(--redbg); color: var(--red); }
+        .card-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 13px; }
+        .small-btn { padding: 9px 6px; border: 1px solid var(--line); border-radius: 10px; background: #fff; font-size: 13px; font-weight: 800; color: #495057; cursor: pointer; }
+        .small-btn.primary { border-color: #b2f2bb; background: #ebfbee; color: var(--green); }
+        .small-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .nav { position: fixed; left: 50%; bottom: 0; z-index: 20; width: min(100%, 560px); transform: translateX(-50%); display: grid; grid-template-columns: repeat(3, 1fr); padding: 8px 8px calc(8px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: rgba(255,255,255,.96); backdrop-filter: blur(10px); }
+        .nav-btn { padding: 8px; border: 0; background: transparent; color: var(--muted); font-size: 12px; font-weight: 700; cursor: pointer; }
+        .nav-btn span { display: block; font-size: 21px; margin-bottom: 2px; }
+        .nav-btn.active { color: var(--green); }
+        .fab { position: fixed; right: max(18px, calc((100vw - 560px)/2 + 18px)); bottom: calc(76px + env(safe-area-inset-bottom)); z-index: 21; width: 58px; height: 58px; border: 0; border-radius: 50%; box-shadow: 0 8px 22px rgba(8,127,91,.3); background: var(--green); color: #fff; font-size: 30px; cursor: pointer; }
+        .overlay { position: fixed; inset: 0; z-index: 100; display: flex; align-items: flex-end; justify-content: center; background: rgba(0,0,0,.52); opacity: 1; visibility: visible; transition: .2s; }
+        .overlay.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+        .sheet { width: min(100%, 560px); max-height: 92vh; overflow: auto; border-radius: 20px 20px 0 0; background: #fff; padding-bottom: calc(18px + env(safe-area-inset-bottom)); transform: translateY(0); transition: .2s; }
+        .overlay.hidden .sheet { transform: translateY(30px); }
+        .handle { width: 42px; height: 5px; margin: 10px auto; border-radius: 99px; background: #dee2e6; }
+        .sheet-head { display: flex; align-items: center; justify-content: space-between; padding: 4px 18px 13px; border-bottom: 1px solid var(--line); }
+        .sheet-title { font-size: 19px; font-weight: 800; }
+        .close { width: 36px; height: 36px; border: 0; border-radius: 50%; background: #f1f3f5; font-size: 20px; cursor: pointer; }
+        .sheet-body { padding: 16px 18px; }
+        .type-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 9px; margin-bottom: 16px; }
+        .type-btn { padding: 13px 8px; border: 1px solid var(--line); border-radius: 12px; background: #fff; font-weight: 800; cursor: pointer; }
+        .type-btn.active { border-color: var(--green); background: var(--green3); color: var(--green); }
+        .field { margin-bottom: 14px; }
+        .field label { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 800; }
+        .field input, .field select, .field textarea { width: 100%; padding: 12px; border: 1px solid #ced4da; border-radius: 10px; background: #fff; outline: 0; }
+        .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(12,166,120,.12); }
+        .preview { margin: 4px 0 15px; padding: 13px; border-radius: 12px; background: #f8f9fa; }
+        .preview-row { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; font-size: 14px; }
+        .preview-row.final { margin-top: 5px; padding-top: 10px; border-top: 1px solid #dee2e6; font-weight: 900; }
+        .preview-row.final span:last-child { color: var(--green); }
+        .submit { width: 100%; padding: 13px; border: 0; border-radius: 11px; background: var(--green); color: #fff; font-size: 16px; font-weight: 900; cursor: pointer; }
+        .helper { margin-top: 8px; color: var(--muted); font-size: 12px; text-align: center; line-height: 1.5; }
+        .toast { position: fixed; left: 50%; bottom: calc(90px + env(safe-area-inset-bottom)); z-index: 200; transform: translate(-50%, 130px); width: min(calc(100% - 28px), 500px); padding: 13px; border-radius: 11px; background: #1864ab; color: #fff; text-align: center; opacity: 0; transition: .2s; }
+        .toast.show { transform: translate(-50%, 0); opacity: 1; }
+        @media(min-width: 561px) {
+            body { padding: 18px; }
+            .app { border-radius: 18px; overflow: hidden; min-height: calc(100vh - 36px); }
+            .nav { bottom: 18px; border-radius: 0 0 18px 18px; }
+            .sheet { margin-bottom: 18px; border-radius: 20px; }
+        }
+    </style>
 </head>
 <body>
 <div class="app">
-  <header class="header">
-    <div class="header-row">
-      <div><div class="title">📦 云說倉庫管理</div><div class="subtitle" id="userGreeting">載入中...</div></div>
-      <button class="icon-btn" aria-label="重新整理" onclick="initApp()">↻</button>
+    <header class="header">
+        <div class="header-row">
+            <div>
+                <div class="title">📦 云說倉庫管理</div>
+                <div class="subtitle" id="userGreeting">載入中...</div>
+            </div>
+            <button class="icon-btn" aria-label="重新整理" onclick="initApp()">↻</button>
+        </div>
+    </header>
+
+    <section class="summary">
+        <button class="metric" onclick="setFilter('all')"><strong id="sumTotal">0</strong><span>總品項</span></button>
+        <button class="metric warn" onclick="setFilter('low')"><strong id="sumLow">0</strong><span>低庫存</span></button>
+        <button class="metric danger" onclick="setFilter('empty')"><strong id="sumEmpty">0</strong><span>缺貨</span></button>
+    </section>
+
+    <div class="search-wrap">
+        <div class="search">🔎<input id="searchInput" placeholder="搜尋材料名稱或料號" oninput="renderList()"></div>
     </div>
-  </header>
+    
+    <div class="filters">
+        <button class="chip active" data-filter="all" onclick="setFilter('all')">全部</button>
+        <button class="chip" data-filter="normal" onclick="setFilter('normal')">正常</button>
+        <button class="chip" data-filter="low" onclick="setFilter('low')">低庫存</button>
+        <button class="chip" data-filter="empty" onclick="setFilter('empty')">缺貨</button>
+    </div>
 
-  <section class="summary">
-    <button class="metric" onclick="setFilter('all')"><strong id="sumTotal">0</strong><span>總品項</span></button>
-    <button class="metric warn" onclick="setFilter('low')"><strong id="sumLow">0</strong><span>低庫存</span></button>
-    <button class="metric danger" onclick="setFilter('empty')"><strong id="sumEmpty">0</strong><span>缺貨</span></button>
-  </section>
+    <div class="notice">
+        <strong>💡 材料流向：</strong><br>
+        公司倉庫送往工地請使用「領至案場」；<br>供應商直送工地請使用工程小幫手。
+    </div>
 
-  <div class="search-wrap"><div class="search">🔎<input id="searchInput" placeholder="搜尋材料名稱或料號" oninput="renderList()"></div></div>
-  <div class="filters">
-    <button class="chip active" data-filter="all" onclick="setFilter('all')">全部</button>
-    <button class="chip" data-filter="normal" onclick="setFilter('normal')">正常</button>
-    <button class="chip" data-filter="low" onclick="setFilter('low')">低庫存</button>
-    <button class="chip" data-filter="empty" onclick="setFilter('empty')">缺貨</button>
-  </div>
+    <main class="list" id="materialList">
+        <div style="text-align:center; padding: 40px; color:#6c757d;">載入材料資料中...</div>
+    </main>
 
-  <div class="notice"><strong>💡 材料流向：</strong><br>公司倉庫送往工地請使用「領至案場」；<br>供應商直送工地請使用工程小幫手。</div>
-
-  <main class="list" id="materialList">
-    <div style="text-align:center; padding: 40px; color:#6c757d;">載入材料資料中...</div>
-  </main>
-
-  <button class="fab" onclick="openSheet('PURCHASE_IN')" aria-label="新增異動">＋</button>
-  <nav class="nav">
-    <button class="nav-btn active"><span>📦</span>庫存總覽</button>
-    <button class="nav-btn" onclick="openSheet('PURCHASE_IN')"><span>➕</span>新增異動</button>
-    <button class="nav-btn" onclick="showToast('正式版將顯示異動紀錄')"><span>📋</span>紀錄</button>
-  </nav>
+    <button class="fab" onclick="openSheet('PURCHASE_IN')" aria-label="新增異動">＋</button>
+    <nav class="nav">
+        <button class="nav-btn active"><span>📦</span>庫存總覽</button>
+        <button class="nav-btn" onclick="openSheet('PURCHASE_IN')"><span>➕</span>新增異動</button>
+        <button class="nav-btn" onclick="showToast('正式版將顯示異動紀錄')"><span>📋</span>紀錄</button>
+    </nav>
 </div>
 
 <!-- 底部彈出異動表單 -->
 <div id="overlay" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
-  <section class="sheet">
-    <div class="handle"></div>
-    <div class="sheet-head"><div id="sheetTitle" class="sheet-title">新增庫存異動</div><button class="close" onclick="closeSheet()" aria-label="關閉">×</button></div>
-    <div class="sheet-body">
-      <div class="type-grid">
-        <button class="type-btn active" data-type="PURCHASE_IN" onclick="chooseType(this)">➕ 採購入庫</button>
-        <button class="type-btn" data-type="WAREHOUSE_ADJUSTMENT" onclick="chooseType(this)">🔄 盤點修正</button>
-        <button class="type-btn" data-type="PROJECT_TRANSFER_OUT" onclick="chooseType(this)">🚚 領至案場</button>
-        <button class="type-btn" data-type="PROJECT_RETURN" onclick="chooseType(this)">↩️ 案場退回</button>
-      </div>
-      <div class="field"><label>操作人</label><input id="operatorName" placeholder="填寫後系統將記憶"></div>
-      <div class="field">
-          <label>材料品項</label>
-          <select id="sheetMaterial" onchange="updatePreview()"><option>載入中...</option></select>
-      </div>
-      <div id="projectField" class="field" hidden>
-          <label>案場</label>
-          <select id="sheetProject"><option>載入中...</option></select>
-      </div>
-      <div class="field"><label id="qtyLabel">本次入庫數量</label><input id="qty" type="number" inputmode="decimal" min="0" step="0.1" value="" oninput="updatePreview()" placeholder="請輸入數量"></div>
-      
-      <div class="preview">
-        <div class="preview-row"><span>目前倉庫</span><strong id="prevCurrent">0</strong></div>
-        <div class="preview-row"><span id="changeLabel">本次入庫</span><strong id="changeValue">0</strong></div>
-        <div class="preview-row final"><span>異動後倉庫</span><span id="afterValue">0</span></div>
-        <div id="projectImpact" class="preview-row" hidden><span>案場材料領入</span><strong id="projImpactValue">0</strong></div>
-      </div>
-      
-      <div class="field"><label>備註</label><textarea id="sheetRemark" rows="2" placeholder="選填，例如：廠商送貨、開工首批領料"></textarea></div>
-      <button class="submit" id="submitBtn" onclick="submitTransaction()">確認送出</button>
-    </div>
-  </section>
+    <section class="sheet">
+        <div class="handle"></div>
+        <div class="sheet-head">
+            <div id="sheetTitle" class="sheet-title">新增庫存異動</div>
+            <button class="close" onclick="closeSheet()" aria-label="關閉">×</button>
+        </div>
+        <div class="sheet-body">
+            <div class="type-grid">
+                <button class="type-btn active" data-type="PURCHASE_IN" onclick="chooseType(this)">➕ 採購入庫</button>
+                <button class="type-btn" data-type="WAREHOUSE_ADJUSTMENT" onclick="chooseType(this)">🔄 盤點修正</button>
+                <button class="type-btn" data-type="PROJECT_TRANSFER_OUT" onclick="chooseType(this)">🚚 領至案場</button>
+                <button class="type-btn" data-type="PROJECT_RETURN" onclick="chooseType(this)">↩️ 案場退回</button>
+            </div>
+            
+            <div class="field">
+                <label>操作人</label>
+                <input id="operatorName" placeholder="填寫後系統將記憶">
+            </div>
+            
+            <div class="field">
+                <label>材料品項</label>
+                <select id="sheetMaterial" onchange="updatePreview()"><option>載入中...</option></select>
+            </div>
+            
+            <div id="projectField" class="field" hidden>
+                <label>案場</label>
+                <select id="sheetProject"><option>載入中...</option></select>
+            </div>
+            
+            <div class="field">
+                <label id="qtyLabel">本次入庫數量</label>
+                <input id="qty" type="number" inputmode="decimal" min="0" step="0.1" value="" oninput="updatePreview()" placeholder="請輸入數量">
+            </div>
+            
+            <div class="preview">
+                <div class="preview-row"><span>目前倉庫</span><strong id="prevCurrent">0</strong></div>
+                <div class="preview-row"><span id="changeLabel">本次入庫</span><strong id="changeValue">0</strong></div>
+                <div class="preview-row final"><span>異動後倉庫</span><span id="afterValue">0</span></div>
+                <div id="projectImpact" class="preview-row" hidden><span>案場材料領入</span><strong id="projImpactValue">0</strong></div>
+            </div>
+            
+            <div class="field">
+                <label>備註</label>
+                <textarea id="sheetRemark" rows="2" placeholder="選填，例如：廠商送貨、開工首批領料"></textarea>
+            </div>
+            
+            <button class="submit" id="submitBtn" onclick="submitTransaction()">確認送出</button>
+        </div>
+    </section>
 </div>
 <div id="toast" class="toast"></div>
 
@@ -116,171 +195,190 @@ button,input,select,textarea{font:inherit}.app{width:min(100%,560px);min-height:
 const LIFF_ID = '2011289657-dSXS9DVe';
 const API_BASE_URL = 'https://gong-cheng-linechuan-jie.onrender.com';
 
-let materialsData = []; // 最終合併後的資料
+let materialsData = [];
 let projectsData = [];
 let currentFilter = 'all';
 let currentType = 'PURCHASE_IN';
 
-// 暴力解析所有可能的庫存變數名稱
-function parseRealStock(obj) {
-    if (!obj) return 0;
-    if (obj.currentStock !== undefined && obj.currentStock !== null) return Number(obj.currentStock);
-    if (obj.stock !== undefined && obj.stock !== null) return Number(obj.stock);
-    if (obj.quantity !== undefined && obj.quantity !== null) return Number(obj.quantity);
-    if (obj.balance !== undefined && obj.balance !== null) return Number(obj.balance);
-    if (obj.amount !== undefined && obj.amount !== null) return Number(obj.amount);
-    if (obj.remainingBaseQuantity !== undefined && obj.remainingBaseQuantity !== null) return Number(obj.remainingBaseQuantity);
-    return 0;
-}
-
+// 💡 1. 系統初始化與資料拉取
 async function initApp() {
     showToast("資料同步中...");
     
+    // 讀取上次紀錄的姓名
     const savedName = localStorage.getItem('warehouseOperatorName');
-    if (savedName) document.getElementById('operatorName').value = savedName;
+    if (savedName) {
+        document.getElementById('operatorName').value = savedName;
+    }
 
-    let idToken = null;
     try {
         await liff.init({ liffId: LIFF_ID });
         if (liff.isLoggedIn()) {
             const profile = await liff.getProfile();
-            idToken = liff.getIDToken();
             document.getElementById('userGreeting').textContent = `哈囉，${profile.displayName}`;
-            if (!savedName) document.getElementById('operatorName').value = profile.displayName;
+            if (!savedName) {
+                document.getElementById('operatorName').value = profile.displayName;
+            }
         } else {
             liff.login();
             return;
         }
     } catch (e) {
+        console.error("LIFF 錯誤", e);
         document.getElementById('userGreeting').textContent = `庫存管理系統`;
     }
 
-    const reqHeaders = { 'Content-Type': 'application/json' };
-    if (idToken) reqHeaders['Authorization'] = `Bearer ${idToken}`;
-
     try {
-        // 1. 抓取案場專案
-        const projRes = await fetch(`${API_BASE_URL}/api/projects`, { headers: reqHeaders });
+        // 同時向後端請求庫存與專案清單 (根據 server.js，GET 讀取不需要 Token)
+        const [invRes, projRes] = await Promise.all([
+            fetch(`${API_BASE_URL}/api/warehouse/inventory`),
+            fetch(`${API_BASE_URL}/api/projects`)
+        ]);
+
+        const invJson = await invRes.json();
         const projJson = await projRes.json();
-        projectsData = Array.isArray(projJson) ? projJson : (projJson.projects || projJson.data || []);
 
-        // 2. 抓取「材料字典」(負責提供 照片、名稱、料號)
-        const matRes = await fetch(`${API_BASE_URL}/api/materials`, { headers: reqHeaders });
-        const matJson = await matRes.json();
-        const catalogList = Array.isArray(matJson) ? matJson : (matJson.materials || matJson.data || matJson.items || []);
-
-        // 3. 抓取「倉庫庫存」(負責提供 實際數量)
-        let inventoryMap = {};
-        try {
-            const invRes = await fetch(`${API_BASE_URL}/api/warehouse/inventory`, { headers: reqHeaders });
-            if (invRes.ok) {
-                const invJson = await invRes.json();
-                const invList = Array.isArray(invJson) ? invJson : (invJson.inventory || invJson.data || invJson.items || []);
-                // 建立以 materialId 為 Key 的對照表
-                invList.forEach(item => {
-                    if (item.materialId) {
-                        inventoryMap[item.materialId] = parseRealStock(item);
-                    }
-                });
-            }
-        } catch (e) {
-            console.warn("獨立庫存 API 抓取失敗，將退回字典預設值");
+        // 💡 根據 server.js，庫存資料包裝在 items 屬性中
+        if (invJson.success && Array.isArray(invJson.items)) {
+            materialsData = invJson.items;
+        } else {
+            materialsData = [];
         }
 
-        // 4. 完美縫合：把「照片」跟「真實庫存數字」組合在一起
-        materialsData = catalogList.map(m => {
-            const defaultStock = parseRealStock(m); // 以防材料 API 自己就有帶數量
-            const realStock = inventoryMap[m.materialId]; // 從庫存 API 抓到的數字
-            return {
-                ...m,
-                finalStock: (realStock !== undefined) ? realStock : defaultStock
-            };
-        });
+        if (projJson.success && Array.isArray(projJson.projects)) {
+            projectsData = projJson.projects;
+        } else {
+            projectsData = [];
+        }
 
         populateSelects();
         renderList();
     } catch (e) {
+        console.error('抓取資料失敗:', e);
         showToast("資料拉取失敗，請檢查網路連線");
         document.getElementById('materialList').innerHTML = `<div style="text-align:center; padding: 40px; color:var(--red); font-weight:bold;">連線到伺服器失敗，請重新整理</div>`;
     }
 }
 
+// 💡 2. 將資料塞入下拉選單
 function populateSelects() {
     const mSel = document.getElementById('sheetMaterial');
     mSel.innerHTML = materialsData.map(m => {
-        return `<option value="${m.materialId}">${m.materialName} (庫存:${m.finalStock}${m.stockUnit})</option>`;
+        // 精準抓取 server.js 的 stockQuantity
+        const stock = Number(m.stockQuantity || 0);
+        return `<option value="${m.materialId}">${m.materialName} (庫存:${stock}${m.stockUnit})</option>`;
     }).join('');
     
     const pSel = document.getElementById('sheetProject');
-    pSel.innerHTML = projectsData.map(p => `<option value="${p.projectId}">${p.projectName}</option>`).join('');
+    pSel.innerHTML = projectsData.map(p => {
+        return `<option value="${p.projectId}">${p.projectName}</option>`;
+    }).join('');
 }
 
+// 💡 3. 渲染主頁的材料卡片清單
 function renderList() {
     const searchStr = document.getElementById('searchInput').value.toLowerCase();
     let sumTotal = 0, sumLow = 0, sumEmpty = 0;
     
     const html = materialsData.filter(m => {
+        // 精準抓取 server.js 的 stockQuantity
+        const stock = Number(m.stockQuantity || 0);
+        
+        // 統計計算
         sumTotal++;
-        if (m.finalStock === 0) sumEmpty++;
-        else if (m.finalStock < 10) sumLow++;
+        if (stock === 0) sumEmpty++;
+        else if (stock < 10) sumLow++;
 
-        if (searchStr && !m.materialName.toLowerCase().includes(searchStr) && !(m.materialCode||'').toLowerCase().includes(searchStr)) return false;
-        if (currentFilter === 'empty' && m.finalStock !== 0) return false;
-        if (currentFilter === 'low' && (m.finalStock === 0 || m.finalStock >= 10)) return false;
-        if (currentFilter === 'normal' && m.finalStock < 10) return false;
+        // 搜尋過濾
+        if (searchStr && !m.materialName.toLowerCase().includes(searchStr) && !(m.materialCode || '').toLowerCase().includes(searchStr)) return false;
+        
+        // 標籤過濾
+        if (currentFilter === 'empty' && stock !== 0) return false;
+        if (currentFilter === 'low' && (stock === 0 || stock >= 10)) return false;
+        if (currentFilter === 'normal' && stock < 10) return false;
         
         return true;
     }).map(m => {
-        let statusCls = 'normal', statusTxt = '庫存正常', defaultThumb = '📦';
-        if (m.finalStock === 0) { statusCls = 'empty'; statusTxt = '目前缺貨'; defaultThumb = '⚠️'; }
-        else if (m.finalStock < 10) { statusCls = 'low'; statusTxt = '庫存偏低'; defaultThumb = '🪣'; }
+        const stock = Number(m.stockQuantity || 0);
+        let statusCls = 'normal';
+        let statusTxt = '庫存正常';
+        let defaultThumb = '📦';
+
+        if (stock === 0) { 
+            statusCls = 'empty'; 
+            statusTxt = '目前缺貨'; 
+            defaultThumb = '⚠️'; 
+        } else if (stock < 10) { 
+            statusCls = 'low'; 
+            statusTxt = '庫存偏低'; 
+            defaultThumb = '🪣'; 
+        }
         
-        const disBtn = m.finalStock === 0 ? 'disabled' : '';
+        const disBtn = stock === 0 ? 'disabled' : '';
         
+        // 圖片路徑判斷：到 images/ 尋找，找不到就退回 emoji
         const photoFileName = m.photoUrl || m.imageUrl || m.image || (m.materialCode ? m.materialCode + '.jpg' : m.materialId + '.jpg');
         const thumbContent = `<img src="images/${photoFileName}" onerror="this.outerHTML='${defaultThumb}'" style="width:100%; height:100%; object-fit:cover; border-radius:13px;">`;
 
         return `
         <article class="card">
-          <div class="card-top">
-            <div class="thumb" style="padding:0; background:none;">${thumbContent}</div>
-            <div class="meta"><div class="name">${m.materialName}</div><div class="code">${m.materialCode||'無編號'}</div><span class="status ${statusCls}">${statusTxt}</span></div>
-            <div class="stock"><strong class="${statusCls === 'empty' ? 'text-danger' : (statusCls === 'low' ? 'text-warning' : '')}">${m.finalStock} ${m.stockUnit}</strong></div>
-          </div>
-          <div class="card-actions">
-            <button class="small-btn primary" onclick="openSheet('PURCHASE_IN', '${m.materialId}')">＋ 入庫</button>
-            <button class="small-btn" onclick="openSheet('WAREHOUSE_ADJUSTMENT', '${m.materialId}')">🔄 盤點</button>
-            <button class="small-btn" onclick="openSheet('PROJECT_TRANSFER_OUT', '${m.materialId}')" ${disBtn}>🚚 領案場</button>
-          </div>
+            <div class="card-top">
+                <div class="thumb" style="padding:0; background:none;">${thumbContent}</div>
+                <div class="meta">
+                    <div class="name">${m.materialName}</div>
+                    <div class="code">${m.materialCode || '無編號'}</div>
+                    <span class="status ${statusCls}">${statusTxt}</span>
+                </div>
+                <div class="stock">
+                    <strong class="${statusCls === 'empty' ? 'text-danger' : (statusCls === 'low' ? 'text-warning' : '')}">${stock} ${m.stockUnit}</strong>
+                </div>
+            </div>
+            <div class="card-actions">
+                <button class="small-btn primary" onclick="openSheet('PURCHASE_IN', '${m.materialId}')">＋ 入庫</button>
+                <button class="small-btn" onclick="openSheet('WAREHOUSE_ADJUSTMENT', '${m.materialId}')">🔄 盤點</button>
+                <button class="small-btn" onclick="openSheet('PROJECT_TRANSFER_OUT', '${m.materialId}')" ${disBtn}>🚚 領案場</button>
+            </div>
         </article>`;
     }).join('');
 
     document.getElementById('materialList').innerHTML = html || '<div style="text-align:center; padding: 40px; color:#6c757d;">查無符合條件的材料</div>';
     
+    // 更新頂部統計數字
     document.getElementById('sumTotal').textContent = sumTotal;
     document.getElementById('sumLow').textContent = sumLow;
     document.getElementById('sumEmpty').textContent = sumEmpty;
 }
 
+// 切換頂部篩選器
 function setFilter(type) {
     currentFilter = type;
     document.querySelectorAll('.chip').forEach(x => {
-        x.classList.toggle('active', x.dataset.filter === type);
+        if (x.dataset.filter === type) {
+            x.classList.add('active');
+        } else {
+            x.classList.remove('active');
+        }
     });
     renderList();
 }
 
+// 💡 4. 底部表單 UI 邏輯
 const overlay = document.getElementById('overlay');
+
 function openSheet(type, matId = null) {
     overlay.classList.remove('hidden');
     document.body.style.overflow = 'hidden';
+    
     if (matId) document.getElementById('sheetMaterial').value = matId;
     document.getElementById('qty').value = '';
+    
     const btn = document.querySelector(`[data-type="${type}"]`);
     if (btn) chooseType(btn);
 }
 
-function closeSheet() { overlay.classList.add('hidden'); document.body.style.overflow = ''; }
+function closeSheet() {
+    overlay.classList.add('hidden');
+    document.body.style.overflow = '';
+}
 
 function chooseType(btn) {
     document.querySelectorAll('.type-btn').forEach(x => x.classList.remove('active'));
@@ -297,36 +395,41 @@ function chooseType(btn) {
         PROJECT_TRANSFER_OUT: ['領出數量', '本次領出'],
         PROJECT_RETURN: ['退回數量', '本次退回']
     };
+    
     document.getElementById('qtyLabel').textContent = labels[currentType][0];
     document.getElementById('changeLabel').textContent = labels[currentType][1];
     
     updatePreview();
 }
 
+// 動態更新表單內的數字預覽
 function updatePreview() {
     const matId = document.getElementById('sheetMaterial').value;
     const mat = materialsData.find(m => m.materialId === matId);
     if (!mat) return;
     
     const unit = mat.stockUnit;
+    const currentStock = Number(mat.stockQuantity || 0);
     const q = Number(document.getElementById('qty').value || 0);
     
-    let after = mat.finalStock, sign = '＋', displayQ = q;
+    let after = currentStock;
+    let sign = '＋';
+    let displayQ = q;
     
     if (currentType === 'WAREHOUSE_ADJUSTMENT') {
         after = q;
-        const diff = q - mat.finalStock;
+        const diff = q - currentStock;
         sign = diff >= 0 ? '＋' : '−';
         displayQ = Math.abs(diff);
     } else if (currentType === 'PROJECT_TRANSFER_OUT') {
-        after = mat.finalStock - q;
+        after = currentStock - q;
         sign = '−';
     } else {
-        after = mat.finalStock + q;
+        after = currentStock + q;
         sign = '＋';
     }
 
-    document.getElementById('prevCurrent').textContent = `${mat.finalStock} ${unit}`;
+    document.getElementById('prevCurrent').textContent = `${currentStock} ${unit}`;
     document.getElementById('changeValue').textContent = `${sign}${displayQ} ${unit}`;
     
     const afterEl = document.getElementById('afterValue');
@@ -338,73 +441,120 @@ function updatePreview() {
     }
 }
 
+// 💡 5. 送出異動資料給後端 (完全對齊 server.js 邏輯)
 async function submitTransaction() {
     const matId = document.getElementById('sheetMaterial').value;
     const qty = Number(document.getElementById('qty').value);
     const operator = document.getElementById('operatorName').value.trim();
     
-    if (!operator) return alert('請填寫操作人');
-    if (!matId) return alert('請選擇材料');
-    if (qty <= 0 && currentType !== 'WAREHOUSE_ADJUSTMENT') return alert('請輸入有效數量');
+    if (!operator) return alert('請填寫操作人姓名');
+    if (!matId) return alert('請選擇材料品項');
+    if (qty <= 0 && currentType !== 'WAREHOUSE_ADJUSTMENT') return alert('請輸入大於 0 的有效數量');
 
     const mat = materialsData.find(m => m.materialId === matId);
+    const currentStock = Number(mat.stockQuantity || 0);
     
-    if (currentType === 'PROJECT_TRANSFER_OUT' && mat.finalStock - qty < 0) {
-        if (!confirm('警告：領出後庫存將變為負數，確定要繼續嗎？')) return;
+    // 防呆：領出不可大於現有庫存
+    if (currentType === 'PROJECT_TRANSFER_OUT' && currentStock - qty < 0) {
+        if (!confirm('警告：領出數量大於倉庫庫存，確定要繼續嗎？')) return;
     }
 
-    const typeNames = { PURCHASE_IN: '採購入庫', WAREHOUSE_ADJUSTMENT: '盤點修正', PROJECT_TRANSFER_OUT: '倉庫領至案場', PROJECT_RETURN: '案場退回' };
-    if (!confirm(`確認執行「${typeNames[currentType]}」？\n\n材料：${mat.materialName}\n數量：${document.getElementById('qty').value}`)) return;
+    const typeNames = { 
+        PURCHASE_IN: '採購入庫', 
+        WAREHOUSE_ADJUSTMENT: '盤點修正', 
+        PROJECT_TRANSFER_OUT: '倉庫領至案場', 
+        PROJECT_RETURN: '案場退回' 
+    };
+    
+    if (!confirm(`確認執行「${typeNames[currentType]}」？\n\n材料：${mat.materialName}\n數量：${document.getElementById('qty').value}`)) {
+        return;
+    }
 
     const btn = document.getElementById('submitBtn');
-    btn.disabled = true; btn.textContent = '⏳ 送出中...';
+    btn.disabled = true; 
+    btn.textContent = '⏳ 送出中...';
 
+    // 依據 server.js 決定要打哪一支 API
+    let endpoint = '';
     const payload = {
-        transactionType: currentType,
-        operatorName: operator,
+        submissionId: 'SUB-' + Date.now() + '-' + Math.floor(Math.random() * 1000), // 產生隨機交易 ID
         materialId: matId,
-        quantity: qty,
-        projectId: ['PROJECT_TRANSFER_OUT', 'PROJECT_RETURN'].includes(currentType) ? document.getElementById('sheetProject').value : null,
-        remark: document.getElementById('sheetRemark').value
+        operatorName: operator,
+        remarks: document.getElementById('sheetRemark').value
     };
 
+    if (currentType === 'PURCHASE_IN' || currentType === 'WAREHOUSE_ADJUSTMENT') {
+        endpoint = `${API_BASE_URL}/api/warehouse/transactions`;
+        payload.transactionType = currentType;
+        if (currentType === 'PURCHASE_IN') {
+            payload.quantity = qty;
+        } else {
+            payload.actualQuantity = qty; // server.js 盤點要用 actualQuantity 變數
+        }
+    } else if (currentType === 'PROJECT_TRANSFER_OUT') {
+        endpoint = `${API_BASE_URL}/api/warehouse/project-transfer`;
+        payload.projectId = document.getElementById('sheetProject').value;
+        payload.quantity = qty;
+    } else if (currentType === 'PROJECT_RETURN') {
+        endpoint = `${API_BASE_URL}/api/warehouse/project-return`;
+        payload.projectId = document.getElementById('sheetProject').value;
+        payload.quantity = qty;
+    }
+
+    // 取得 LINE ID Token (server.js 寫入時強制需要憑證)
     let idToken = null;
-    if (liff.isLoggedIn()) idToken = liff.getIDToken();
+    if (liff.isLoggedIn()) {
+        idToken = liff.getIDToken();
+    }
+
     const reqHeaders = { 'Content-Type': 'application/json' };
-    if (idToken) reqHeaders['Authorization'] = `Bearer ${idToken}`;
+    if (idToken) {
+        reqHeaders['Authorization'] = `Bearer ${idToken}`;
+    }
 
     try {
-        const res = await fetch(`${API_BASE_URL}/api/submit-inventory`, {
+        const response = await fetch(endpoint, {
             method: 'POST',
             headers: reqHeaders,
             body: JSON.stringify(payload)
         });
         
-        if (res.ok) {
+        const result = await response.json();
+
+        if (response.ok && result.success) {
             localStorage.setItem('warehouseOperatorName', operator);
             showToast(`✅ ${typeNames[currentType]} 完成！`);
             closeSheet();
-            setTimeout(initApp, 1000); 
+            setTimeout(initApp, 1000); // 重整畫面抓最新庫存
         } else {
-            throw new Error('伺服器回應錯誤');
+            throw new Error(result.error || '伺服器回應錯誤');
         }
     } catch (e) {
-        localStorage.setItem('warehouseOperatorName', operator);
-        showToast(`✅ ${typeNames[currentType]} (模擬成功)`);
-        closeSheet();
+        console.error("寫入失敗:", e);
+        alert(`寫入失敗：\n${e.message}`);
     } finally {
-        btn.disabled = false; btn.textContent = '確認送出';
+        btn.disabled = false; 
+        btn.textContent = '確認送出';
     }
 }
 
+// 顯示提示訊息
 function showToast(msg) {
     const t = document.getElementById('toast');
-    t.textContent = msg; t.classList.add('show');
+    t.textContent = msg; 
+    t.classList.add('show');
     clearTimeout(showToast.timer);
-    showToast.timer = setTimeout(() => t.classList.remove('show'), 2600);
+    showToast.timer = setTimeout(() => {
+        t.classList.remove('show');
+    }, 2600);
 }
 
-overlay.addEventListener('click', e => { if (e.target === overlay) closeSheet(); });
+// 點擊背景關閉表單
+overlay.addEventListener('click', e => { 
+    if (e.target === overlay) closeSheet(); 
+});
+
+// 啟動應用
 window.addEventListener('load', initApp);
 </script>
 </body>
