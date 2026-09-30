@@ -18,15 +18,15 @@ button,input,select,textarea{font:inherit}.app{width:min(100%,560px);min-height:
 .header{position:sticky;top:0;z-index:10;padding:calc(14px + env(safe-area-inset-top)) 16px 12px;background:linear-gradient(135deg,var(--green),var(--green2));color:#fff}
 .header-row{display:flex;align-items:center;justify-content:space-between;gap:12px}.title{font-size:20px;font-weight:800}.subtitle{margin-top:2px;font-size:12px;color:rgba(255,255,255,.82)}
 .icon-btn{width:42px;height:42px;border:0;border-radius:12px;background:rgba(255,255,255,.16);color:#fff;font-size:20px;cursor:pointer}
-.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:14px 14px 8px;background:#fff}.metric{padding:11px 8px;border:1px solid var(--line);border-radius:12px;text-align:center;background:#fff}.metric strong{display:block;font-size:21px}.metric span{font-size:12px;color:var(--muted)}.metric.warn strong{color:var(--orange)}.metric.danger strong{color:var(--red)}
+.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:14px 14px 8px;background:#fff}.metric{padding:11px 8px;border:1px solid var(--line);border-radius:12px;text-align:center;background:#fff;cursor:pointer}.metric strong{display:block;font-size:21px}.metric span{font-size:12px;color:var(--muted)}.metric.warn strong{color:var(--orange)}.metric.danger strong{color:var(--red)}
 .search-wrap{padding:8px 14px}.search{display:flex;align-items:center;gap:8px;padding:0 12px;border:1px solid #ced4da;border-radius:12px;background:#fff}.search input{width:100%;padding:12px 0;border:0;outline:0;background:transparent}
-.filters{display:flex;gap:8px;overflow-x:auto;padding:4px 14px 12px;scrollbar-width:none}.chip{flex:none;padding:8px 12px;border:1px solid var(--line);border-radius:999px;background:#fff;color:#495057;font-size:13px;font-weight:700}.chip.active{border-color:var(--green);background:var(--green3);color:var(--green)}
+.filters{display:flex;gap:8px;overflow-x:auto;padding:4px 14px 12px;scrollbar-width:none}.chip{flex:none;padding:8px 12px;border:1px solid var(--line);border-radius:999px;background:#fff;color:#495057;font-size:13px;font-weight:700;cursor:pointer}.chip.active{border-color:var(--green);background:var(--green3);color:var(--green)}
 .notice{margin:0 14px 12px;padding:12px 13px;border-left:4px solid var(--blue);border-radius:10px;background:var(--bluebg);font-size:13px;line-height:1.55}.notice strong{color:var(--blue)}
 .list{padding:0 14px 96px}.card{margin-bottom:12px;padding:14px;border:1px solid var(--line);border-radius:15px;background:#fff;box-shadow:0 4px 16px rgba(33,37,41,.055)}
 .card-top{display:flex;align-items:flex-start;gap:11px}.thumb{display:grid;place-items:center;flex:none;width:52px;height:52px;border-radius:13px;background:linear-gradient(145deg,#edf2ff,#e7f5ff);font-size:27px}.meta{min-width:0;flex:1}.name{font-weight:800;line-height:1.35}.code{margin-top:3px;color:var(--muted);font-size:12px}.stock{text-align:right}.stock strong{display:block;font-size:23px;color:var(--green)}.stock span{font-size:12px;color:var(--muted)}
 .status{display:inline-flex;margin-top:7px;padding:4px 8px;border-radius:999px;font-size:11px;font-weight:800}.normal{background:var(--green3);color:var(--green)}.low{background:var(--orangebg);color:var(--orange)}.empty{background:var(--redbg);color:var(--red)}
 .card-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:13px}.small-btn{padding:9px 6px;border:1px solid var(--line);border-radius:10px;background:#fff;font-size:13px;font-weight:800;color:#495057;cursor:pointer}.small-btn.primary{border-color:#b2f2bb;background:#ebfbee;color:var(--green)}.small-btn:disabled{opacity:0.4;cursor:not-allowed}
-.nav{position:fixed;left:50%;bottom:0;z-index:20;width:min(100%,560px);transform:translateX(-50%);display:grid;grid-template-columns:repeat(3,1fr);padding:8px 8px calc(8px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:rgba(255,255,255,.96);backdrop-filter:blur(10px)}.nav-btn{padding:8px;border:0;background:transparent;color:var(--muted);font-size:12px;font-weight:700}.nav-btn span{display:block;font-size:21px;margin-bottom:2px}.nav-btn.active{color:var(--green)}
+.nav{position:fixed;left:50%;bottom:0;z-index:20;width:min(100%,560px);transform:translateX(-50%);display:grid;grid-template-columns:repeat(3,1fr);padding:8px 8px calc(8px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:rgba(255,255,255,.96);backdrop-filter:blur(10px)}.nav-btn{padding:8px;border:0;background:transparent;color:var(--muted);font-size:12px;font-weight:700;cursor:pointer}.nav-btn span{display:block;font-size:21px;margin-bottom:2px}.nav-btn.active{color:var(--green)}
 .fab{position:fixed;right:max(18px,calc((100vw - 560px)/2 + 18px));bottom:calc(76px + env(safe-area-inset-bottom));z-index:21;width:58px;height:58px;border:0;border-radius:50%;box-shadow:0 8px 22px rgba(8,127,91,.3);background:var(--green);color:#fff;font-size:30px;cursor:pointer}
 .overlay{position:fixed;inset:0;z-index:100;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.52);opacity:1;visibility:visible;transition:.2s}.overlay.hidden{opacity:0;visibility:hidden;pointer-events:none}.sheet{width:min(100%,560px);max-height:92vh;overflow:auto;border-radius:20px 20px 0 0;background:#fff;padding-bottom:calc(18px + env(safe-area-inset-bottom));transform:translateY(0);transition:.2s}.overlay.hidden .sheet{transform:translateY(30px)}
 .handle{width:42px;height:5px;margin:10px auto;border-radius:99px;background:#dee2e6}.sheet-head{display:flex;align-items:center;justify-content:space-between;padding:4px 18px 13px;border-bottom:1px solid var(--line)}.sheet-title{font-size:19px;font-weight:800}.close{width:36px;height:36px;border:0;border-radius:50%;background:#f1f3f5;font-size:20px;cursor:pointer}
@@ -64,7 +64,6 @@ button,input,select,textarea{font:inherit}.app{width:min(100%,560px);min-height:
   <div class="notice"><strong>💡 材料流向：</strong><br>公司倉庫送往工地請使用「領至案場」；<br>供應商直送工地請使用工程小幫手。</div>
 
   <main class="list" id="materialList">
-    <!-- 卡片由 JS 動態生成 -->
     <div style="text-align:center; padding: 40px; color:#6c757d;">載入材料資料中...</div>
   </main>
 
@@ -114,9 +113,6 @@ button,input,select,textarea{font:inherit}.app{width:min(100%,560px);min-height:
 <div id="toast" class="toast"></div>
 
 <script>
-// ==========================================
-// ⚙️ 環境與 API 設定
-// ==========================================
 const LIFF_ID = '2011289657-dSXS9DVe';
 const API_BASE_URL = 'https://gong-cheng-linechuan-jie.onrender.com';
 
@@ -125,15 +121,12 @@ let projectsData = [];
 let currentFilter = 'all';
 let currentType = 'PURCHASE_IN';
 
-// UI 初始化與資料拉取
 async function initApp() {
     showToast("資料同步中...");
     
-    // 1. 處理姓名記憶
     const savedName = localStorage.getItem('warehouseOperatorName');
     if (savedName) document.getElementById('operatorName').value = savedName;
 
-    // 2. 初始化 LIFF
     try {
         await liff.init({ liffId: LIFF_ID });
         if (liff.isLoggedIn()) {
@@ -145,7 +138,6 @@ async function initApp() {
         document.getElementById('userGreeting').textContent = `庫存管理系統`;
     }
 
-    // 3. 拉取資料
     try {
         const [matRes, projRes] = await Promise.all([
             fetch(`${API_BASE_URL}/api/materials`),
@@ -157,12 +149,7 @@ async function initApp() {
         if (matJson.success) materialsData = matJson.materials || [];
         if (projJson.success) projectsData = projJson.projects || [];
         
-        // 賦予假庫存狀態以供預覽 (正式串接後端餘額後可移除此段模擬)
-        materialsData = materialsData.map(m => {
-            const stock = Math.floor(Math.random() * 50); // 模擬庫存 0~50
-            return { ...m, currentStock: stock };
-        });
-
+        // 💡 已經移除了假資料，完全依賴後端真實庫存數量
         populateSelects();
         renderList();
     } catch (e) {
@@ -170,50 +157,55 @@ async function initApp() {
     }
 }
 
-// 填充彈出視窗的選單
 function populateSelects() {
     const mSel = document.getElementById('sheetMaterial');
-    mSel.innerHTML = materialsData.map(m => `<option value="${m.materialId}">${m.materialName} (庫存:${m.currentStock}${m.stockUnit})</option>`).join('');
+    mSel.innerHTML = materialsData.map(m => {
+        const stock = Number(m.currentStock !== undefined ? m.currentStock : (m.stock !== undefined ? m.stock : 0));
+        return `<option value="${m.materialId}">${m.materialName} (庫存:${stock}${m.stockUnit})</option>`;
+    }).join('');
     
     const pSel = document.getElementById('sheetProject');
     pSel.innerHTML = projectsData.map(p => `<option value="${p.projectId}">${p.projectName}</option>`).join('');
 }
 
-// 渲染材料清單
 function renderList() {
     const searchStr = document.getElementById('searchInput').value.toLowerCase();
-    
     let sumTotal = 0, sumLow = 0, sumEmpty = 0;
     
     const html = materialsData.filter(m => {
-        // 計算統計
+        const stock = Number(m.currentStock !== undefined ? m.currentStock : (m.stock !== undefined ? m.stock : 0));
+        
         sumTotal++;
-        if (m.currentStock === 0) sumEmpty++;
-        else if (m.currentStock < 10) sumLow++;
+        if (stock === 0) sumEmpty++;
+        else if (stock < 10) sumLow++;
 
-        // 搜尋過濾
         if (searchStr && !m.materialName.toLowerCase().includes(searchStr) && !(m.materialCode||'').toLowerCase().includes(searchStr)) return false;
         
-        // 狀態過濾
-        if (currentFilter === 'empty' && m.currentStock !== 0) return false;
-        if (currentFilter === 'low' && (m.currentStock === 0 || m.currentStock >= 10)) return false;
-        if (currentFilter === 'normal' && m.currentStock < 10) return false;
+        if (currentFilter === 'empty' && stock !== 0) return false;
+        if (currentFilter === 'low' && (stock === 0 || stock >= 10)) return false;
+        if (currentFilter === 'normal' && stock < 10) return false;
         
         return true;
     }).map(m => {
-        let statusCls = 'normal', statusTxt = '庫存正常', thumb = '📦';
-        if (m.currentStock === 0) { statusCls = 'empty'; statusTxt = '目前缺貨'; thumb = '⚠️'; }
-        else if (m.currentStock < 10) { statusCls = 'low'; statusTxt = '庫存偏低'; thumb = '🪣'; }
+        const stock = Number(m.currentStock !== undefined ? m.currentStock : (m.stock !== undefined ? m.stock : 0));
+        let statusCls = 'normal', statusTxt = '庫存正常', defaultThumb = '📦';
+        if (stock === 0) { statusCls = 'empty'; statusTxt = '目前缺貨'; defaultThumb = '⚠️'; }
+        else if (stock < 10) { statusCls = 'low'; statusTxt = '庫存偏低'; defaultThumb = '🪣'; }
         
-        // 缺貨時領案場按鈕要 disabled
-        const disBtn = m.currentStock === 0 ? 'disabled' : '';
+        const disBtn = stock === 0 ? 'disabled' : '';
+        
+        // 💡 支援顯示真實照片：自動抓取後端傳回的照片欄位
+        const photoUrl = m.photoUrl || m.imageUrl || m.image || m.picture || m.imgUrl;
+        const thumbContent = photoUrl 
+            ? `<img src="${photoUrl}" style="width:100%; height:100%; object-fit:cover; border-radius:13px;">` 
+            : defaultThumb;
 
         return `
         <article class="card">
           <div class="card-top">
-            <div class="thumb">${thumb}</div>
+            <div class="thumb" style="${photoUrl ? 'padding:0; background:none;' : ''}">${thumbContent}</div>
             <div class="meta"><div class="name">${m.materialName}</div><div class="code">${m.materialCode||'無編號'}</div><span class="status ${statusCls}">${statusTxt}</span></div>
-            <div class="stock"><strong class="${statusCls === 'empty' ? 'text-danger' : (statusCls === 'low' ? 'text-warning' : '')}">${m.currentStock} ${m.stockUnit}</strong></div>
+            <div class="stock"><strong class="${statusCls === 'empty' ? 'text-danger' : (statusCls === 'low' ? 'text-warning' : '')}">${stock} ${m.stockUnit}</strong></div>
           </div>
           <div class="card-actions">
             <button class="small-btn primary" onclick="openSheet('PURCHASE_IN', '${m.materialId}')">＋ 入庫</button>
@@ -225,7 +217,6 @@ function renderList() {
 
     document.getElementById('materialList').innerHTML = html || '<div style="text-align:center; padding: 40px; color:#6c757d;">查無符合條件的材料</div>';
     
-    // 更新統計數字
     document.getElementById('sumTotal').textContent = sumTotal;
     document.getElementById('sumLow').textContent = sumLow;
     document.getElementById('sumEmpty').textContent = sumEmpty;
@@ -239,15 +230,12 @@ function setFilter(type) {
     renderList();
 }
 
-// 彈出表單邏輯
 const overlay = document.getElementById('overlay');
 function openSheet(type, matId = null) {
     overlay.classList.remove('hidden');
     document.body.style.overflow = 'hidden';
-    
     if (matId) document.getElementById('sheetMaterial').value = matId;
     document.getElementById('qty').value = '';
-    
     const btn = document.querySelector(`[data-type="${type}"]`);
     if (btn) chooseType(btn);
 }
@@ -281,7 +269,7 @@ function updatePreview() {
     if (!mat) return;
     
     const unit = mat.stockUnit;
-    const currentStock = mat.currentStock;
+    const currentStock = Number(mat.currentStock !== undefined ? mat.currentStock : (mat.stock !== undefined ? mat.stock : 0));
     const q = Number(document.getElementById('qty').value || 0);
     
     let after = currentStock, sign = '＋', displayQ = q;
@@ -295,7 +283,7 @@ function updatePreview() {
         after = currentStock - q;
         sign = '−';
     } else {
-        after = currentStock + q; // 入庫或退回
+        after = currentStock + q;
         sign = '＋';
     }
 
@@ -321,7 +309,9 @@ async function submitTransaction() {
     if (qty <= 0 && currentType !== 'WAREHOUSE_ADJUSTMENT') return alert('請輸入有效數量');
 
     const mat = materialsData.find(m => m.materialId === matId);
-    if (currentType === 'PROJECT_TRANSFER_OUT' && mat.currentStock - qty < 0) {
+    const currentStock = Number(mat.currentStock !== undefined ? mat.currentStock : (mat.stock !== undefined ? mat.stock : 0));
+    
+    if (currentType === 'PROJECT_TRANSFER_OUT' && currentStock - qty < 0) {
         if (!confirm('警告：領出後庫存將變為負數，確定要繼續嗎？')) return;
     }
 
@@ -331,7 +321,6 @@ async function submitTransaction() {
     const btn = document.getElementById('submitBtn');
     btn.disabled = true; btn.textContent = '⏳ 送出中...';
 
-    // 準備 Payload，對應後端交易記錄
     const payload = {
         transactionType: currentType,
         operatorName: operator,
@@ -342,24 +331,21 @@ async function submitTransaction() {
     };
 
     try {
-        // 💡 這裡指向後端真實的交易紀錄 API 路徑，如果路徑不同請自行微調
         const res = await fetch(`${API_BASE_URL}/api/submit-inventory`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
         
-        // 為了讓預覽版不會因為沒有這支 API 而卡死，這裡做了一個 Try/Catch 包容
         if (res.ok) {
             localStorage.setItem('warehouseOperatorName', operator);
             showToast(`✅ ${typeNames[currentType]} 完成！`);
             closeSheet();
-            setTimeout(initApp, 1000); // 重新載入最新資料
+            setTimeout(initApp, 1000); 
         } else {
             throw new Error('伺服器回應錯誤');
         }
     } catch (e) {
-        // 模擬成功 (如果你後端還沒寫好這支 API，可先體驗流暢度)
         localStorage.setItem('warehouseOperatorName', operator);
         showToast(`✅ ${typeNames[currentType]} (模擬成功)`);
         closeSheet();
