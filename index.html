@@ -54,12 +54,12 @@
     .action-btn { width: 100%; padding: 12px 14px; border-radius: 10px; font-size: 16px; font-weight: 800; cursor: pointer; border:none;}
     .back-btn { border: 1px solid #dc2626; color: #dc2626; background: #fff; }
     .confirm-btn { color: #fff; background: #f59e0b; }
-    @media (max-width:380px) { .checkbox-grid { grid-template-columns:1fr; } .flex-row { flex-direction:column; gap:4px; } }
+    @media (max-width:380px) { .checkbox-grid { grid-template-columns:1fr; } }
   </style>
 </head>
 <body>
   <div class="container">
-    <h2 id="formTitle">👷 施工日報表 <span class="version-tag">v6.0</span></h2>
+    <h2 id="formTitle">👷 施工日報表 <span class="version-tag">v6.1</span></h2>
 
     <div style="display:flex; gap:10px; margin-bottom:15px;">
         <button type="button" id="btnDailyMode" class="btn btn-primary" style="flex:1; padding:10px; border:none; border-radius:5px; background:#00B900; color:white; font-weight:bold; cursor:pointer;" onclick="switchMode('daily_report')">📝 填寫施工日報</button>
@@ -71,7 +71,7 @@
 
       <div id="issueExtraSection" class="hidden" style="background:#f8f9fa; padding:12px; border-radius:5px; border-left:4px solid #28a745; margin-bottom:15px;">
         <div style="background-color: #fff3cd; border-left: 5px solid #ffc107; padding: 12px 16px; border-radius: 6px; font-size: 0.9rem; color: #856404; margin-bottom: 16px; line-height: 1.5;">
-            <strong>⚠️️ 供應商直接送到工地，才使用此功能。</strong><br><br>
+            <strong>⚠ 供應商直接送到工地，才使用此功能。</strong><br><br>
             如果材料是從公司大倉庫領出帶過去的，請一律使用庫存系統的「領至案場」，請勿在此重複登記，以免庫存錯亂。
         </div>
 
@@ -165,7 +165,6 @@
     </form>
   </div>
 
-  <!-- 💡 409 防呆警告視窗 -->
   <div id="duplicateIssueOverlay" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="warningTitle">
     <div class="dialog">
       <div class="dialog-header" id="warningTitle"><span aria-hidden="true">⚠️</span>發現疑似重複進場</div>
@@ -213,7 +212,7 @@
     let isRestoringDraft = false;
     let projectMode = 'LOADING';
     let currentSubmissionId = '';
-    let pendingDirectPayload = null; // 存放 409 攔截時的資料
+    let pendingDirectPayload = null; 
 
     function getTaiwanDateString() { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()); }
 
@@ -226,14 +225,14 @@
         if (mode === 'daily_report') {
             btnDaily.style.background = '#00B900'; btnDaily.style.color = 'white'; btnDaily.style.border = 'none';
             btnIssue.style.background = '#e9ecef'; btnIssue.style.color = '#333'; btnIssue.style.border = '1px solid #ccc';
-            formTitle.innerHTML = '👷 施工日報表 <span class="version-tag">v6.0</span>';
+            formTitle.innerHTML = '👷 施工日報表 <span class="version-tag">v6.1</span>';
             submitButton.textContent = '確認送出施工日報'; submitButton.style.background = '#00B900';
             materialLabel.textContent = '📦 今日用料';
             issueExtraSection.classList.add('hidden'); dailyOnlyElements.forEach(el => el.classList.remove('hidden'));
         } else {
             btnDaily.style.background = '#e9ecef'; btnDaily.style.color = '#333'; btnDaily.style.border = '1px solid #ccc';
             btnIssue.style.background = '#28a745'; btnIssue.style.color = 'white'; btnIssue.style.border = 'none';
-            formTitle.innerHTML = '🚚 供應商直送登記表 <span class="version-tag">v6.0</span>';
+            formTitle.innerHTML = '🚚 供應商直送登記表 <span class="version-tag">v6.1</span>';
             submitButton.textContent = '確認登記供應商直送'; submitButton.style.background = '#28a745';
             materialLabel.textContent = '📦 進場材料清單';
             issueExtraSection.classList.remove('hidden'); dailyOnlyElements.forEach(el => el.classList.add('hidden'));
@@ -272,7 +271,35 @@
     function addContractorRow(name='', customName='', workers='') { const container = document.getElementById('contractorsContainer'); if (container.children.length >= MAX_CONTRACTOR_ROWS) return; const div = document.createElement('div'); div.className = 'contractor-group material-group'; div.innerHTML = `<div class="material-header"><div class="material-title"></div><button type="button" class="remove-material-button" onclick="this.closest('.contractor-group').remove(); refreshContractorTitles(); saveDraft();">移除</button></div><div class="flex-row"><select class="contractor-name"><option value="" disabled>請選擇廠商</option>${getSavedContractorsList().map(c=>`<option value="${c}">${c}</option>`).join('')}<option value="其他">其他 (自行輸入)</option></select><input type="number" class="contractor-workers" placeholder="人數" min="1" step="1"></div><input type="text" class="custom-contractor-name hidden" placeholder="請輸入新廠商名稱">`; const nSel = div.querySelector('.contractor-name'), cInp = div.querySelector('.custom-contractor-name'), wInp = div.querySelector('.contractor-workers'); nSel.onchange = () => { const isCustom = nSel.value === '其他'; cInp.classList.toggle('hidden', !isCustom); if(isCustom) cInp.focus(); else cInp.value=''; saveDraft(); }; cInp.oninput = saveDraft; wInp.oninput = saveDraft; const isCust = name === '其他' || (name && !getSavedContractorsList().includes(name)); nSel.value = isCust ? '其他' : name; if(isCust){ cInp.value = name==='其他'?customName:name; cInp.classList.remove('hidden'); } if(workers) wInp.value = workers; container.appendChild(div); refreshContractorTitles(); if(!isRestoringDraft) saveDraft(); }
     function refreshContractorTitles() { document.querySelectorAll('.contractor-group').forEach((g, i) => g.querySelector('.material-title').textContent = `施工廠商 ${i + 1}`); }
 
-    function addMaterialRow(materialId='', qty='') { const container = document.getElementById('materialsContainer'); if (container.children.length >= MAX_MATERIAL_ROWS) return; const div = document.createElement('div'); div.className = 'material-group'; div.innerHTML = `<div class="material-header"><div class="material-title"></div><button type="button" class="remove-material-button" onclick="this.closest('.material-group').remove(); refreshMaterialTitles(); saveDraft();">移除</button></div><div class="flex-row"><select class="mat-name"><option value="" disabled>請選擇標準材料...</option>${MATERIAL_OPTIONS.map(m=>`<option value="${m.materialId}">${m.materialName}</option>`).join('')}</select><div class="flex-row" style="flex:0.6"><input type="number" class="mat-qty" placeholder="數量" step="0.1"><div class="mat-unit-display" style="padding:10px;background:#e9ecef;border:1px solid #ccc;border-radius:5px;color:#555;text-align:center;min-width:50px">單位</div></div></div><div class="material-balance-info hidden" style="font-size:13px;color:#555;background:#eef5ee;padding:8px;border-left:3px solid #00B900;margin-top:5px;border-radius:4px;"></div>`; const mSel = div.querySelector('.mat-name'), qInp = div.querySelector('.mat-qty'), uDisp = div.querySelector('.mat-unit-display'); mSel.onchange = () => { if(mSel.value && MATERIAL_ITEMS_MAP.has(mSel.value)) uDisp.textContent = MATERIAL_ITEMS_MAP.get(mSel.value).stockUnit; updateBalanceDisplay(div); saveDraft(); }; qInp.oninput = () => { updateBalanceDisplay(div); saveDraft(); }; if(materialId && MATERIAL_ITEMS_MAP.has(materialId)){ mSel.value = materialId; uDisp.textContent = MATERIAL_ITEMS_MAP.get(materialId).stockUnit; } if(qty) qInp.value = qty; container.appendChild(div); refreshMaterialTitles(); if(!isRestoringDraft) saveDraft(); }
+    // 💡 修正材料清單的排版，確保選單佔滿一整行，數量跟單位放在第二行
+    function addMaterialRow(materialId='', qty='') { 
+        const container = document.getElementById('materialsContainer'); 
+        if (container.children.length >= MAX_MATERIAL_ROWS) return; 
+        const div = document.createElement('div'); 
+        div.className = 'material-group'; 
+        div.innerHTML = `
+            <div class="material-header">
+                <div class="material-title"></div>
+                <button type="button" class="remove-material-button" onclick="this.closest('.material-group').remove(); refreshMaterialTitles(); saveDraft();">移除</button>
+            </div>
+            <select class="mat-name" style="margin-bottom: 8px;">
+                <option value="" disabled>請選擇標準材料...</option>
+                ${MATERIAL_OPTIONS.map(m=>`<option value="${m.materialId}">${m.materialName}</option>`).join('')}
+            </select>
+            <div class="flex-row">
+                <input type="number" class="mat-qty" placeholder="填寫數量" step="0.1">
+                <div class="mat-unit-display" style="padding:10px;background:#e9ecef;border:1px solid #ccc;border-radius:5px;color:#555;text-align:center;min-width:60px;display:flex;align-items:center;justify-content:center;">單位</div>
+            </div>
+            <div class="material-balance-info hidden" style="font-size:13px;color:#555;background:#eef5ee;padding:8px;border-left:3px solid #00B900;margin-top:8px;border-radius:4px;"></div>
+        `; 
+        const mSel = div.querySelector('.mat-name'), qInp = div.querySelector('.mat-qty'), uDisp = div.querySelector('.mat-unit-display'); 
+        mSel.onchange = () => { if(mSel.value && MATERIAL_ITEMS_MAP.has(mSel.value)) uDisp.textContent = MATERIAL_ITEMS_MAP.get(mSel.value).stockUnit; updateBalanceDisplay(div); saveDraft(); }; 
+        qInp.oninput = () => { updateBalanceDisplay(div); saveDraft(); }; 
+        if(materialId && MATERIAL_ITEMS_MAP.has(materialId)){ mSel.value = materialId; uDisp.textContent = MATERIAL_ITEMS_MAP.get(materialId).stockUnit; } 
+        if(qty) qInp.value = qty; 
+        container.appendChild(div); refreshMaterialTitles(); if(!isRestoringDraft) saveDraft(); 
+    }
+    
     function refreshMaterialTitles() { document.querySelectorAll('.material-group').forEach((g, i) => g.querySelector('.material-title').textContent = `品項 ${i + 1}`); document.getElementById('addMaterialButton').disabled = document.querySelectorAll('.material-group').length >= MAX_MATERIAL_ROWS; }
     function updateBalanceDisplay(groupDiv) { const select = groupDiv.querySelector('.mat-name'), qtyInput = groupDiv.querySelector('.mat-qty'), infoDiv = groupDiv.querySelector('.material-balance-info'); const materialId = select.value; if (!materialId || !projectMaterialBalances[materialId]) { infoDiv.classList.add('hidden'); return; } const bData = projectMaterialBalances[materialId], iQty = Number(qtyInput.value) || 0, itm = MATERIAL_ITEMS_MAP.get(materialId), pkgQty = itm && itm.packageQuantity ? Number(itm.packageQuantity) : 1, bUnit = itm ? (itm.baseUnit || itm.stockUnit) : '', curUse = iQty * pkgQty, curRem = bData.remainingBaseQuantity, expRem = curRem - curUse, formType = document.getElementById('formType').value; infoDiv.classList.remove('hidden'); if (formType === 'material_issue') { const lbl = document.getElementById('issueType').value === 'OPENING' ? '本次開工首批進場' : '本次追加進場'; infoDiv.style.borderLeftColor = '#00B900'; infoDiv.style.backgroundColor = '#eef5ee'; infoDiv.innerHTML = `<strong>目前案場剩餘：</strong> ${curRem} ${bUnit}<br><span style="color: #00B900;"><strong>${lbl}：</strong> +${curUse} ${bUnit}</span><br><strong>登記後預計剩餘：</strong> ${curRem + curUse} ${bUnit}`; } else { if (expRem < 0 && iQty > 0) { infoDiv.style.borderLeftColor = '#dc3545'; infoDiv.style.backgroundColor = '#fff3f3'; infoDiv.innerHTML = `<strong>目前案場剩餘：</strong> ${curRem} ${bUnit}<br><strong>本次預計耗用：</strong> -${curUse} ${bUnit}<br><strong>送出後預計剩餘：</strong> <span style="color:#dc3545;font-weight:bold;">${expRem} ${bUnit}</span>`; } else { infoDiv.style.borderLeftColor = '#00B900'; infoDiv.style.backgroundColor = '#eef5ee'; infoDiv.innerHTML = `<strong>目前理論剩餘：</strong> ${curRem} ${bUnit}<br><span style="color:#007bff;"><strong>送出後預計剩餘：</strong> ${expRem} ${bUnit}</span>`; } } }
 
@@ -308,7 +335,6 @@
             const res = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             const result = await res.json();
             
-            // 💡 攔截 409 防呆邏輯 (觸發設計好的 Modal)
             if (res.status === 409 && result.requiresConfirmation) {
                 const match = result.matches[0];
                 const curMat = payload.materialItems[0];
@@ -335,7 +361,6 @@
         } catch (e) { alert('⚠️ 送出失敗：' + e.message); isSubmitting = false; btn.disabled = false; btn.textContent = formType === 'material_issue' ? '確認登記供應商直送' : '確認送出施工日報'; }
     }
 
-    // Modal 動作處理
     function closeDuplicateWarning() {
         document.getElementById('duplicateIssueOverlay').classList.add('hidden');
         document.body.style.overflow = '';
