@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
     <meta name="theme-color" content="#087f5b">
-    <title>云說倉庫管理 v6.3.2</title>
+    <title>云說倉庫管理 v6.3.3</title>
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <style>
         :root {
@@ -119,7 +119,7 @@
     <header class="header">
         <div class="header-row">
             <div>
-                <div class="title">📦 云說倉庫管理 <span class="version-tag">v6.3.2</span></div>
+                <div class="title">📦 云說倉庫管理 <span class="version-tag">v6.3.3</span></div>
                 <div class="subtitle" id="userGreeting">載入中...</div>
             </div>
             <button class="icon-btn" aria-label="重新整理" onclick="initApp()">↻</button>
@@ -338,11 +338,26 @@ function renderRecentTransactions(items) {
         return `<article class="recent-item ${info.cls}"><div class="recent-accent"></div><div><div class="recent-type">${info.icon} ${escapeHtml(info.label)}</div><div class="recent-material">${escapeHtml(item.materialName)}</div><div class="recent-meta">${formatNumber(item.beforeQuantity)}${escapeHtml(item.stockUnit)} → ${formatNumber(item.afterQuantity)}${escapeHtml(item.stockUnit)}<br>${project}${escapeHtml(item.operatorName || '未填操作人')}</div></div><div><div class="recent-qty ${quantityClass}">${change > 0 ? '+' : ''}${formatNumber(change)}${escapeHtml(item.stockUnit)}</div><div class="recent-time">${formatRecentTime(item.createdAt || item.transactionDate)}</div></div></article>`;
     }).join('');
 }
+const AUTH_RETRY_KEY = 'warehouseAuthRetryOnce';
+function restartLineLogin() {
+    if (sessionStorage.getItem(AUTH_RETRY_KEY) === '1') {
+        throw new Error('LINE 登入憑證更新失敗，請完全關閉頁面後重新開啟');
+    }
+    sessionStorage.setItem(AUTH_RETRY_KEY, '1');
+    const redirectUri = window.location.href.split('#')[0];
+    if (liff.isLoggedIn()) liff.logout();
+    liff.login({ redirectUri });
+}
+function clearAuthRetryFlag() {
+    sessionStorage.removeItem(AUTH_RETRY_KEY);
+}
+
 async function loadRecentTransactions() {
     try {
         const token = liff.isLoggedIn() ? liff.getIDToken() : null;
         if (!token) {
-            throw new Error('缺少 LINE 登入憑證，請完全關閉頁面後從 LINE 重新開啟');
+            restartLineLogin();
+            return;
         }
 
         const response = await fetch(`${API_BASE_URL}/api/warehouse/recent-transactions?limit=5`, {
@@ -357,11 +372,16 @@ async function loadRecentTransactions() {
             throw new Error(`API 回傳格式錯誤（HTTP ${response.status}）`);
         }
 
+        if (response.status === 401) {
+            restartLineLogin();
+            return;
+        }
         if (!response.ok || !result.success) {
             const apiMessage = result.error || result.message || '伺服器回應錯誤';
             throw new Error(`${apiMessage}（HTTP ${response.status}）`);
         }
 
+        clearAuthRetryFlag();
         renderRecentTransactions(result.items);
     } catch (error) {
         const message = String(error?.message || '未知錯誤');
