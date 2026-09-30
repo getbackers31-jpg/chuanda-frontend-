@@ -75,7 +75,6 @@ button,input,select,textarea{font:inherit}.app{width:min(100%,560px);min-height:
   </nav>
 </div>
 
-<!-- 底部彈出異動表單 -->
 <div id="overlay" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
   <section class="sheet">
     <div class="handle"></div>
@@ -121,7 +120,7 @@ let projectsData = [];
 let currentFilter = 'all';
 let currentType = 'PURCHASE_IN';
 
-// 💡 強化版的庫存數字抓取邏輯 (全頻譜掃描)
+// 💡 防呆抓取所有可能代表「庫存數量」的變數名稱
 function getRealStock(m) {
     return Number(
         m.currentStock !== undefined ? m.currentStock :
@@ -152,13 +151,15 @@ async function initApp() {
 
     try {
         const [matRes, projRes] = await Promise.all([
-            fetch(`${API_BASE_URL}/api/materials`),
+            // 💡 改回正確的倉庫庫存 API 路徑
+            fetch(`${API_BASE_URL}/api/warehouse/inventory`),
             fetch(`${API_BASE_URL}/api/projects`)
         ]);
         const matJson = await matRes.json();
         const projJson = await projRes.json();
 
-        if (matJson.success) materialsData = matJson.materials || [];
+        // 💡 確保相容不同的陣列名稱 (inventory 或是 materials)
+        if (matJson.success) materialsData = matJson.inventory || matJson.materials || [];
         if (projJson.success) projectsData = projJson.projects || [];
         
         populateSelects();
