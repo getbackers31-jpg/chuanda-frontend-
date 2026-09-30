@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
     <meta name="theme-color" content="#087f5b">
-    <title>云說倉庫管理 v6.3.3</title>
+    <title>云說倉庫管理 v6.3.4</title>
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <style>
         :root {
@@ -42,6 +42,7 @@
         .recent-subtitle { margin-top:2px; color:var(--muted); font-size:11px; text-align:left; }
         .recent-toggle { color:var(--green); font-size:12px; font-weight:900; white-space:nowrap; }
         .recent-body { padding:0 12px; border-top:1px solid var(--line); }
+        .recent-body.hidden { display:none; }
         .recent-item { display:grid; grid-template-columns:4px minmax(0,1fr) auto; gap:9px; padding:12px 0; border-bottom:1px solid var(--line); }
         .recent-item:last-child { border-bottom:0; }
         .recent-accent { border-radius:99px; background:var(--blue); }
@@ -59,7 +60,7 @@
         .recent-state { padding:16px 8px; color:var(--muted); font-size:12px; text-align:center; }
         .notice { margin: 0 14px 12px; padding: 12px 13px; border-left: 4px solid var(--blue); border-radius: 10px; background: var(--bluebg); font-size: 13px; line-height: 1.55; }
         .notice strong { color: var(--blue); }
-        .list { padding: 0 14px 96px; }
+        .list { padding: 0 14px 84px; }
         .card { margin-bottom: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 15px; background: #fff; box-shadow: 0 4px 16px rgba(33,37,41,.055); cursor:pointer; transition:.15s; }
         .card:active { transform:scale(.992); }
         .card:focus-visible { outline:3px solid rgba(12,166,120,.25); outline-offset:2px; }
@@ -78,11 +79,7 @@
         .normal { background: var(--green3); color: var(--green); }
         .low { background: var(--orangebg); color: var(--orange); }
         .empty { background: var(--redbg); color: var(--red); }
-        .nav { position: fixed; left: 50%; bottom: 0; z-index: 20; width: min(100%, 560px); transform: translateX(-50%); display: grid; grid-template-columns: 1fr; padding: 8px 8px calc(8px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: rgba(255,255,255,.96); backdrop-filter: blur(10px); }
-        .nav-btn { padding: 8px; border: 0; background: transparent; color: var(--muted); font-size: 12px; font-weight: 700; cursor: pointer; }
-        .nav-btn span { display: block; font-size: 21px; margin-bottom: 2px; }
-        .nav-btn.active { color: var(--green); }
-        .fab { position: fixed; right: max(18px, calc((100vw - 560px)/2 + 18px)); bottom: calc(76px + env(safe-area-inset-bottom)); z-index: 21; width: 58px; height: 58px; border: 0; border-radius: 50%; box-shadow: 0 8px 22px rgba(8,127,91,.3); background: var(--green); color: #fff; font-size: 30px; cursor: pointer; }
+        .fab { position: fixed; right: max(18px, calc((100vw - 560px)/2 + 18px)); bottom: calc(18px + env(safe-area-inset-bottom)); z-index: 21; width: 58px; height: 58px; border: 0; border-radius: 50%; box-shadow: 0 8px 22px rgba(8,127,91,.3); background: var(--green); color: #fff; font-size: 30px; cursor: pointer; }
         .overlay { position: fixed; inset: 0; z-index: 100; display: flex; align-items: flex-end; justify-content: center; background: rgba(0,0,0,.52); opacity: 1; visibility: visible; transition: .2s; }
         .overlay.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
         .sheet { width: min(100%, 560px); max-height: 92vh; overflow: auto; border-radius: 20px 20px 0 0; background: #fff; padding-bottom: calc(18px + env(safe-area-inset-bottom)); transform: translateY(0); transition: .2s; }
@@ -104,12 +101,11 @@
         .preview-row.final { margin-top: 5px; padding-top: 10px; border-top: 1px solid #dee2e6; font-weight: 900; }
         .preview-row.final span:last-child { color: var(--green); }
         .submit { width: 100%; padding: 13px; border: 0; border-radius: 11px; background: var(--green); color: #fff; font-size: 16px; font-weight: 900; cursor: pointer; }
-        .toast { position: fixed; left: 50%; bottom: calc(90px + env(safe-area-inset-bottom)); z-index: 200; transform: translate(-50%, 130px); width: min(calc(100% - 28px), 500px); padding: 13px; border-radius: 11px; background: #1864ab; color: #fff; text-align: center; opacity: 0; transition: .2s; }
+        .toast { position: fixed; left: 50%; bottom: calc(88px + env(safe-area-inset-bottom)); z-index: 200; transform: translate(-50%, 130px); width: min(calc(100% - 28px), 500px); padding: 13px; border-radius: 11px; background: #1864ab; color: #fff; text-align: center; opacity: 0; transition: .2s; }
         .toast.show { transform: translate(-50%, 0); opacity: 1; }
         @media(min-width: 561px) {
             body { padding: 18px; }
             .app { border-radius: 18px; overflow: hidden; min-height: calc(100vh - 36px); }
-            .nav { bottom: 18px; border-radius: 0 0 18px 18px; }
             .sheet { margin-bottom: 18px; border-radius: 20px; }
         }
     </style>
@@ -119,7 +115,7 @@
     <header class="header">
         <div class="header-row">
             <div>
-                <div class="title">📦 云說倉庫管理 <span class="version-tag">v6.3.3</span></div>
+                <div class="title">📦 云說倉庫管理 <span class="version-tag">v6.3.4</span></div>
                 <div class="subtitle" id="userGreeting">載入中...</div>
             </div>
             <button class="icon-btn" aria-label="重新整理" onclick="initApp()">↻</button>
@@ -162,9 +158,6 @@
     </main>
 
     <button class="fab" onclick="openSheet('PURCHASE_IN')" aria-label="新增異動">＋</button>
-    <nav class="nav">
-        <button class="nav-btn active" type="button"><span>📦</span>庫存總覽</button>
-    </nav>
 </div>
 
 <!-- 底部彈出異動表單 -->
