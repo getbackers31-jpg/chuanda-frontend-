@@ -75,6 +75,7 @@ button,input,select,textarea{font:inherit}.app{width:min(100%,560px);min-height:
   </nav>
 </div>
 
+<!-- 底部彈出異動表單 -->
 <div id="overlay" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
   <section class="sheet">
     <div class="handle"></div>
@@ -120,7 +121,7 @@ let projectsData = [];
 let currentFilter = 'all';
 let currentType = 'PURCHASE_IN';
 
-// 💡 防呆抓取所有可能代表「庫存數量」的變數名稱
+// 確保精準抓取庫存數量
 function getRealStock(m) {
     return Number(
         m.currentStock !== undefined ? m.currentStock :
@@ -138,27 +139,36 @@ async function initApp() {
     const savedName = localStorage.getItem('warehouseOperatorName');
     if (savedName) document.getElementById('operatorName').value = savedName;
 
+    let idToken = null;
     try {
         await liff.init({ liffId: LIFF_ID });
         if (liff.isLoggedIn()) {
             const profile = await liff.getProfile();
+            idToken = liff.getIDToken(); // 💡 取得 LINE ID Token 鑰匙
             document.getElementById('userGreeting').textContent = `哈囉，${profile.displayName}`;
             if (!savedName) document.getElementById('operatorName').value = profile.displayName;
-        } else { liff.login(); }
+        } else { 
+            liff.login(); 
+        }
     } catch (e) {
         document.getElementById('userGreeting').textContent = `庫存管理系統`;
     }
 
+    // 💡 將 Token 放入標頭 (Headers) 中，確保後端放行
+    const reqHeaders = { 'Content-Type': 'application/json' };
+    if (idToken) reqHeaders['Authorization'] = `Bearer ${idToken}`;
+
     try {
-        const [matRes, projRes] = await Promise.all([
-            // 💡 改回正確的倉庫庫存 API 路徑
-            fetch(`${API_BASE_URL}/api/warehouse/inventory`),
-            fetch(`${API_BASE_URL}/api/projects`)
-        ]);
+        // 💡 雙重 API 備援機制：先試倉庫專屬 API，若失敗則退回通用的材料 API
+        let matRes = await fetch(`${API_BASE_URL}/api/warehouse/inventory`, { headers: reqHeaders });
+        if (!matRes.ok) {
+            matRes = await fetch(`${API_BASE_URL}/api/materials`, { headers: reqHeaders });
+        }
+        const projRes = await fetch(`${API_BASE_URL}/api/projects`, { headers: reqHeaders });
+        
         const matJson = await matRes.json();
         const projJson = await projRes.json();
 
-        // 💡 確保相容不同的陣列名稱 (inventory 或是 materials)
         if (matJson.success) materialsData = matJson.inventory || matJson.materials || [];
         if (projJson.success) projectsData = projJson.projects || [];
         
@@ -186,13 +196,11 @@ function renderList() {
     
     const html = materialsData.filter(m => {
         const stock = getRealStock(m);
-        
         sumTotal++;
         if (stock === 0) sumEmpty++;
         else if (stock < 10) sumLow++;
 
         if (searchStr && !m.materialName.toLowerCase().includes(searchStr) && !(m.materialCode||'').toLowerCase().includes(searchStr)) return false;
-        
         if (currentFilter === 'empty' && stock !== 0) return false;
         if (currentFilter === 'low' && (stock === 0 || stock >= 10)) return false;
         if (currentFilter === 'normal' && stock < 10) return false;
@@ -205,15 +213,15 @@ function renderList() {
         else if (stock < 10) { statusCls = 'low'; statusTxt = '庫存偏低'; defaultThumb = '🪣'; }
         
         const disBtn = stock === 0 ? 'disabled' : '';
-        const photoUrl = m.photoUrl || m.imageUrl || m.image || m.picture || m.imgUrl;
-        const thumbContent = photoUrl 
-            ? `<img src="${photoUrl}" style="width:100%; height:100%; object-fit:cover; border-radius:13px;">` 
-            : defaultThumb;
+        
+        // 💡 修正圖片路徑：強制指向 images/ 資料夾，若找不到圖片則自動替換回 📦 圖示
+        const photoFileName = m.photoUrl || m.imageUrl || m.image || (m.materialCode ? m.materialCode + '.jpg' : m.materialId + '.jpg');
+        const thumbContent = `<img src="images/${photoFileName}" onerror="this.outerHTML='${defaultThumb}'" style="width:100%; height:100%; object-fit:cover; border-radius:13px;">`;
 
         return `
         <article class="card">
           <div class="card-top">
-            <div class="thumb" style="${photoUrl ? 'padding:0; background:none;' : ''}">${thumbContent}</div>
+            <div class="thumb" style="padding:0; background:none;">${thumbContent}</div>
             <div class="meta"><div class="name">${m.materialName}</div><div class="code">${m.materialCode||'無編號'}</div><span class="status ${statusCls}">${statusTxt}</span></div>
             <div class="stock"><strong class="${statusCls === 'empty' ? 'text-danger' : (statusCls === 'low' ? 'text-warning' : '')}">${stock} ${m.stockUnit}</strong></div>
           </div>
@@ -340,10 +348,15 @@ async function submitTransaction() {
         remark: document.getElementById('sheetRemark').value
     };
 
+    let idToken = null;
+    if (liff.isLoggedIn()) idToken = liff.getIDToken();
+    const reqHeaders = { 'Content-Type': 'application/json' };
+    if (idToken) reqHeaders['Authorization'] = `Bearer ${idToken}`;
+
     try {
         const res = await fetch(`${API_BASE_URL}/api/submit-inventory`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: reqHeaders,
             body: JSON.stringify(payload)
         });
         
