@@ -37,7 +37,10 @@
         .notice { margin: 0 14px 12px; padding: 12px 13px; border-left: 4px solid var(--blue); border-radius: 10px; background: var(--bluebg); font-size: 13px; line-height: 1.55; }
         .notice strong { color: var(--blue); }
         .list { padding: 0 14px 96px; }
-        .card { margin-bottom: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 15px; background: #fff; box-shadow: 0 4px 16px rgba(33,37,41,.055); }
+        .card { margin-bottom: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 15px; background: #fff; box-shadow: 0 4px 16px rgba(33,37,41,.055); cursor: pointer; transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease; }
+        .card:active { transform: scale(.992); }
+        .card:focus-visible { outline: 3px solid rgba(12,166,120,.28); outline-offset: 2px; border-color: var(--green2); }
+        .card-hint { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); color: var(--green); font-size: 12px; font-weight: 800; text-align: right; }
         .card-top { display: flex; align-items: flex-start; gap: 11px; }
         .thumb { display: grid; place-items: center; flex: none; width: 52px; height: 52px; border-radius: 13px; background: linear-gradient(145deg, #edf2ff, #e7f5ff); font-size: 27px; padding: 0; overflow: hidden; }
         .meta { min-width: 0; flex: 1; }
@@ -50,11 +53,7 @@
         .normal { background: var(--green3); color: var(--green); }
         .low { background: var(--orangebg); color: var(--orange); }
         .empty { background: var(--redbg); color: var(--red); }
-        .card-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 13px; }
-        .small-btn { padding: 9px 6px; border: 1px solid var(--line); border-radius: 10px; background: #fff; font-size: 13px; font-weight: 800; color: #495057; cursor: pointer; }
-        .small-btn.primary { border-color: #b2f2bb; background: #ebfbee; color: var(--green); }
-        .small-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-        .nav { position: fixed; left: 50%; bottom: 0; z-index: 20; width: min(100%, 560px); transform: translateX(-50%); display: grid; grid-template-columns: repeat(3, 1fr); padding: 8px 8px calc(8px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: rgba(255,255,255,.96); backdrop-filter: blur(10px); }
+        .nav { position: fixed; left: 50%; bottom: 0; z-index: 20; width: min(100%, 560px); transform: translateX(-50%); display: grid; grid-template-columns: 1fr; padding: 8px 8px calc(8px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: rgba(255,255,255,.96); backdrop-filter: blur(10px); }
         .nav-btn { padding: 8px; border: 0; background: transparent; color: var(--muted); font-size: 12px; font-weight: 700; cursor: pointer; }
         .nav-btn span { display: block; font-size: 21px; margin-bottom: 2px; }
         .nav-btn.active { color: var(--green); }
@@ -130,9 +129,7 @@
 
     <button class="fab" onclick="openSheet('PURCHASE_IN')" aria-label="新增異動">＋</button>
     <nav class="nav">
-        <button class="nav-btn active"><span>📦</span>庫存總覽</button>
-        <button class="nav-btn" onclick="openSheet('PURCHASE_IN')"><span>➕</span>新增異動</button>
-        <button class="nav-btn" onclick="showToast('正式版將顯示異動紀錄')"><span>📋</span>紀錄</button>
+        <button class="nav-btn active" type="button"><span>📦</span>庫存總覽</button>
     </nav>
 </div>
 
@@ -141,7 +138,7 @@
     <section class="sheet">
         <div class="handle"></div>
         <div class="sheet-head">
-            <div id="sheetTitle" class="sheet-title">新增庫存異動</div>
+            <div id="sheetTitle" class="sheet-title">選擇異動方式</div>
             <button class="close" onclick="closeSheet()" aria-label="關閉">×</button>
         </div>
         <div class="sheet-body">
@@ -316,12 +313,11 @@ function renderList() {
             defaultThumb = '🪣'; 
         }
         
-        const disBtn = stock === 0 ? 'disabled' : '';
         const photoFileName = m.photoUrl || m.imageUrl || m.image || (m.materialCode ? m.materialCode + '.jpg' : m.materialId + '.jpg');
         const thumbContent = `<img src="images/${photoFileName}" onerror="this.outerHTML='${defaultThumb}'" style="width:100%; height:100%; object-fit:cover; border-radius:13px;">`;
 
         return `
-        <article class="card">
+        <article class="card" role="button" tabindex="0" aria-label="選擇 ${m.materialName} 並新增庫存異動" onclick="openSheet(null, '${m.materialId}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openSheet(null, '${m.materialId}');}">
             <div class="card-top">
                 <div class="thumb" style="padding:0; background:none;">${thumbContent}</div>
                 <div class="meta">
@@ -333,11 +329,7 @@ function renderList() {
                     <strong class="${statusCls === 'empty' ? 'text-danger' : (statusCls === 'low' ? 'text-warning' : '')}">${stock} ${m.stockUnit}</strong>
                 </div>
             </div>
-            <div class="card-actions">
-                <button class="small-btn primary" onclick="openSheet('PURCHASE_IN', '${m.materialId}')">＋ 入庫</button>
-                <button class="small-btn" onclick="openSheet('WAREHOUSE_ADJUSTMENT', '${m.materialId}')">🔄 盤點</button>
-                <button class="small-btn" onclick="openSheet('PROJECT_TRANSFER_OUT', '${m.materialId}')" ${disBtn}>🚚 領案場</button>
-            </div>
+            <div class="card-hint">點擊卡片選擇入庫、盤點、領料或退回 ›</div>
         </article>`;
     }).join('');
 
@@ -362,15 +354,21 @@ function setFilter(type) {
 
 const overlay = document.getElementById('overlay');
 
-function openSheet(type, matId = null) {
+function openSheet(type = null, matId = null) {
     currentSubmissionId = createSubmissionId();
     overlay.classList.remove('hidden');
     document.body.style.overflow = 'hidden';
     if (matId) document.getElementById('sheetMaterial').value = matId;
     document.getElementById('qty').value = '';
     document.getElementById('sheetRemark').value = '';
-    const btn = document.querySelector(`[data-type="${type}"]`);
+
+    const targetType = type || 'PURCHASE_IN';
+    const btn = document.querySelector(`[data-type="${targetType}"]`);
     if (btn) chooseType(btn);
+
+    document.getElementById('sheetTitle').textContent = matId
+        ? '選擇異動方式'
+        : '新增庫存異動';
     updatePreview();
 }
 
