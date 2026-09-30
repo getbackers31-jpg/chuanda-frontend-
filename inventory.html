@@ -75,7 +75,6 @@ button,input,select,textarea{font:inherit}.app{width:min(100%,560px);min-height:
   </nav>
 </div>
 
-<!-- 底部彈出異動表單 -->
 <div id="overlay" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
   <section class="sheet">
     <div class="handle"></div>
@@ -121,16 +120,15 @@ let projectsData = [];
 let currentFilter = 'all';
 let currentType = 'PURCHASE_IN';
 
-// 確保精準抓取庫存數量
+// 💡 暴力破解法：掃描資料庫中所有的數量變數，確保絕對抓得到
 function getRealStock(m) {
-    return Number(
-        m.currentStock !== undefined ? m.currentStock :
-        m.stock !== undefined ? m.stock :
-        m.quantity !== undefined ? m.quantity :
-        m.balance !== undefined ? m.balance :
-        m.amount !== undefined ? m.amount :
-        m.remainingBaseQuantity !== undefined ? m.remainingBaseQuantity : 0
-    );
+    if (m.currentStock !== undefined && m.currentStock !== null) return Number(m.currentStock);
+    if (m.stock !== undefined && m.stock !== null) return Number(m.stock);
+    if (m.quantity !== undefined && m.quantity !== null) return Number(m.quantity);
+    if (m.balance !== undefined && m.balance !== null) return Number(m.balance);
+    if (m.amount !== undefined && m.amount !== null) return Number(m.amount);
+    if (m.remainingBaseQuantity !== undefined && m.remainingBaseQuantity !== null) return Number(m.remainingBaseQuantity);
+    return 0;
 }
 
 async function initApp() {
@@ -144,38 +142,45 @@ async function initApp() {
         await liff.init({ liffId: LIFF_ID });
         if (liff.isLoggedIn()) {
             const profile = await liff.getProfile();
-            idToken = liff.getIDToken(); // 💡 取得 LINE ID Token 鑰匙
+            idToken = liff.getIDToken();
             document.getElementById('userGreeting').textContent = `哈囉，${profile.displayName}`;
             if (!savedName) document.getElementById('operatorName').value = profile.displayName;
-        } else { 
-            liff.login(); 
+        } else {
+            liff.login();
+            return;
         }
     } catch (e) {
         document.getElementById('userGreeting').textContent = `庫存管理系統`;
     }
 
-    // 💡 將 Token 放入標頭 (Headers) 中，確保後端放行
     const reqHeaders = { 'Content-Type': 'application/json' };
     if (idToken) reqHeaders['Authorization'] = `Bearer ${idToken}`;
 
     try {
-        // 💡 雙重 API 備援機制：先試倉庫專屬 API，若失敗則退回通用的材料 API
-        let matRes = await fetch(`${API_BASE_URL}/api/warehouse/inventory`, { headers: reqHeaders });
-        if (!matRes.ok) {
-            matRes = await fetch(`${API_BASE_URL}/api/materials`, { headers: reqHeaders });
-        }
+        // 先抓專案案場
         const projRes = await fetch(`${API_BASE_URL}/api/projects`, { headers: reqHeaders });
-        
-        const matJson = await matRes.json();
         const projJson = await projRes.json();
+        // 暴力解析案場陣列
+        projectsData = Array.isArray(projJson) ? projJson : (projJson.projects || projJson.data || []);
 
-        if (matJson.success) materialsData = matJson.inventory || matJson.materials || [];
-        if (projJson.success) projectsData = projJson.projects || [];
+        // 💡 抓取倉庫庫存：不限制 success 參數，直接抓出裡面的陣列
+        let matRes = await fetch(`${API_BASE_URL}/api/warehouse/inventory`, { headers: reqHeaders });
+        let matJson = await matRes.json();
         
+        materialsData = Array.isArray(matJson) ? matJson : (matJson.inventory || matJson.materials || matJson.data || matJson.items || []);
+
+        // 雙重保險：如果庫存 API 壞掉回傳空陣列，退回直接抓材料表
+        if (materialsData.length === 0) {
+            matRes = await fetch(`${API_BASE_URL}/api/materials`, { headers: reqHeaders });
+            matJson = await matRes.json();
+            materialsData = Array.isArray(matJson) ? matJson : (matJson.materials || matJson.data || matJson.items || []);
+        }
+
         populateSelects();
         renderList();
     } catch (e) {
-        showToast("資料拉取失敗，請檢查網路！");
+        showToast("資料拉取失敗，請檢查網路連線");
+        document.getElementById('materialList').innerHTML = `<div style="text-align:center; padding: 40px; color:var(--red); font-weight:bold;">連線到伺服器失敗，請重新整理</div>`;
     }
 }
 
@@ -214,7 +219,6 @@ function renderList() {
         
         const disBtn = stock === 0 ? 'disabled' : '';
         
-        // 💡 修正圖片路徑：強制指向 images/ 資料夾，若找不到圖片則自動替換回 📦 圖示
         const photoFileName = m.photoUrl || m.imageUrl || m.image || (m.materialCode ? m.materialCode + '.jpg' : m.materialId + '.jpg');
         const thumbContent = `<img src="images/${photoFileName}" onerror="this.outerHTML='${defaultThumb}'" style="width:100%; height:100%; object-fit:cover; border-radius:13px;">`;
 
