@@ -22,7 +22,7 @@
         .title { font-size: 20px; font-weight: 800; }
         .subtitle { margin-top: 2px; font-size: 12px; color: rgba(255,255,255,.82); }
         .icon-btn { width: 42px; height: 42px; border: 0; border-radius: 12px; background: rgba(255,255,255,.16); color: #fff; font-size: 20px; cursor: pointer; }
-        .summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 14px 14px 8px; background: #fff; }
+        .summary { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; padding: 14px 14px 8px; background: #fff; }
         .metric { padding: 11px 8px; border: 1px solid var(--line); border-radius: 12px; text-align: center; background: #fff; cursor: pointer; }
         .metric strong { display: block; font-size: 21px; }
         .metric span { font-size: 12px; color: var(--muted); }
@@ -68,7 +68,7 @@
         .sheet-title { font-size: 19px; font-weight: 800; }
         .close { width: 36px; height: 36px; border: 0; border-radius: 50%; background: #f1f3f5; font-size: 20px; cursor: pointer; }
         .sheet-body { padding: 16px 18px; }
-        .type-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; margin-bottom: 16px; } /* 3欄平均分佈 */
+        .type-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; margin-bottom: 16px; }
         .type-btn { padding: 13px 4px; border: 1px solid var(--line); border-radius: 12px; background: #fff; font-weight: 800; font-size: 13px; cursor: pointer; text-align: center; }
         .type-btn.active { border-color: var(--green); background: var(--green3); color: var(--green); }
         .field { margin-bottom: 14px; }
@@ -145,7 +145,6 @@
             <button class="close" onclick="closeSheet()" aria-label="關閉">×</button>
         </div>
         <div class="sheet-body">
-            <!-- 💡 移除盤點修正，留下 3 個核心異動按鈕並改為 3 等分排版 -->
             <div class="type-grid">
                 <button class="type-btn active" data-type="PURCHASE_IN" onclick="chooseType(this)">➕ 採購入庫</button>
                 <button class="type-btn" data-type="PROJECT_TRANSFER_OUT" onclick="chooseType(this)">🚚 領至案場</button>
@@ -167,6 +166,10 @@
                 <select id="sheetProject"><option>載入中...</option></select>
             </div>
             
+            <div class="field">
+                <label>異動日期</label>
+                <input id="transactionDate" type="date">
+            </div>
             <div class="field">
                 <label id="qtyLabel">本次入庫數量</label>
                 <input id="qty" type="number" inputmode="decimal" min="0" step="0.1" value="" oninput="updatePreview()" placeholder="請輸入數量">
@@ -198,9 +201,21 @@ let materialsData = [];
 let projectsData = [];
 let currentFilter = 'all';
 let currentType = 'PURCHASE_IN';
+let currentSubmissionId = '';
+let isSubmitting = false;
 
+function createSubmissionId() {
+    return window.crypto?.randomUUID ? window.crypto.randomUUID() : Date.now().toString(36) + '-' + Math.random().toString(36).slice(2);
+}
+function getTaiwanDateString() {
+    return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+}
 async function initApp() {
     showToast("資料同步中...");
+    const dateInput = document.getElementById('transactionDate');
+    const today = getTaiwanDateString();
+    dateInput.value = dateInput.value || today;
+    dateInput.max = today;
     
     const savedName = localStorage.getItem('warehouseOperatorName');
     if (savedName) {
@@ -275,14 +290,14 @@ function renderList() {
         const stock = Number(m.stockQuantity || 0);
         
         sumTotal++;
-        if (stock === 0) sumEmpty++;
-        else if (stock < 10) sumLow++;
+        if (m.stockStatus === 'OUT_OF_STOCK') sumEmpty++;
+        else if (m.stockStatus === 'LOW_STOCK') sumLow++;
 
         if (searchStr && !m.materialName.toLowerCase().includes(searchStr) && !(m.materialCode || '').toLowerCase().includes(searchStr)) return false;
         
-        if (currentFilter === 'empty' && stock !== 0) return false;
-        if (currentFilter === 'low' && (stock === 0 || stock >= 10)) return false;
-        if (currentFilter === 'normal' && stock < 10) return false;
+        if (currentFilter === 'empty' && m.stockStatus !== 'OUT_OF_STOCK') return false;
+        if (currentFilter === 'low' && m.stockStatus !== 'LOW_STOCK') return false;
+        if (currentFilter === 'normal' && m.stockStatus !== 'NORMAL') return false;
         
         return true;
     }).map(m => {
@@ -291,11 +306,11 @@ function renderList() {
         let statusTxt = '庫存正常';
         let defaultThumb = '📦';
 
-        if (stock === 0) { 
+        if (m.stockStatus === 'OUT_OF_STOCK') { 
             statusCls = 'empty'; 
             statusTxt = '目前缺貨'; 
             defaultThumb = '⚠️'; 
-        } else if (stock < 10) { 
+        } else if (m.stockStatus === 'LOW_STOCK') { 
             statusCls = 'low'; 
             statusTxt = '庫存偏低'; 
             defaultThumb = '🪣'; 
@@ -348,21 +363,21 @@ function setFilter(type) {
 const overlay = document.getElementById('overlay');
 
 function openSheet(type, matId = null) {
+    currentSubmissionId = createSubmissionId();
     overlay.classList.remove('hidden');
     document.body.style.overflow = 'hidden';
-    
     if (matId) document.getElementById('sheetMaterial').value = matId;
     document.getElementById('qty').value = '';
-    
-    // 如果是從外面點盤點進來的，由於表單內已無盤點按鈕，我們直接預設為採購入庫或對應模式
-    const targetType = (type === 'WAREHOUSE_ADJUSTMENT') ? 'PURCHASE_IN' : type;
-    const btn = document.querySelector(`[data-type="${targetType}"]`);
+    document.getElementById('sheetRemark').value = '';
+    const btn = document.querySelector(`[data-type="${type}"]`);
     if (btn) chooseType(btn);
+    updatePreview();
 }
 
 function closeSheet() {
     overlay.classList.add('hidden');
     document.body.style.overflow = '';
+    if (!isSubmitting) currentSubmissionId = '';
 }
 
 function chooseType(btn) {
@@ -426,94 +441,78 @@ function updatePreview() {
 }
 
 async function submitTransaction() {
+    if (isSubmitting) return;
     const matId = document.getElementById('sheetMaterial').value;
     const qty = Number(document.getElementById('qty').value);
     const operator = document.getElementById('operatorName').value.trim();
-    
+    const projectId = document.getElementById('sheetProject').value;
+    const transactionDate = document.getElementById('transactionDate').value;
     if (!operator) return alert('請填寫操作人姓名');
     if (!matId) return alert('請選擇材料品項');
+    if (!transactionDate) return alert('請選擇異動日期');
+    if (!Number.isFinite(qty) || qty < 0) return alert('請輸入有效數量');
     if (qty <= 0 && currentType !== 'WAREHOUSE_ADJUSTMENT') return alert('請輸入大於 0 的有效數量');
+    if (['PROJECT_TRANSFER_OUT','PROJECT_RETURN'].includes(currentType) && !projectId) return alert('請選擇案場');
 
     const mat = materialsData.find(m => m.materialId === matId);
     const currentStock = Number(mat.stockQuantity || 0);
-    
     if (currentType === 'PROJECT_TRANSFER_OUT' && currentStock - qty < 0) {
-        if (!confirm('警告：領出數量大於倉庫庫存，確定要繼續嗎？')) return;
+        return alert(`倉庫庫存不足，目前只有 ${currentStock}${mat.stockUnit}`);
     }
 
-    const typeNames = { 
-        PURCHASE_IN: '採購入庫', 
-        WAREHOUSE_ADJUSTMENT: '盤點修正', 
-        PROJECT_TRANSFER_OUT: '倉庫領至案場', 
-        PROJECT_RETURN: '案場退回' 
-    };
-    
-    if (!confirm(`確認執行「${typeNames[currentType]}」？\n\n材料：${mat.materialName}\n數量：${document.getElementById('qty').value}`)) {
-        return;
-    }
+    const names = {PURCHASE_IN:'採購入庫',WAREHOUSE_ADJUSTMENT:'盤點修正',PROJECT_TRANSFER_OUT:'倉庫領至案場',PROJECT_RETURN:'案場退回'};
+    let after = currentStock;
+    if (currentType === 'WAREHOUSE_ADJUSTMENT') after = qty;
+    else if (currentType === 'PROJECT_TRANSFER_OUT') after = currentStock - qty;
+    else after = currentStock + qty;
+
+    if (!confirm(`確認執行「${names[currentType]}」？
+
+材料：${mat.materialName}
+目前倉庫：${currentStock}${mat.stockUnit}
+異動後：${after}${mat.stockUnit}`)) return;
 
     const btn = document.getElementById('submitBtn');
-    btn.disabled = true; 
+    isSubmitting = true;
+    btn.disabled = true;
     btn.textContent = '⏳ 送出中...';
 
     let endpoint = '';
-    const payload = {
-        submissionId: 'SUB-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
-        materialId: matId,
-        operatorName: operator,
-        remarks: document.getElementById('sheetRemark').value
-    };
-
-    if (currentType === 'PURCHASE_IN' || currentType === 'WAREHOUSE_ADJUSTMENT') {
+    const payload = {submissionId:currentSubmissionId,transactionDate,materialId:matId,operatorName:operator,remarks:document.getElementById('sheetRemark').value};
+    if (['PURCHASE_IN','WAREHOUSE_ADJUSTMENT'].includes(currentType)) {
         endpoint = `${API_BASE_URL}/api/warehouse/transactions`;
         payload.transactionType = currentType;
-        if (currentType === 'PURCHASE_IN') {
-            payload.quantity = qty;
-        } else {
-            payload.actualQuantity = qty;
-        }
+        if (currentType === 'PURCHASE_IN') payload.quantity = qty;
+        else payload.actualQuantity = qty;
     } else if (currentType === 'PROJECT_TRANSFER_OUT') {
         endpoint = `${API_BASE_URL}/api/warehouse/project-transfer`;
-        payload.projectId = document.getElementById('sheetProject').value;
+        payload.projectId = projectId;
         payload.quantity = qty;
-    } else if (currentType === 'PROJECT_RETURN') {
+    } else {
         endpoint = `${API_BASE_URL}/api/warehouse/project-return`;
-        payload.projectId = document.getElementById('sheetProject').value;
+        payload.projectId = projectId;
         payload.quantity = qty;
     }
 
-    let idToken = null;
-    if (liff.isLoggedIn()) {
-        idToken = liff.getIDToken();
-    }
-
-    const reqHeaders = { 'Content-Type': 'application/json' };
-    if (idToken) {
-        reqHeaders['Authorization'] = `Bearer ${idToken}`;
-    }
+    const token = liff.isLoggedIn() ? liff.getIDToken() : null;
+    const headers = {'Content-Type':'application/json'};
+    if (token) headers.Authorization = `Bearer ${token}`;
 
     try {
-        const response = await fetch(endpoint, {
-            method: 'POST',
-            headers: reqHeaders,
-            body: JSON.stringify(payload)
-        });
-        
+        const response = await fetch(endpoint,{method:'POST',headers,body:JSON.stringify(payload)});
         const result = await response.json();
-
-        if (response.ok && result.success) {
-            localStorage.setItem('warehouseOperatorName', operator);
-            showToast(`✅ ${typeNames[currentType]} 完成！`);
-            closeSheet();
-            setTimeout(initApp, 1000); 
-        } else {
-            throw new Error(result.error || '伺服器回應錯誤');
-        }
+        if (!response.ok || !result.success) throw new Error(result.error || '伺服器回應錯誤');
+        localStorage.setItem('warehouseOperatorName',operator);
+        showToast(result.duplicate ? '此筆異動先前已完成，未重複入帳' : `✅ ${names[currentType]} 完成！`);
+        currentSubmissionId = '';
+        closeSheet();
+        setTimeout(initApp,600);
     } catch (e) {
-        console.error("寫入失敗:", e);
-        alert(`寫入失敗：\n${e.message}`);
+        alert(`寫入失敗：
+${e.message}`);
     } finally {
-        btn.disabled = false; 
+        isSubmitting = false;
+        btn.disabled = false;
         btn.textContent = '確認送出';
     }
 }
@@ -529,7 +528,7 @@ function showToast(msg) {
 }
 
 overlay.addEventListener('click', e => { 
-    if (e.target === overlay) closeSheet(); 
+    if (e.target === overlay && !isSubmitting) closeSheet(); 
 });
 
 window.addEventListener('load', initApp);
