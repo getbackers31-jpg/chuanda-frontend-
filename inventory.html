@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
     <meta name="theme-color" content="#087f5b">
-    <title>云說倉庫管理v3</title>
+    <title>云說倉庫管理 v6.3</title>
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <style>
         :root {
@@ -20,6 +20,7 @@
         .header { position: sticky; top: 0; z-index: 10; padding: calc(14px + env(safe-area-inset-top)) 16px 12px; background: linear-gradient(135deg, var(--green), var(--green2)); color: #fff; }
         .header-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
         .title { font-size: 20px; font-weight: 800; }
+        .version-tag { margin-left:6px; padding:2px 7px; border-radius:999px; background:rgba(255,255,255,.18); font-size:10px; vertical-align:middle; }
         .subtitle { margin-top: 2px; font-size: 12px; color: rgba(255,255,255,.82); }
         .icon-btn { width: 42px; height: 42px; border: 0; border-radius: 12px; background: rgba(255,255,255,.16); color: #fff; font-size: 20px; cursor: pointer; }
         .summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 14px 14px 8px; background: #fff; }
@@ -34,6 +35,28 @@
         .filters { display: flex; gap: 8px; overflow-x: auto; padding: 4px 14px 12px; scrollbar-width: none; }
         .chip { flex: none; padding: 8px 12px; border: 1px solid var(--line); border-radius: 999px; background: #fff; color: #495057; font-size: 13px; font-weight: 700; cursor: pointer; }
         .chip.active { border-color: var(--green); background: var(--green3); color: var(--green); }
+
+        .recent { margin: 10px 14px 4px; border: 1px solid var(--line); border-radius: 14px; background:#fff; overflow:hidden; }
+        .recent-head { display:flex; align-items:center; justify-content:space-between; gap:10px; min-height:48px; padding:10px 12px; border:0; background:#fff; width:100%; color:var(--ink); cursor:pointer; }
+        .recent-title { font-size:15px; font-weight:900; }
+        .recent-subtitle { margin-top:2px; color:var(--muted); font-size:11px; text-align:left; }
+        .recent-toggle { color:var(--green); font-size:12px; font-weight:900; white-space:nowrap; }
+        .recent-body { padding:0 12px; border-top:1px solid var(--line); }
+        .recent-item { display:grid; grid-template-columns:4px minmax(0,1fr) auto; gap:9px; padding:12px 0; border-bottom:1px solid var(--line); }
+        .recent-item:last-child { border-bottom:0; }
+        .recent-accent { border-radius:99px; background:var(--blue); }
+        .recent-item.purchase .recent-accent { background:var(--green2); }
+        .recent-item.adjust .recent-accent { background:var(--orange); }
+        .recent-item.transfer .recent-accent { background:var(--red); }
+        .recent-item.return .recent-accent { background:#7048e8; }
+        .recent-type { font-size:13px; font-weight:900; }
+        .recent-material { margin-top:3px; font-size:13px; overflow-wrap:anywhere; }
+        .recent-meta { margin-top:4px; color:var(--muted); font-size:11px; line-height:1.45; }
+        .recent-qty { font-size:15px; font-weight:900; text-align:right; white-space:nowrap; }
+        .recent-qty.positive { color:var(--green); }
+        .recent-qty.negative { color:var(--red); }
+        .recent-time { margin-top:4px; color:var(--muted); font-size:10px; text-align:right; white-space:nowrap; }
+        .recent-state { padding:16px 8px; color:var(--muted); font-size:12px; text-align:center; }
         .notice { margin: 0 14px 12px; padding: 12px 13px; border-left: 4px solid var(--blue); border-radius: 10px; background: var(--bluebg); font-size: 13px; line-height: 1.55; }
         .notice strong { color: var(--blue); }
         .list { padding: 0 14px 96px; }
@@ -96,7 +119,7 @@
     <header class="header">
         <div class="header-row">
             <div>
-                <div class="title">📦 云說倉庫管理</div>
+                <div class="title">📦 云說倉庫管理 <span class="version-tag">v6.3</span></div>
                 <div class="subtitle" id="userGreeting">載入中...</div>
             </div>
             <button class="icon-btn" aria-label="重新整理" onclick="initApp()">↻</button>
@@ -119,6 +142,15 @@
         <button class="chip" data-filter="low" onclick="setFilter('low')">庫存不足</button>
         <button class="chip" data-filter="empty" onclick="setFilter('empty')">缺貨</button>
     </div>
+
+
+    <section class="recent" aria-labelledby="recentTitle">
+        <button class="recent-head" type="button" onclick="toggleRecent()" aria-expanded="false" id="recentButton">
+            <span><span class="recent-title" id="recentTitle">最近異動</span><span class="recent-subtitle" id="recentSummary">載入最近紀錄中...</span></span>
+            <span class="recent-toggle" id="recentToggle">展開最近5筆</span>
+        </button>
+        <div class="recent-body hidden" id="recentBody"><div class="recent-state">載入中...</div></div>
+    </section>
 
     <div class="notice">
         <strong>💡 材料流向：</strong><br>
@@ -262,11 +294,73 @@ async function initApp() {
 
         populateSelects();
         renderList();
+        await loadRecentTransactions();
     } catch (e) {
         console.error('抓取資料失敗:', e);
         showToast("資料拉取失敗，請檢查網路連線");
         document.getElementById('materialList').innerHTML = `<div style="text-align:center; padding: 40px; color:var(--red); font-weight:bold;">連線到伺服器失敗，請重新整理</div>`;
     }
+}
+
+
+const RECENT_TYPE_INFO = {
+    PURCHASE_IN: { label:'採購入庫', icon:'➕', cls:'purchase' },
+    WAREHOUSE_ADJUSTMENT: { label:'盤點修正', icon:'🔄', cls:'adjust' },
+    PROJECT_TRANSFER_OUT: { label:'領至案場', icon:'🚚', cls:'transfer' },
+    PROJECT_RETURN: { label:'案場退回', icon:'↩️', cls:'return' },
+    INITIAL_COUNT: { label:'期初盤點', icon:'📋', cls:'adjust' }
+};
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+}
+function formatRecentTime(value) {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return escapeHtml(value);
+    return new Intl.DateTimeFormat('zh-TW', { timeZone:'Asia/Taipei', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hour12:false }).format(date);
+}
+function renderRecentTransactions(items) {
+    const body = document.getElementById('recentBody');
+    const summary = document.getElementById('recentSummary');
+    if (!Array.isArray(items) || items.length === 0) {
+        summary.textContent = '尚無倉庫異動';
+        body.innerHTML = '<div class="recent-state">完成第一次庫存異動後，紀錄會顯示在這裡。</div>';
+        return;
+    }
+    const first = items[0];
+    const firstInfo = RECENT_TYPE_INFO[first.transactionType] || { label:first.transactionType || '庫存異動', icon:'📦', cls:'adjust' };
+    summary.textContent = `${firstInfo.label}・${first.materialName}・${Number(first.quantityChange) > 0 ? '+' : ''}${formatNumber(first.quantityChange)}${first.stockUnit || ''}`;
+    body.innerHTML = items.map(item => {
+        const info = RECENT_TYPE_INFO[item.transactionType] || { label:item.transactionType || '庫存異動', icon:'📦', cls:'adjust' };
+        const change = Number(item.quantityChange || 0);
+        const quantityClass = change >= 0 ? 'positive' : 'negative';
+        const project = item.projectName ? `${escapeHtml(item.projectName)} · ` : '';
+        return `<article class="recent-item ${info.cls}"><div class="recent-accent"></div><div><div class="recent-type">${info.icon} ${escapeHtml(info.label)}</div><div class="recent-material">${escapeHtml(item.materialName)}</div><div class="recent-meta">${formatNumber(item.beforeQuantity)}${escapeHtml(item.stockUnit)} → ${formatNumber(item.afterQuantity)}${escapeHtml(item.stockUnit)}<br>${project}${escapeHtml(item.operatorName || '未填操作人')}</div></div><div><div class="recent-qty ${quantityClass}">${change > 0 ? '+' : ''}${formatNumber(change)}${escapeHtml(item.stockUnit)}</div><div class="recent-time">${formatRecentTime(item.createdAt || item.transactionDate)}</div></div></article>`;
+    }).join('');
+}
+async function loadRecentTransactions() {
+    try {
+        const token = liff.isLoggedIn() ? liff.getIDToken() : null;
+        const headers = {};
+        if (token) headers.Authorization = `Bearer ${token}`;
+        const response = await fetch(`${API_BASE_URL}/api/warehouse/recent-transactions?limit=5`, { headers });
+        const result = await response.json();
+        if (!response.ok || !result.success) throw new Error(result.error || '伺服器回應錯誤');
+        renderRecentTransactions(result.items);
+    } catch (error) {
+        console.error('最近異動載入失敗:', error);
+        document.getElementById('recentSummary').textContent = '最近異動暫時無法載入';
+        document.getElementById('recentBody').innerHTML = '<div class="recent-state">⚠️ 最近異動暫時無法載入，庫存操作不受影響。<br><button type="button" class="chip" onclick="loadRecentTransactions()" style="margin-top:8px">重新載入</button></div>';
+    }
+}
+function toggleRecent() {
+    const body = document.getElementById('recentBody');
+    const button = document.getElementById('recentButton');
+    const toggle = document.getElementById('recentToggle');
+    const opening = body.classList.contains('hidden');
+    body.classList.toggle('hidden', !opening);
+    button.setAttribute('aria-expanded', String(opening));
+    toggle.textContent = opening ? '收合' : '展開最近5筆';
 }
 
 function populateSelects() {
