@@ -22,7 +22,7 @@
         .title { font-size: 20px; font-weight: 800; }
         .subtitle { margin-top: 2px; font-size: 12px; color: rgba(255,255,255,.82); }
         .icon-btn { width: 42px; height: 42px; border: 0; border-radius: 12px; background: rgba(255,255,255,.16); color: #fff; font-size: 20px; cursor: pointer; }
-        .summary { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; padding: 14px 14px 8px; background: #fff; }
+        .summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 14px 14px 8px; background: #fff; }
         .metric { padding: 11px 8px; border: 1px solid var(--line); border-radius: 12px; text-align: center; background: #fff; cursor: pointer; }
         .metric strong { display: block; font-size: 21px; }
         .metric span { font-size: 12px; color: var(--muted); }
@@ -37,18 +37,20 @@
         .notice { margin: 0 14px 12px; padding: 12px 13px; border-left: 4px solid var(--blue); border-radius: 10px; background: var(--bluebg); font-size: 13px; line-height: 1.55; }
         .notice strong { color: var(--blue); }
         .list { padding: 0 14px 96px; }
-        .card { margin-bottom: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 15px; background: #fff; box-shadow: 0 4px 16px rgba(33,37,41,.055); cursor: pointer; transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease; }
-        .card:active { transform: scale(.992); }
-        .card:focus-visible { outline: 3px solid rgba(12,166,120,.28); outline-offset: 2px; border-color: var(--green2); }
-        .card-hint { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); color: var(--green); font-size: 12px; font-weight: 800; text-align: right; }
+        .card { margin-bottom: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 15px; background: #fff; box-shadow: 0 4px 16px rgba(33,37,41,.055); cursor:pointer; transition:.15s; }
+        .card:active { transform:scale(.992); }
+        .card:focus-visible { outline:3px solid rgba(12,166,120,.25); outline-offset:2px; }
+        .card-hint { margin-top:10px; padding-top:10px; border-top:1px solid var(--line); color:var(--green); font-size:12px; font-weight:800; text-align:right; }
+        .minimum-note { margin-top:6px; color:var(--orange); font-size:12px; font-weight:800; line-height:1.4; }
+        .minimum-note.normal-note { color:var(--green); }
         .card-top { display: flex; align-items: flex-start; gap: 11px; }
         .thumb { display: grid; place-items: center; flex: none; width: 52px; height: 52px; border-radius: 13px; background: linear-gradient(145deg, #edf2ff, #e7f5ff); font-size: 27px; padding: 0; overflow: hidden; }
         .meta { min-width: 0; flex: 1; }
         .name { font-weight: 800; line-height: 1.35; }
         .code { margin-top: 3px; color: var(--muted); font-size: 12px; }
         .stock { text-align: right; }
-        .stock strong { display: block; font-size: 23px; color: var(--green); }
-        .stock span { font-size: 12px; color: var(--muted); }
+        .stock strong { display:block; font-size:23px; color:var(--green); white-space:nowrap; }
+        .stock span { display:block; margin-top:3px; font-size:12px; color:var(--muted); white-space:nowrap; }
         .status { display: inline-flex; margin-top: 7px; padding: 4px 8px; border-radius: 999px; font-size: 11px; font-weight: 800; }
         .normal { background: var(--green3); color: var(--green); }
         .low { background: var(--orangebg); color: var(--orange); }
@@ -67,7 +69,7 @@
         .sheet-title { font-size: 19px; font-weight: 800; }
         .close { width: 36px; height: 36px; border: 0; border-radius: 50%; background: #f1f3f5; font-size: 20px; cursor: pointer; }
         .sheet-body { padding: 16px 18px; }
-        .type-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; margin-bottom: 16px; }
+        .type-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 9px; margin-bottom: 16px; }
         .type-btn { padding: 13px 4px; border: 1px solid var(--line); border-radius: 12px; background: #fff; font-weight: 800; font-size: 13px; cursor: pointer; text-align: center; }
         .type-btn.active { border-color: var(--green); background: var(--green3); color: var(--green); }
         .field { margin-bottom: 14px; }
@@ -103,7 +105,7 @@
 
     <section class="summary">
         <button class="metric" onclick="setFilter('all')"><strong id="sumTotal">0</strong><span>總品項</span></button>
-        <button class="metric warn" onclick="setFilter('low')"><strong id="sumLow">0</strong><span>低庫存</span></button>
+        <button class="metric warn" onclick="setFilter('low')"><strong id="sumLow">0</strong><span>庫存不足</span></button>
         <button class="metric danger" onclick="setFilter('empty')"><strong id="sumEmpty">0</strong><span>缺貨</span></button>
     </section>
 
@@ -114,7 +116,7 @@
     <div class="filters">
         <button class="chip active" data-filter="all" onclick="setFilter('all')">全部</button>
         <button class="chip" data-filter="normal" onclick="setFilter('normal')">正常</button>
-        <button class="chip" data-filter="low" onclick="setFilter('low')">低庫存</button>
+        <button class="chip" data-filter="low" onclick="setFilter('low')">庫存不足</button>
         <button class="chip" data-filter="empty" onclick="setFilter('empty')">缺貨</button>
     </div>
 
@@ -144,6 +146,7 @@
         <div class="sheet-body">
             <div class="type-grid">
                 <button class="type-btn active" data-type="PURCHASE_IN" onclick="chooseType(this)">➕ 採購入庫</button>
+                <button class="type-btn" data-type="WAREHOUSE_ADJUSTMENT" onclick="chooseType(this)">🔄 盤點修正</button>
                 <button class="type-btn" data-type="PROJECT_TRANSFER_OUT" onclick="chooseType(this)">🚚 領至案場</button>
                 <button class="type-btn" data-type="PROJECT_RETURN" onclick="chooseType(this)">↩️ 案場退回</button>
             </div>
@@ -279,67 +282,44 @@ function populateSelects() {
     }).join('');
 }
 
+function formatNumber(value) {
+    return new Intl.NumberFormat('zh-TW', { maximumFractionDigits: 4 }).format(Number(value || 0));
+}
 function renderList() {
     const searchStr = document.getElementById('searchInput').value.toLowerCase();
-    let sumTotal = 0, sumLow = 0, sumEmpty = 0;
-    
-    const html = materialsData.filter(m => {
-        const stock = Number(m.stockQuantity || 0);
-        
-        sumTotal++;
-        if (m.stockStatus === 'OUT_OF_STOCK') sumEmpty++;
-        else if (m.stockStatus === 'LOW_STOCK') sumLow++;
-
-        if (searchStr && !m.materialName.toLowerCase().includes(searchStr) && !(m.materialCode || '').toLowerCase().includes(searchStr)) return false;
-        
+    const managed = materialsData.filter(m => m.inventoryManaged !== false);
+    const sumTotal = managed.length;
+    const sumLow = managed.filter(m => m.minimumStockEnabled === true && m.stockStatus === 'LOW_STOCK').length;
+    const sumEmpty = managed.filter(m => m.stockStatus === 'OUT_OF_STOCK').length;
+    const html = managed.filter(m => {
+        if (searchStr && !String(m.materialName || '').toLowerCase().includes(searchStr) && !String(m.materialCode || '').toLowerCase().includes(searchStr)) return false;
         if (currentFilter === 'empty' && m.stockStatus !== 'OUT_OF_STOCK') return false;
-        if (currentFilter === 'low' && m.stockStatus !== 'LOW_STOCK') return false;
+        if (currentFilter === 'low' && !(m.minimumStockEnabled === true && m.stockStatus === 'LOW_STOCK')) return false;
         if (currentFilter === 'normal' && m.stockStatus !== 'NORMAL') return false;
-        
         return true;
     }).map(m => {
         const stock = Number(m.stockQuantity || 0);
-        let statusCls = 'normal';
-        let statusTxt = '庫存正常';
-        let defaultThumb = '📦';
-
-        if (m.stockStatus === 'OUT_OF_STOCK') { 
-            statusCls = 'empty'; 
-            statusTxt = '目前缺貨'; 
-            defaultThumb = '⚠️'; 
-        } else if (m.stockStatus === 'LOW_STOCK') { 
-            statusCls = 'low'; 
-            statusTxt = '庫存偏低'; 
-            defaultThumb = '🪣'; 
+        const baseQty = Number.isFinite(Number(m.stockBaseQuantity)) ? Number(m.stockBaseQuantity) : stock * Number(m.packageQuantity || 1);
+        let statusCls='normal', statusTxt=m.minimumStockEnabled===true?'庫存正常':'目前庫存', icon='📦', note='';
+        if (m.stockStatus === 'OUT_OF_STOCK') { statusCls='empty'; statusTxt='目前缺貨'; icon='⚠️'; }
+        else if (m.stockStatus === 'REVIEW_REQUIRED') { statusCls='empty'; statusTxt='帳面異常'; icon='❗'; }
+        else if (m.minimumStockEnabled === true && m.stockStatus === 'LOW_STOCK') {
+            statusCls='low'; statusTxt='庫存不足'; icon='🪣';
+            note=`<div class="minimum-note">最低保有${formatNumber(m.lowStockThreshold)}${m.stockUnit}・尚缺${formatNumber(m.shortageQuantity)}${m.stockUnit}</div>`;
+        } else if (m.minimumStockEnabled === true) {
+            note=`<div class="minimum-note normal-note">最低保有${formatNumber(m.lowStockThreshold)}${m.stockUnit}・庫存正常</div>`;
         }
-        
-        const photoFileName = m.photoUrl || m.imageUrl || m.image || (m.materialCode ? m.materialCode + '.jpg' : m.materialId + '.jpg');
-        const thumbContent = `<img src="images/${photoFileName}" onerror="this.outerHTML='${defaultThumb}'" style="width:100%; height:100%; object-fit:cover; border-radius:13px;">`;
-
-        return `
-        <article class="card" role="button" tabindex="0" aria-label="選擇 ${m.materialName} 並新增庫存異動" onclick="openSheet(null, '${m.materialId}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openSheet(null, '${m.materialId}');}">
-            <div class="card-top">
-                <div class="thumb" style="padding:0; background:none;">${thumbContent}</div>
-                <div class="meta">
-                    <div class="name">${m.materialName}</div>
-                    <div class="code">${m.materialCode || '無編號'}</div>
-                    <span class="status ${statusCls}">${statusTxt}</span>
-                </div>
-                <div class="stock">
-                    <strong class="${statusCls === 'empty' ? 'text-danger' : (statusCls === 'low' ? 'text-warning' : '')}">${stock} ${m.stockUnit}</strong>
-                </div>
-            </div>
-            <div class="card-hint">點擊卡片選擇入庫、盤點、領料或退回 ›</div>
-        </article>`;
+        const photo=m.photoUrl||m.imageUrl||m.image||(m.materialCode?m.materialCode+'.jpg':m.materialId+'.jpg');
+        const thumb=`<img src="images/${photo}" onerror="this.outerHTML='${icon}'" style="width:100%;height:100%;object-fit:cover;border-radius:13px;">`;
+        return `<article class="card" role="button" tabindex="0" aria-label="選擇 ${m.materialName} 並新增庫存異動" onclick="openSheet(null,'${m.materialId}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openSheet(null,'${m.materialId}');}">
+          <div class="card-top"><div class="thumb" style="padding:0;background:none;">${thumb}</div><div class="meta"><div class="name">${m.materialName}</div><div class="code">${m.materialCode||'無編號'}</div><span class="status ${statusCls}">${statusTxt}</span>${note}</div><div class="stock"><strong>${formatNumber(stock)}${m.stockUnit}</strong><span>共${formatNumber(baseQty)}${m.baseUnit||m.stockUnit}</span></div></div>
+          <div class="card-hint">點擊卡片選擇入庫、盤點、領料或退回 ›</div></article>`;
     }).join('');
-
-    document.getElementById('materialList').innerHTML = html || '<div style="text-align:center; padding: 40px; color:#6c757d;">查無符合條件的材料</div>';
-    
-    document.getElementById('sumTotal').textContent = sumTotal;
-    document.getElementById('sumLow').textContent = sumLow;
-    document.getElementById('sumEmpty').textContent = sumEmpty;
+    document.getElementById('materialList').innerHTML=html||'<div style="text-align:center;padding:40px;color:#6c757d;">查無符合條件的材料</div>';
+    document.getElementById('sumTotal').textContent=sumTotal;
+    document.getElementById('sumLow').textContent=sumLow;
+    document.getElementById('sumEmpty').textContent=sumEmpty;
 }
-
 function setFilter(type) {
     currentFilter = type;
     document.querySelectorAll('.chip').forEach(x => {
@@ -361,17 +341,11 @@ function openSheet(type = null, matId = null) {
     if (matId) document.getElementById('sheetMaterial').value = matId;
     document.getElementById('qty').value = '';
     document.getElementById('sheetRemark').value = '';
-
-    const targetType = type || 'PURCHASE_IN';
-    const btn = document.querySelector(`[data-type="${targetType}"]`);
+    const btn = document.querySelector(`[data-type="${type || 'PURCHASE_IN'}"]`);
     if (btn) chooseType(btn);
-
-    document.getElementById('sheetTitle').textContent = matId
-        ? '選擇異動方式'
-        : '新增庫存異動';
+    document.getElementById('sheetTitle').textContent = matId ? '選擇異動方式' : '新增庫存異動';
     updatePreview();
 }
-
 function closeSheet() {
     overlay.classList.add('hidden');
     document.body.style.overflow = '';
