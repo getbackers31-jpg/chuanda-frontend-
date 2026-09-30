@@ -121,6 +121,18 @@ let projectsData = [];
 let currentFilter = 'all';
 let currentType = 'PURCHASE_IN';
 
+// 💡 強化版的庫存數字抓取邏輯 (全頻譜掃描)
+function getRealStock(m) {
+    return Number(
+        m.currentStock !== undefined ? m.currentStock :
+        m.stock !== undefined ? m.stock :
+        m.quantity !== undefined ? m.quantity :
+        m.balance !== undefined ? m.balance :
+        m.amount !== undefined ? m.amount :
+        m.remainingBaseQuantity !== undefined ? m.remainingBaseQuantity : 0
+    );
+}
+
 async function initApp() {
     showToast("資料同步中...");
     
@@ -149,7 +161,6 @@ async function initApp() {
         if (matJson.success) materialsData = matJson.materials || [];
         if (projJson.success) projectsData = projJson.projects || [];
         
-        // 💡 已經移除了假資料，完全依賴後端真實庫存數量
         populateSelects();
         renderList();
     } catch (e) {
@@ -160,7 +171,7 @@ async function initApp() {
 function populateSelects() {
     const mSel = document.getElementById('sheetMaterial');
     mSel.innerHTML = materialsData.map(m => {
-        const stock = Number(m.currentStock !== undefined ? m.currentStock : (m.stock !== undefined ? m.stock : 0));
+        const stock = getRealStock(m);
         return `<option value="${m.materialId}">${m.materialName} (庫存:${stock}${m.stockUnit})</option>`;
     }).join('');
     
@@ -173,7 +184,7 @@ function renderList() {
     let sumTotal = 0, sumLow = 0, sumEmpty = 0;
     
     const html = materialsData.filter(m => {
-        const stock = Number(m.currentStock !== undefined ? m.currentStock : (m.stock !== undefined ? m.stock : 0));
+        const stock = getRealStock(m);
         
         sumTotal++;
         if (stock === 0) sumEmpty++;
@@ -187,14 +198,12 @@ function renderList() {
         
         return true;
     }).map(m => {
-        const stock = Number(m.currentStock !== undefined ? m.currentStock : (m.stock !== undefined ? m.stock : 0));
+        const stock = getRealStock(m);
         let statusCls = 'normal', statusTxt = '庫存正常', defaultThumb = '📦';
         if (stock === 0) { statusCls = 'empty'; statusTxt = '目前缺貨'; defaultThumb = '⚠️'; }
         else if (stock < 10) { statusCls = 'low'; statusTxt = '庫存偏低'; defaultThumb = '🪣'; }
         
         const disBtn = stock === 0 ? 'disabled' : '';
-        
-        // 💡 支援顯示真實照片：自動抓取後端傳回的照片欄位
         const photoUrl = m.photoUrl || m.imageUrl || m.image || m.picture || m.imgUrl;
         const thumbContent = photoUrl 
             ? `<img src="${photoUrl}" style="width:100%; height:100%; object-fit:cover; border-radius:13px;">` 
@@ -269,7 +278,7 @@ function updatePreview() {
     if (!mat) return;
     
     const unit = mat.stockUnit;
-    const currentStock = Number(mat.currentStock !== undefined ? mat.currentStock : (mat.stock !== undefined ? mat.stock : 0));
+    const currentStock = getRealStock(mat);
     const q = Number(document.getElementById('qty').value || 0);
     
     let after = currentStock, sign = '＋', displayQ = q;
@@ -309,7 +318,7 @@ async function submitTransaction() {
     if (qty <= 0 && currentType !== 'WAREHOUSE_ADJUSTMENT') return alert('請輸入有效數量');
 
     const mat = materialsData.find(m => m.materialId === matId);
-    const currentStock = Number(mat.currentStock !== undefined ? mat.currentStock : (mat.stock !== undefined ? mat.stock : 0));
+    const currentStock = getRealStock(mat);
     
     if (currentType === 'PROJECT_TRANSFER_OUT' && currentStock - qty < 0) {
         if (!confirm('警告：領出後庫存將變為負數，確定要繼續嗎？')) return;
