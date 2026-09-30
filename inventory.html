@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#087f5b">
-<title>云說倉庫管理</title>
+<title>云說倉庫管理v1</title>
 <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <style>
 :root{
@@ -75,6 +75,7 @@ button,input,select,textarea{font:inherit}.app{width:min(100%,560px);min-height:
   </nav>
 </div>
 
+<!-- 底部彈出異動表單 -->
 <div id="overlay" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
   <section class="sheet">
     <div class="handle"></div>
@@ -115,19 +116,20 @@ button,input,select,textarea{font:inherit}.app{width:min(100%,560px);min-height:
 const LIFF_ID = '2011289657-dSXS9DVe';
 const API_BASE_URL = 'https://gong-cheng-linechuan-jie.onrender.com';
 
-let materialsData = [];
+let materialsData = []; // 最終合併後的資料
 let projectsData = [];
 let currentFilter = 'all';
 let currentType = 'PURCHASE_IN';
 
-// 💡 暴力破解法：掃描資料庫中所有的數量變數，確保絕對抓得到
-function getRealStock(m) {
-    if (m.currentStock !== undefined && m.currentStock !== null) return Number(m.currentStock);
-    if (m.stock !== undefined && m.stock !== null) return Number(m.stock);
-    if (m.quantity !== undefined && m.quantity !== null) return Number(m.quantity);
-    if (m.balance !== undefined && m.balance !== null) return Number(m.balance);
-    if (m.amount !== undefined && m.amount !== null) return Number(m.amount);
-    if (m.remainingBaseQuantity !== undefined && m.remainingBaseQuantity !== null) return Number(m.remainingBaseQuantity);
+// 暴力解析所有可能的庫存變數名稱
+function parseRealStock(obj) {
+    if (!obj) return 0;
+    if (obj.currentStock !== undefined && obj.currentStock !== null) return Number(obj.currentStock);
+    if (obj.stock !== undefined && obj.stock !== null) return Number(obj.stock);
+    if (obj.quantity !== undefined && obj.quantity !== null) return Number(obj.quantity);
+    if (obj.balance !== undefined && obj.balance !== null) return Number(obj.balance);
+    if (obj.amount !== undefined && obj.amount !== null) return Number(obj.amount);
+    if (obj.remainingBaseQuantity !== undefined && obj.remainingBaseQuantity !== null) return Number(obj.remainingBaseQuantity);
     return 0;
 }
 
@@ -157,24 +159,43 @@ async function initApp() {
     if (idToken) reqHeaders['Authorization'] = `Bearer ${idToken}`;
 
     try {
-        // 先抓專案案場
+        // 1. 抓取案場專案
         const projRes = await fetch(`${API_BASE_URL}/api/projects`, { headers: reqHeaders });
         const projJson = await projRes.json();
-        // 暴力解析案場陣列
         projectsData = Array.isArray(projJson) ? projJson : (projJson.projects || projJson.data || []);
 
-        // 💡 抓取倉庫庫存：不限制 success 參數，直接抓出裡面的陣列
-        let matRes = await fetch(`${API_BASE_URL}/api/warehouse/inventory`, { headers: reqHeaders });
-        let matJson = await matRes.json();
-        
-        materialsData = Array.isArray(matJson) ? matJson : (matJson.inventory || matJson.materials || matJson.data || matJson.items || []);
+        // 2. 抓取「材料字典」(負責提供 照片、名稱、料號)
+        const matRes = await fetch(`${API_BASE_URL}/api/materials`, { headers: reqHeaders });
+        const matJson = await matRes.json();
+        const catalogList = Array.isArray(matJson) ? matJson : (matJson.materials || matJson.data || matJson.items || []);
 
-        // 雙重保險：如果庫存 API 壞掉回傳空陣列，退回直接抓材料表
-        if (materialsData.length === 0) {
-            matRes = await fetch(`${API_BASE_URL}/api/materials`, { headers: reqHeaders });
-            matJson = await matRes.json();
-            materialsData = Array.isArray(matJson) ? matJson : (matJson.materials || matJson.data || matJson.items || []);
+        // 3. 抓取「倉庫庫存」(負責提供 實際數量)
+        let inventoryMap = {};
+        try {
+            const invRes = await fetch(`${API_BASE_URL}/api/warehouse/inventory`, { headers: reqHeaders });
+            if (invRes.ok) {
+                const invJson = await invRes.json();
+                const invList = Array.isArray(invJson) ? invJson : (invJson.inventory || invJson.data || invJson.items || []);
+                // 建立以 materialId 為 Key 的對照表
+                invList.forEach(item => {
+                    if (item.materialId) {
+                        inventoryMap[item.materialId] = parseRealStock(item);
+                    }
+                });
+            }
+        } catch (e) {
+            console.warn("獨立庫存 API 抓取失敗，將退回字典預設值");
         }
+
+        // 4. 完美縫合：把「照片」跟「真實庫存數字」組合在一起
+        materialsData = catalogList.map(m => {
+            const defaultStock = parseRealStock(m); // 以防材料 API 自己就有帶數量
+            const realStock = inventoryMap[m.materialId]; // 從庫存 API 抓到的數字
+            return {
+                ...m,
+                finalStock: (realStock !== undefined) ? realStock : defaultStock
+            };
+        });
 
         populateSelects();
         renderList();
@@ -187,8 +208,7 @@ async function initApp() {
 function populateSelects() {
     const mSel = document.getElementById('sheetMaterial');
     mSel.innerHTML = materialsData.map(m => {
-        const stock = getRealStock(m);
-        return `<option value="${m.materialId}">${m.materialName} (庫存:${stock}${m.stockUnit})</option>`;
+        return `<option value="${m.materialId}">${m.materialName} (庫存:${m.finalStock}${m.stockUnit})</option>`;
     }).join('');
     
     const pSel = document.getElementById('sheetProject');
@@ -200,24 +220,22 @@ function renderList() {
     let sumTotal = 0, sumLow = 0, sumEmpty = 0;
     
     const html = materialsData.filter(m => {
-        const stock = getRealStock(m);
         sumTotal++;
-        if (stock === 0) sumEmpty++;
-        else if (stock < 10) sumLow++;
+        if (m.finalStock === 0) sumEmpty++;
+        else if (m.finalStock < 10) sumLow++;
 
         if (searchStr && !m.materialName.toLowerCase().includes(searchStr) && !(m.materialCode||'').toLowerCase().includes(searchStr)) return false;
-        if (currentFilter === 'empty' && stock !== 0) return false;
-        if (currentFilter === 'low' && (stock === 0 || stock >= 10)) return false;
-        if (currentFilter === 'normal' && stock < 10) return false;
+        if (currentFilter === 'empty' && m.finalStock !== 0) return false;
+        if (currentFilter === 'low' && (m.finalStock === 0 || m.finalStock >= 10)) return false;
+        if (currentFilter === 'normal' && m.finalStock < 10) return false;
         
         return true;
     }).map(m => {
-        const stock = getRealStock(m);
         let statusCls = 'normal', statusTxt = '庫存正常', defaultThumb = '📦';
-        if (stock === 0) { statusCls = 'empty'; statusTxt = '目前缺貨'; defaultThumb = '⚠️'; }
-        else if (stock < 10) { statusCls = 'low'; statusTxt = '庫存偏低'; defaultThumb = '🪣'; }
+        if (m.finalStock === 0) { statusCls = 'empty'; statusTxt = '目前缺貨'; defaultThumb = '⚠️'; }
+        else if (m.finalStock < 10) { statusCls = 'low'; statusTxt = '庫存偏低'; defaultThumb = '🪣'; }
         
-        const disBtn = stock === 0 ? 'disabled' : '';
+        const disBtn = m.finalStock === 0 ? 'disabled' : '';
         
         const photoFileName = m.photoUrl || m.imageUrl || m.image || (m.materialCode ? m.materialCode + '.jpg' : m.materialId + '.jpg');
         const thumbContent = `<img src="images/${photoFileName}" onerror="this.outerHTML='${defaultThumb}'" style="width:100%; height:100%; object-fit:cover; border-radius:13px;">`;
@@ -227,7 +245,7 @@ function renderList() {
           <div class="card-top">
             <div class="thumb" style="padding:0; background:none;">${thumbContent}</div>
             <div class="meta"><div class="name">${m.materialName}</div><div class="code">${m.materialCode||'無編號'}</div><span class="status ${statusCls}">${statusTxt}</span></div>
-            <div class="stock"><strong class="${statusCls === 'empty' ? 'text-danger' : (statusCls === 'low' ? 'text-warning' : '')}">${stock} ${m.stockUnit}</strong></div>
+            <div class="stock"><strong class="${statusCls === 'empty' ? 'text-danger' : (statusCls === 'low' ? 'text-warning' : '')}">${m.finalStock} ${m.stockUnit}</strong></div>
           </div>
           <div class="card-actions">
             <button class="small-btn primary" onclick="openSheet('PURCHASE_IN', '${m.materialId}')">＋ 入庫</button>
@@ -291,25 +309,24 @@ function updatePreview() {
     if (!mat) return;
     
     const unit = mat.stockUnit;
-    const currentStock = getRealStock(mat);
     const q = Number(document.getElementById('qty').value || 0);
     
-    let after = currentStock, sign = '＋', displayQ = q;
+    let after = mat.finalStock, sign = '＋', displayQ = q;
     
     if (currentType === 'WAREHOUSE_ADJUSTMENT') {
         after = q;
-        const diff = q - currentStock;
+        const diff = q - mat.finalStock;
         sign = diff >= 0 ? '＋' : '−';
         displayQ = Math.abs(diff);
     } else if (currentType === 'PROJECT_TRANSFER_OUT') {
-        after = currentStock - q;
+        after = mat.finalStock - q;
         sign = '−';
     } else {
-        after = currentStock + q;
+        after = mat.finalStock + q;
         sign = '＋';
     }
 
-    document.getElementById('prevCurrent').textContent = `${currentStock} ${unit}`;
+    document.getElementById('prevCurrent').textContent = `${mat.finalStock} ${unit}`;
     document.getElementById('changeValue').textContent = `${sign}${displayQ} ${unit}`;
     
     const afterEl = document.getElementById('afterValue');
@@ -331,9 +348,8 @@ async function submitTransaction() {
     if (qty <= 0 && currentType !== 'WAREHOUSE_ADJUSTMENT') return alert('請輸入有效數量');
 
     const mat = materialsData.find(m => m.materialId === matId);
-    const currentStock = getRealStock(mat);
     
-    if (currentType === 'PROJECT_TRANSFER_OUT' && currentStock - qty < 0) {
+    if (currentType === 'PROJECT_TRANSFER_OUT' && mat.finalStock - qty < 0) {
         if (!confirm('警告：領出後庫存將變為負數，確定要繼續嗎？')) return;
     }
 
