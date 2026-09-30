@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
     <meta name="theme-color" content="#087f5b">
-    <title>云說倉庫管理</title>
+    <title>云說倉庫管理v3</title>
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <style>
         :root {
@@ -68,8 +68,8 @@
         .sheet-title { font-size: 19px; font-weight: 800; }
         .close { width: 36px; height: 36px; border: 0; border-radius: 50%; background: #f1f3f5; font-size: 20px; cursor: pointer; }
         .sheet-body { padding: 16px 18px; }
-        .type-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 9px; margin-bottom: 16px; }
-        .type-btn { padding: 13px 8px; border: 1px solid var(--line); border-radius: 12px; background: #fff; font-weight: 800; cursor: pointer; }
+        .type-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; margin-bottom: 16px; } /* 3欄平均分佈 */
+        .type-btn { padding: 13px 4px; border: 1px solid var(--line); border-radius: 12px; background: #fff; font-weight: 800; font-size: 13px; cursor: pointer; text-align: center; }
         .type-btn.active { border-color: var(--green); background: var(--green3); color: var(--green); }
         .field { margin-bottom: 14px; }
         .field label { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 800; }
@@ -80,7 +80,6 @@
         .preview-row.final { margin-top: 5px; padding-top: 10px; border-top: 1px solid #dee2e6; font-weight: 900; }
         .preview-row.final span:last-child { color: var(--green); }
         .submit { width: 100%; padding: 13px; border: 0; border-radius: 11px; background: var(--green); color: #fff; font-size: 16px; font-weight: 900; cursor: pointer; }
-        .helper { margin-top: 8px; color: var(--muted); font-size: 12px; text-align: center; line-height: 1.5; }
         .toast { position: fixed; left: 50%; bottom: calc(90px + env(safe-area-inset-bottom)); z-index: 200; transform: translate(-50%, 130px); width: min(calc(100% - 28px), 500px); padding: 13px; border-radius: 11px; background: #1864ab; color: #fff; text-align: center; opacity: 0; transition: .2s; }
         .toast.show { transform: translate(-50%, 0); opacity: 1; }
         @media(min-width: 561px) {
@@ -146,9 +145,9 @@
             <button class="close" onclick="closeSheet()" aria-label="關閉">×</button>
         </div>
         <div class="sheet-body">
+            <!-- 💡 移除盤點修正，留下 3 個核心異動按鈕並改為 3 等分排版 -->
             <div class="type-grid">
                 <button class="type-btn active" data-type="PURCHASE_IN" onclick="chooseType(this)">➕ 採購入庫</button>
-                <button class="type-btn" data-type="WAREHOUSE_ADJUSTMENT" onclick="chooseType(this)">🔄 盤點修正</button>
                 <button class="type-btn" data-type="PROJECT_TRANSFER_OUT" onclick="chooseType(this)">🚚 領至案場</button>
                 <button class="type-btn" data-type="PROJECT_RETURN" onclick="chooseType(this)">↩️ 案場退回</button>
             </div>
@@ -200,11 +199,9 @@ let projectsData = [];
 let currentFilter = 'all';
 let currentType = 'PURCHASE_IN';
 
-// 💡 1. 系統初始化與資料拉取
 async function initApp() {
     showToast("資料同步中...");
     
-    // 讀取上次紀錄的姓名
     const savedName = localStorage.getItem('warehouseOperatorName');
     if (savedName) {
         document.getElementById('operatorName').value = savedName;
@@ -228,7 +225,6 @@ async function initApp() {
     }
 
     try {
-        // 同時向後端請求庫存與專案清單 (根據 server.js，GET 讀取不需要 Token)
         const [invRes, projRes] = await Promise.all([
             fetch(`${API_BASE_URL}/api/warehouse/inventory`),
             fetch(`${API_BASE_URL}/api/projects`)
@@ -237,7 +233,6 @@ async function initApp() {
         const invJson = await invRes.json();
         const projJson = await projRes.json();
 
-        // 💡 根據 server.js，庫存資料包裝在 items 屬性中
         if (invJson.success && Array.isArray(invJson.items)) {
             materialsData = invJson.items;
         } else {
@@ -259,11 +254,9 @@ async function initApp() {
     }
 }
 
-// 💡 2. 將資料塞入下拉選單
 function populateSelects() {
     const mSel = document.getElementById('sheetMaterial');
     mSel.innerHTML = materialsData.map(m => {
-        // 精準抓取 server.js 的 stockQuantity
         const stock = Number(m.stockQuantity || 0);
         return `<option value="${m.materialId}">${m.materialName} (庫存:${stock}${m.stockUnit})</option>`;
     }).join('');
@@ -274,24 +267,19 @@ function populateSelects() {
     }).join('');
 }
 
-// 💡 3. 渲染主頁的材料卡片清單
 function renderList() {
     const searchStr = document.getElementById('searchInput').value.toLowerCase();
     let sumTotal = 0, sumLow = 0, sumEmpty = 0;
     
     const html = materialsData.filter(m => {
-        // 精準抓取 server.js 的 stockQuantity
         const stock = Number(m.stockQuantity || 0);
         
-        // 統計計算
         sumTotal++;
         if (stock === 0) sumEmpty++;
         else if (stock < 10) sumLow++;
 
-        // 搜尋過濾
         if (searchStr && !m.materialName.toLowerCase().includes(searchStr) && !(m.materialCode || '').toLowerCase().includes(searchStr)) return false;
         
-        // 標籤過濾
         if (currentFilter === 'empty' && stock !== 0) return false;
         if (currentFilter === 'low' && (stock === 0 || stock >= 10)) return false;
         if (currentFilter === 'normal' && stock < 10) return false;
@@ -314,8 +302,6 @@ function renderList() {
         }
         
         const disBtn = stock === 0 ? 'disabled' : '';
-        
-        // 圖片路徑判斷：到 images/ 尋找，找不到就退回 emoji
         const photoFileName = m.photoUrl || m.imageUrl || m.image || (m.materialCode ? m.materialCode + '.jpg' : m.materialId + '.jpg');
         const thumbContent = `<img src="images/${photoFileName}" onerror="this.outerHTML='${defaultThumb}'" style="width:100%; height:100%; object-fit:cover; border-radius:13px;">`;
 
@@ -342,13 +328,11 @@ function renderList() {
 
     document.getElementById('materialList').innerHTML = html || '<div style="text-align:center; padding: 40px; color:#6c757d;">查無符合條件的材料</div>';
     
-    // 更新頂部統計數字
     document.getElementById('sumTotal').textContent = sumTotal;
     document.getElementById('sumLow').textContent = sumLow;
     document.getElementById('sumEmpty').textContent = sumEmpty;
 }
 
-// 切換頂部篩選器
 function setFilter(type) {
     currentFilter = type;
     document.querySelectorAll('.chip').forEach(x => {
@@ -361,7 +345,6 @@ function setFilter(type) {
     renderList();
 }
 
-// 💡 4. 底部表單 UI 邏輯
 const overlay = document.getElementById('overlay');
 
 function openSheet(type, matId = null) {
@@ -371,7 +354,9 @@ function openSheet(type, matId = null) {
     if (matId) document.getElementById('sheetMaterial').value = matId;
     document.getElementById('qty').value = '';
     
-    const btn = document.querySelector(`[data-type="${type}"]`);
+    // 如果是從外面點盤點進來的，由於表單內已無盤點按鈕，我們直接預設為採購入庫或對應模式
+    const targetType = (type === 'WAREHOUSE_ADJUSTMENT') ? 'PURCHASE_IN' : type;
+    const btn = document.querySelector(`[data-type="${targetType}"]`);
     if (btn) chooseType(btn);
 }
 
@@ -402,7 +387,6 @@ function chooseType(btn) {
     updatePreview();
 }
 
-// 動態更新表單內的數字預覽
 function updatePreview() {
     const matId = document.getElementById('sheetMaterial').value;
     const mat = materialsData.find(m => m.materialId === matId);
@@ -441,7 +425,6 @@ function updatePreview() {
     }
 }
 
-// 💡 5. 送出異動資料給後端 (完全對齊 server.js 邏輯)
 async function submitTransaction() {
     const matId = document.getElementById('sheetMaterial').value;
     const qty = Number(document.getElementById('qty').value);
@@ -454,7 +437,6 @@ async function submitTransaction() {
     const mat = materialsData.find(m => m.materialId === matId);
     const currentStock = Number(mat.stockQuantity || 0);
     
-    // 防呆：領出不可大於現有庫存
     if (currentType === 'PROJECT_TRANSFER_OUT' && currentStock - qty < 0) {
         if (!confirm('警告：領出數量大於倉庫庫存，確定要繼續嗎？')) return;
     }
@@ -474,10 +456,9 @@ async function submitTransaction() {
     btn.disabled = true; 
     btn.textContent = '⏳ 送出中...';
 
-    // 依據 server.js 決定要打哪一支 API
     let endpoint = '';
     const payload = {
-        submissionId: 'SUB-' + Date.now() + '-' + Math.floor(Math.random() * 1000), // 產生隨機交易 ID
+        submissionId: 'SUB-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
         materialId: matId,
         operatorName: operator,
         remarks: document.getElementById('sheetRemark').value
@@ -489,7 +470,7 @@ async function submitTransaction() {
         if (currentType === 'PURCHASE_IN') {
             payload.quantity = qty;
         } else {
-            payload.actualQuantity = qty; // server.js 盤點要用 actualQuantity 變數
+            payload.actualQuantity = qty;
         }
     } else if (currentType === 'PROJECT_TRANSFER_OUT') {
         endpoint = `${API_BASE_URL}/api/warehouse/project-transfer`;
@@ -501,7 +482,6 @@ async function submitTransaction() {
         payload.quantity = qty;
     }
 
-    // 取得 LINE ID Token (server.js 寫入時強制需要憑證)
     let idToken = null;
     if (liff.isLoggedIn()) {
         idToken = liff.getIDToken();
@@ -525,7 +505,7 @@ async function submitTransaction() {
             localStorage.setItem('warehouseOperatorName', operator);
             showToast(`✅ ${typeNames[currentType]} 完成！`);
             closeSheet();
-            setTimeout(initApp, 1000); // 重整畫面抓最新庫存
+            setTimeout(initApp, 1000); 
         } else {
             throw new Error(result.error || '伺服器回應錯誤');
         }
@@ -538,7 +518,6 @@ async function submitTransaction() {
     }
 }
 
-// 顯示提示訊息
 function showToast(msg) {
     const t = document.getElementById('toast');
     t.textContent = msg; 
@@ -549,12 +528,10 @@ function showToast(msg) {
     }, 2600);
 }
 
-// 點擊背景關閉表單
 overlay.addEventListener('click', e => { 
     if (e.target === overlay) closeSheet(); 
 });
 
-// 啟動應用
 window.addEventListener('load', initApp);
 </script>
 </body>
