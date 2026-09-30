@@ -170,23 +170,11 @@
       <div class="dialog-header" id="warningTitle"><span aria-hidden="true">⚠️</span>發現疑似重複進場</div>
       <div class="dialog-body">
         <p class="warning-copy">今天已有相同材料從公司倉庫領入此案場。請比較以下兩筆資料，確認本次是否確實為另一批供應商直送材料。</p>
-        <section class="record-card existing">
-          <div class="card-heading"><span>已存在的進場紀錄</span><span class="source-pill">📦 公司倉庫</span></div>
-          <div class="modal-row"><span>材料</span><strong id="existingMaterialName"></strong></div>
-          <div class="modal-row"><span>數量</span><strong id="existingQuantity"></strong></div>
-          <div class="modal-row"><span>日期</span><strong id="existingDate"></strong></div>
-        </section>
-        <section class="record-card current">
-          <div class="card-heading"><span>目前準備登記</span><span class="source-pill">🚚 供應商直送</span></div>
-          <div class="modal-row"><span>材料</span><strong id="currentMaterialName"></strong></div>
-          <div class="modal-row"><span>數量</span><strong id="currentQuantity"></strong></div>
-          <div class="modal-row"><span>日期</span><strong id="currentDate"></strong></div>
-          <div class="modal-row"><span>影響</span><strong>只增加案場領入，不扣倉庫</strong></div>
-        </section>
+        <div id="duplicateMatchesContainer"></div>
         <div class="question">請確認這是否為另一批材料。</div>
         <div class="actions">
-          <button type="button" class="action-btn back-btn" onclick="closeDuplicateWarning()">返回檢查 (取消送出)</button>
-          <button type="button" class="action-btn confirm-btn" onclick="confirmDirectIssue()">確定為另一批，仍要登記</button>
+          <button type="button" id="duplicateBackButton" class="action-btn back-btn" onclick="closeDuplicateWarning()">返回檢查 (取消送出)</button>
+          <button type="button" id="forceDirectButton" class="action-btn confirm-btn" onclick="confirmDirectIssue()">確定為另一批，仍要登記</button>
         </div>
       </div>
     </div>
@@ -212,7 +200,8 @@
     let isRestoringDraft = false;
     let projectMode = 'LOADING';
     let currentSubmissionId = '';
-    let pendingDirectPayload = null; 
+    let pendingDirectPayload = null;
+    let pendingMatchMaterialId = ''; 
 
     function getTaiwanDateString() { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()); }
 
@@ -329,29 +318,20 @@
       await performFetch(payload);
     }
 
+    function escapeHtml(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
     async function performFetch(payload) {
         const btn = document.getElementById('submitButton'), formType = document.getElementById('formType').value;
         try {
             const res = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             const result = await res.json();
             
-            if (res.status === 409 && result.requiresConfirmation) {
-                const match = result.matches[0];
-                const curMat = payload.materialItems[0];
-                document.getElementById('existingMaterialName').textContent = match.materialName;
-                document.getElementById('existingQuantity').textContent = `${match.quantity} ${match.stockUnit}`;
-                document.getElementById('existingDate').textContent = payload.date;
-                document.getElementById('currentMaterialName').textContent = curMat.materialName;
-                document.getElementById('currentQuantity').textContent = `${curMat.quantity} ${curMat.stockUnit}`;
-                document.getElementById('currentDate').textContent = payload.date;
-                
-                pendingDirectPayload = payload;
-                document.getElementById('duplicateIssueOverlay').classList.remove('hidden');
-                document.body.style.overflow = 'hidden';
-                isSubmitting = false; btn.disabled = false; btn.textContent = '確認登記供應商直送';
-                return;
+            if (res.status === 409 && result.requiresConfirmation && result.warningCode === 'POSSIBLE_DUPLICATE_RECEIPT') {
+                const matches=Array.isArray(result.matches)?result.matches:[];
+                document.getElementById('duplicateMatchesContainer').innerHTML=matches.map(match=>{const cur=payload.materialItems.find(x=>x.materialId===match.materialId)||match;return `<section class="record-card existing"><div class="card-heading"><span>已存在的進場紀錄</span><span class="source-pill">📦 公司倉庫</span></div><div class="modal-row"><span>材料</span><strong>${escapeHtml(match.materialName)}</strong></div><div class="modal-row"><span>數量</span><strong>${match.quantity} ${escapeHtml(match.stockUnit)}</strong></div><div class="modal-row"><span>日期</span><strong>${escapeHtml(payload.date)}</strong></div><div class="modal-row"><span>編號</span><strong>${escapeHtml(match.existingTransferId||'未提供')}</strong></div></section><section class="record-card current"><div class="card-heading"><span>目前準備登記</span><span class="source-pill">🚚 供應商直送</span></div><div class="modal-row"><span>材料</span><strong>${escapeHtml(cur.materialName)}</strong></div><div class="modal-row"><span>數量</span><strong>${cur.quantity} ${escapeHtml(cur.stockUnit)}</strong></div><div class="modal-row"><span>日期</span><strong>${escapeHtml(payload.date)}</strong></div><div class="modal-row"><span>影響</span><strong>只增加案場領入，不扣倉庫</strong></div></section>`;}).join('');
+                pendingDirectPayload=payload;pendingMatchMaterialId=matches[0]?.materialId||'';
+                document.getElementById('duplicateIssueOverlay').classList.remove('hidden');document.body.style.overflow='hidden';
+                isSubmitting=false;btn.disabled=false;btn.textContent='確認登記供應商直送';return;
             }
-
             if (!res.ok || !result.success) throw new Error(result.error || '寫入失敗');
             
             localStorage.setItem('savedReporterName', document.getElementById('reporterName').value.trim());
@@ -362,18 +342,17 @@
     }
 
     function closeDuplicateWarning() {
-        document.getElementById('duplicateIssueOverlay').classList.add('hidden');
-        document.body.style.overflow = '';
+        document.getElementById('duplicateIssueOverlay').classList.add('hidden');document.body.style.overflow='';
+        const group=[...document.querySelectorAll('#materialsContainer .material-group')].find(el=>el.querySelector('.mat-name')?.value===pendingMatchMaterialId);
+        if(group){group.scrollIntoView({behavior:'smooth',block:'center'});group.style.outline='3px solid #f59e0b';setTimeout(()=>group.style.outline='',2500);}
     }
-    
     async function confirmDirectIssue() {
-        closeDuplicateWarning();
-        if (pendingDirectPayload) {
-            pendingDirectPayload.forceDirectIssue = true;
-            const btn = document.getElementById('submitButton');
-            isSubmitting = true; btn.disabled = true; btn.textContent = '⏳ 強制寫入中...';
-            await performFetch(pendingDirectPayload);
-        }
+        if(!pendingDirectPayload||isSubmitting)return;
+        const force=document.getElementById('forceDirectButton'),back=document.getElementById('duplicateBackButton');
+        force.disabled=true;back.disabled=true;force.textContent='⏳ 正在登記...';pendingDirectPayload.forceDirectIssue=true;
+        document.getElementById('duplicateIssueOverlay').classList.add('hidden');document.body.style.overflow='';
+        const btn=document.getElementById('submitButton');isSubmitting=true;btn.disabled=true;btn.textContent='⏳ 強制寫入中...';
+        try{await performFetch(pendingDirectPayload);}finally{force.disabled=false;back.disabled=false;force.textContent='確定為另一批，仍要登記';}
     }
   </script>
 </body>
