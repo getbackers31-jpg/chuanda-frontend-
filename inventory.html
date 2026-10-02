@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
     <meta name="theme-color" content="#087f5b">
-    <title>云說倉庫管理 v6.5.1</title>
+    <title>云說倉庫管理 v6.5.2</title>
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <style>
         :root {
@@ -119,7 +119,7 @@
     <header class="header">
         <div class="header-row">
             <div>
-                <div class="title">📦 云說倉庫管理 <span class="version-tag">v6.5.1</span></div>
+                <div class="title">📦 云說倉庫管理 <span class="version-tag">v6.5.2</span></div>
                 <div class="subtitle" id="userGreeting">載入中...</div>
             </div>
             <button class="icon-btn" aria-label="重新整理" onclick="initApp()">↻</button>
@@ -720,6 +720,133 @@ function scrapItem(key){const m=materialsData.find(x=>itemKey(x)===key);if(m.act
 async function enableItem(key){if(!confirm('確認重新啟用品項？庫存不會自動增加。'))return;try{const m=materialsData.find(x=>itemKey(x)===key),d=await apiJson(`/api/warehouse/material-items/${encodeURIComponent(key)}`,{method:'PATCH',body:JSON.stringify({action:'ENABLE',reason:'恢復使用',operatorName:document.getElementById('operatorName').value.trim()})});Object.assign(m,d.item);renderList();renderManager()}catch(e){alert(e.message)}}
 
 window.addEventListener('load', initApp);
+</script>
+<!-- v6.5.2 category selector -->
+<script>
+(() => {
+  "use strict";
+  const FIXED_CATEGORIES = ["油漆", "底漆", "中塗漆", "面漆", "溶劑", "耗材"];
+  const STOCK_UNITS = ["桶", "罐", "支"];
+  const BASE_UNITS = ["加侖", "公升", "公斤"];
+
+  function esc(value) {
+    return String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+  }
+  function operatorName() {
+    return document.getElementById("operatorName")?.value.trim() || "";
+  }
+  function installStyles() {
+    if (document.getElementById("v652Styles")) return;
+    const style = document.createElement("style");
+    style.id = "v652Styles";
+    style.textContent = `
+      .v652-overlay{position:fixed;inset:0;z-index:10000;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.46)}
+      .v652-dialog{width:100%;max-width:640px;max-height:92vh;overflow:auto;background:#fff;border-radius:18px 18px 0 0;padding:16px 14px calc(18px + env(safe-area-inset-bottom));box-shadow:0 -10px 35px rgba(0,0,0,.18)}
+      .v652-dialog h3{margin:0 0 5px}.v652-note{margin:0 0 14px;color:#6c757d;font-size:12px;line-height:1.55}
+      .v652-field{margin-bottom:13px}.v652-field label{display:block;margin:0 0 6px;font-size:13px;font-weight:800}
+      .v652-field input,.v652-field select{width:100%;min-height:47px;border:1px solid #ced4da;border-radius:11px;padding:10px 12px;background:#fff;font:inherit;box-sizing:border-box}
+      .v652-tags{display:flex;flex-wrap:wrap;gap:8px}.v652-tag{min-height:40px;padding:8px 12px;border:1px solid #dee2e6;border-radius:999px;background:#fff;font-weight:800}.v652-tag.active{border-color:#087f5b;background:#e6fcf5;color:#087f5b}
+      .v652-actions{display:grid;grid-template-columns:1fr 1.5fr;gap:8px;margin-top:15px}.v652-actions button{min-height:50px;border-radius:11px;font-weight:900}.v652-cancel{border:1px solid #dee2e6;background:#fff}.v652-save{border:0;background:#087f5b;color:#fff}
+      .v652-hidden{display:none!important}.v652-preview{padding:12px;border-radius:11px;background:#e6fcf5;color:#087f5b;font-size:13px;font-weight:800;line-height:1.6}
+    `;
+    document.head.appendChild(style);
+  }
+  function modal(title, body, onSave) {
+    installStyles();
+    const overlay = document.createElement("div");
+    overlay.className = "v652-overlay";
+    overlay.innerHTML = `<section class="v652-dialog"><h3>${esc(title)}</h3><p class="v652-note">固定選項直接點選；只有特殊規格才使用「其他」。</p>${body}<div class="v652-actions"><button type="button" class="v652-cancel">取消</button><button type="button" class="v652-save">儲存</button></div></section>`;
+    document.body.appendChild(overlay);
+    const close = () => overlay.remove();
+    overlay.querySelector(".v652-cancel").onclick = close;
+    overlay.addEventListener("click", e => { if (e.target === overlay) close(); });
+    overlay.querySelector(".v652-save").onclick = async () => {
+      try { await onSave(overlay); close(); } catch (e) { alert(e.message || "儲存失敗"); }
+    };
+    return overlay;
+  }
+  function categoryMarkup(initial = []) {
+    const fixed = new Set(initial.filter(x => FIXED_CATEGORIES.includes(x)));
+    const custom = initial.filter(x => !FIXED_CATEGORIES.includes(x));
+    return `<div class="v652-field"><label>材料標籤，可複選 *</label><div class="v652-tags">${FIXED_CATEGORIES.map(x => `<button type="button" class="v652-tag ${fixed.has(x)?"active":""}" data-cat="${esc(x)}">${esc(x)}</button>`).join("")}<button type="button" class="v652-tag ${custom.length?"active":""}" data-cat="OTHER">其他</button></div></div><div class="v652-field ${custom.length?"":"v652-hidden"}" data-custom-wrap><label>自訂材料標籤 *</label><input data-custom-category value="${esc(custom.join("、"))}" placeholder="例如：耐熱塗料"></div>`;
+  }
+  function bindCategoryUI(root) {
+    root.querySelectorAll("[data-cat]").forEach(button => {
+      button.onclick = () => {
+        button.classList.toggle("active");
+        if (button.dataset.cat === "OTHER") {
+          root.querySelector("[data-custom-wrap]").classList.toggle("v652-hidden", !button.classList.contains("active"));
+          if (!button.classList.contains("active")) root.querySelector("[data-custom-category]").value = "";
+        }
+      };
+    });
+  }
+  function readCategories(root) {
+    const values = [...root.querySelectorAll("[data-cat].active")].map(x => x.dataset.cat).filter(x => x !== "OTHER");
+    const other = root.querySelector('[data-cat="OTHER"]')?.classList.contains("active");
+    if (other) {
+      const custom = root.querySelector("[data-custom-category]").value.trim();
+      if (!custom) throw new Error("選擇其他時，自訂材料標籤必填");
+      custom.split(/[、,，]/).map(x => x.trim()).filter(Boolean).forEach(x => values.push(x));
+    }
+    const unique = [...new Set(values)];
+    if (!unique.length) throw new Error("至少選擇一個材料標籤");
+    return unique;
+  }
+  function unitMarkup(label, key, values, selected) {
+    const isCustom = selected && !values.includes(selected);
+    return `<div class="v652-field"><label>${label} *</label><select data-unit-select="${key}">${values.map(x => `<option ${x===selected?"selected":""}>${x}</option>`).join("")}<option value="OTHER" ${isCustom?"selected":""}>其他</option></select></div><div class="v652-field ${isCustom?"":"v652-hidden"}" data-unit-wrap="${key}"><label>自訂${label} *</label><input data-unit-custom="${key}" value="${isCustom?esc(selected):""}" placeholder="輸入特殊單位"></div>`;
+  }
+  function bindUnitUI(root, key) {
+    const select = root.querySelector(`[data-unit-select="${key}"]`);
+    select.onchange = () => root.querySelector(`[data-unit-wrap="${key}"]`).classList.toggle("v652-hidden", select.value !== "OTHER");
+  }
+  function readUnit(root, key) {
+    const select = root.querySelector(`[data-unit-select="${key}"]`);
+    const value = select.value === "OTHER" ? root.querySelector(`[data-unit-custom="${key}"]`).value.trim() : select.value;
+    if (!value) throw new Error("自訂單位不可空白");
+    return value;
+  }
+
+  window.editTags = function(key) {
+    const item = materialsData.find(x => itemKey(x) === key);
+    if (!item) return alert("找不到材料品項");
+    const root = modal(`修改標籤：${item.materialName}`, categoryMarkup(item.materialCategories || []), async box => {
+      const categories = readCategories(box);
+      const data = await apiJson(`/api/warehouse/material-items/${encodeURIComponent(key)}`, {method:"PATCH", body:JSON.stringify({action:"UPDATE_CATEGORIES", materialCategories:categories, operatorName:operatorName()})});
+      Object.assign(item, data.item); renderList(); renderManager();
+    });
+    bindCategoryUI(root);
+  };
+
+  window.createMaterialDialog = function() {
+    const body = `<div class="v652-field"><label>代碼狀態 *</label><select data-code-status><option value="TEMPORARY">臨時代碼，系統自動產生</option><option value="FORMAL">正式英文代碼</option></select></div><div class="v652-field v652-hidden" data-code-wrap><label>正式英文代碼 *</label><input data-code placeholder="例如 P-NP-9011-GRA-5G"></div><div class="v652-field"><label>中文材料名稱 *</label><input data-name placeholder="輸入完整中文名稱"></div>${categoryMarkup(["油漆"])}${unitMarkup("庫存單位","stock",STOCK_UNITS,"桶")}<div class="v652-field"><label>每一庫存單位的容量 *</label><input data-capacity type="number" min="0.0001" step="0.1" value="5"></div>${unitMarkup("基準單位","base",BASE_UNITS,"加侖")}<div class="v652-preview" data-preview>換算確認：1桶 = 5加侖</div>`;
+    const root = modal("新增材料品項", body, async box => {
+      const status = box.querySelector("[data-code-status]").value;
+      const materialCode = box.querySelector("[data-code]").value.trim();
+      const materialName = box.querySelector("[data-name]").value.trim();
+      const categories = readCategories(box);
+      const stockUnit = readUnit(box,"stock");
+      const baseUnit = readUnit(box,"base");
+      const packageQuantity = Number(box.querySelector("[data-capacity]").value);
+      if (!materialName) throw new Error("中文材料名稱必填");
+      if (status === "FORMAL" && !materialCode) throw new Error("正式英文代碼必填");
+      if (!(packageQuantity > 0)) throw new Error("容量必須大於0");
+      const data = await apiJson("/api/warehouse/material-items", {method:"POST", body:JSON.stringify({codeStatus:status, materialCode, materialName, materialCategories:categories, stockUnit, packageQuantity, baseUnit, createReason:"新購入材料", operatorName:operatorName()})});
+      materialsData.push(data.item); populateSelects(); renderList(); renderManager(); showToast(`✅ 已新增 ${data.item.materialCode}`);
+    });
+    bindCategoryUI(root); bindUnitUI(root,"stock"); bindUnitUI(root,"base");
+    const status = root.querySelector("[data-code-status]");
+    status.onchange = () => root.querySelector("[data-code-wrap]").classList.toggle("v652-hidden", status.value !== "FORMAL");
+    const update = () => {
+      const stock = readUnit(root,"stock"), base = readUnit(root,"base"), capacity = Number(root.querySelector("[data-capacity]").value || 0);
+      root.querySelector("[data-preview]").textContent = `換算確認：1${stock} = ${capacity}${base}`;
+    };
+    root.querySelectorAll("[data-unit-select], [data-unit-custom], [data-capacity]").forEach(x => { x.addEventListener("change", update); x.addEventListener("input", update); });
+  };
+
+  installStyles();
+})();
 </script>
 </body>
 </html>
