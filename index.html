@@ -59,7 +59,7 @@
 </head>
 <body>
   <div class="container">
-    <h2 id="formTitle">👷 施工日報表 <span class="version-tag">v6.3</span></h2>
+    <h2 id="formTitle">👷 施工日報表 <span class="version-tag">v6.3.1</span></h2>
 
     <div style="display:flex; gap:10px; margin-bottom:15px;">
         <button type="button" id="btnDailyMode" class="btn btn-primary" style="flex:1; padding:10px; border:none; border-radius:5px; background:#00B900; color:white; font-weight:bold; cursor:pointer;" onclick="switchMode('daily_report')">📝 填寫施工日報</button>
@@ -214,14 +214,14 @@
         if (mode === 'daily_report') {
             btnDaily.style.background = '#00B900'; btnDaily.style.color = 'white'; btnDaily.style.border = 'none';
             btnIssue.style.background = '#e9ecef'; btnIssue.style.color = '#333'; btnIssue.style.border = '1px solid #ccc';
-            formTitle.innerHTML = '👷 施工日報表 <span class="version-tag">v6.3</span>';
+            formTitle.innerHTML = '👷 施工日報表 <span class="version-tag">v6.3.1</span>';
             submitButton.textContent = '確認送出施工日報'; submitButton.style.background = '#00B900';
             materialLabel.textContent = '📦 今日用料';
             issueExtraSection.classList.add('hidden'); dailyOnlyElements.forEach(el => el.classList.remove('hidden'));
         } else {
             btnDaily.style.background = '#e9ecef'; btnDaily.style.color = '#333'; btnDaily.style.border = '1px solid #ccc';
             btnIssue.style.background = '#28a745'; btnIssue.style.color = 'white'; btnIssue.style.border = 'none';
-            formTitle.innerHTML = '🚚 供應商直送登記表 <span class="version-tag">v6.3</span>';
+            formTitle.innerHTML = '🚚 供應商直送登記表 <span class="version-tag">v6.3.1</span>';
             submitButton.textContent = '確認登記供應商直送'; submitButton.style.background = '#28a745';
             materialLabel.textContent = '📦 進場材料清單';
             issueExtraSection.classList.remove('hidden'); dailyOnlyElements.forEach(el => el.classList.add('hidden'));
@@ -291,7 +291,73 @@
     function refreshMaterialTitles() { document.querySelectorAll('#materialsContainer .material-group').forEach((g, i) => g.querySelector('.material-title').textContent = `品項 ${i + 1}`); document.getElementById('addMaterialButton').disabled = document.querySelectorAll('#materialsContainer .material-group').length >= MAX_MATERIAL_ROWS; }
     function updateBalanceDisplay(groupDiv) { const select = groupDiv.querySelector('.mat-name'), qtyInput = groupDiv.querySelector('.mat-qty'), infoDiv = groupDiv.querySelector('.material-balance-info'); const materialId = select.value; if (!materialId || !projectMaterialBalances[materialId]) { infoDiv.classList.add('hidden'); return; } const bData = projectMaterialBalances[materialId], iQty = Number(qtyInput.value) || 0, itm = MATERIAL_ITEMS_MAP.get(materialId), pkgQty = itm && itm.packageQuantity ? Number(itm.packageQuantity) : 1, bUnit = itm ? (itm.baseUnit || itm.stockUnit) : '', curUse = iQty * pkgQty, curRem = bData.remainingBaseQuantity, expRem = curRem - curUse, formType = document.getElementById('formType').value; infoDiv.classList.remove('hidden'); if (formType === 'material_issue') { const lbl = document.getElementById('issueType').value === 'OPENING' ? '本次開工首批進場' : '本次追加進場'; infoDiv.style.borderLeftColor = '#00B900'; infoDiv.style.backgroundColor = '#eef5ee'; infoDiv.innerHTML = `<strong>目前案場剩餘：</strong> ${curRem} ${bUnit}<br><span style="color: #00B900;"><strong>${lbl}：</strong> +${curUse} ${bUnit}</span><br><strong>登記後預計剩餘：</strong> ${curRem + curUse} ${bUnit}`; } else { if (expRem < 0 && iQty > 0) { infoDiv.style.borderLeftColor = '#dc3545'; infoDiv.style.backgroundColor = '#fff3f3'; infoDiv.innerHTML = `<strong>目前案場剩餘：</strong> ${curRem} ${bUnit}<br><strong>本次預計耗用：</strong> -${curUse} ${bUnit}<br><strong>送出後預計剩餘：</strong> <span style="color:#dc3545;font-weight:bold;">${expRem} ${bUnit}</span>`; } else { infoDiv.style.borderLeftColor = '#00B900'; infoDiv.style.backgroundColor = '#eef5ee'; infoDiv.innerHTML = `<strong>目前理論剩餘：</strong> ${curRem} ${bUnit}<br><span style="color:#007bff;"><strong>送出後預計剩餘：</strong> ${expRem} ${bUnit}</span>`; } } }
 
-    async function getWeather() { if (!navigator.geolocation) return; navigator.geolocation.getCurrentPosition(async pos => { try { const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${pos.coords.latitude}&longitude=${pos.coords.longitude}&current=temperature_2m,relative_humidity_2m,wind_speed_10m&wind_speed_unit=ms&timezone=Asia%2FTaipei`); const data = await res.json(); document.getElementById('temp').value = Number(data.current.temperature_2m).toFixed(1); document.getElementById('humidity').value = Math.round(data.current.relative_humidity_2m); document.getElementById('wind').value = Number(data.current.wind_speed_10m).toFixed(1); saveDraft(); } catch(e){} }, ()=>{}, {timeout:10000}); }
+    async function getWeather() {
+        if (!navigator.geolocation) {
+            alert('此裝置不支援定位功能，請手動填寫天氣資訊');
+            return;
+        }
+
+        const button = document.querySelector('.btn-weather');
+        button.disabled = true;
+        button.textContent = '⏳ 正在取得天氣...';
+
+        navigator.geolocation.getCurrentPosition(
+            async position => {
+                try {
+                    const response = await fetch(
+                        `https://api.open-meteo.com/v1/forecast` +
+                        `?latitude=${position.coords.latitude}` +
+                        `&longitude=${position.coords.longitude}` +
+                        `&current=temperature_2m,relative_humidity_2m,wind_speed_10m` +
+                        `&wind_speed_unit=ms` +
+                        `&timezone=Asia%2FTaipei`
+                    );
+
+                    if (!response.ok) {
+                        throw new Error(`天氣 API 回傳 HTTP ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    const current = data.current || {};
+
+                    const temperature = Number(current.temperature_2m);
+                    const humidity = Number(current.relative_humidity_2m);
+                    const windSpeed = Number(current.wind_speed_10m);
+
+                    if (
+                        !Number.isFinite(temperature) ||
+                        !Number.isFinite(humidity) ||
+                        !Number.isFinite(windSpeed)
+                    ) {
+                        throw new Error('天氣 API 未回傳完整資料');
+                    }
+
+                    document.getElementById('temp').value = temperature.toFixed(1);
+                    document.getElementById('humidity').value = Math.round(humidity);
+                    document.getElementById('wind').value = windSpeed.toFixed(1);
+
+                    saveDraft();
+                } catch (error) {
+                    console.error('取得天氣失敗：', error);
+                    alert(`無法取得天氣資訊：${error.message}\n請改為手動填寫`);
+                } finally {
+                    button.disabled = false;
+                    button.textContent = '一鍵獲取當地天氣';
+                }
+            },
+            error => {
+                console.error('定位失敗：', error);
+                button.disabled = false;
+                button.textContent = '一鍵獲取當地天氣';
+                alert('無法取得目前位置，請允許定位權限或手動填寫天氣資訊');
+            },
+            {
+                enableHighAccuracy: false,
+                timeout: 10000,
+                maximumAge: 300000
+            }
+        );
+    }
     
     function saveDraft() {
       if (isRestoringDraft || (projectMode !== 'LOCKED' && projectMode !== 'COMPATIBLE')) return;
@@ -326,7 +392,6 @@
       const btn = document.getElementById('submitButton'), formType = document.getElementById('formType').value;
       isSubmitting = true; btn.disabled = true; btn.textContent = '⏳ 正在送出...';
 
-      // 💡 已補上漏送的天氣變數
       let payload = { 
           formType, 
           projectId: document.getElementById('projectId').value.trim(), 
