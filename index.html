@@ -59,7 +59,7 @@
 </head>
 <body>
   <div class="container">
-    <h2 id="formTitle">👷 施工日報表 <span class="version-tag">v6.2</span></h2>
+    <h2 id="formTitle">👷 施工日報表 <span class="version-tag">v6.3</span></h2>
 
     <div style="display:flex; gap:10px; margin-bottom:15px;">
         <button type="button" id="btnDailyMode" class="btn btn-primary" style="flex:1; padding:10px; border:none; border-radius:5px; background:#00B900; color:white; font-weight:bold; cursor:pointer;" onclick="switchMode('daily_report')">📝 填寫施工日報</button>
@@ -128,7 +128,7 @@
       </div>
 
       <div class="daily-only">
-        <label>🌤️️ 氣象資訊</label>
+        <label>🌤 氣象資訊</label>
         <button type="button" class="btn-weather" onclick="getWeather()">一鍵獲取當地天氣</button>
         <div class="flex-row">
           <input type="number" id="temp" placeholder="溫度(度)" step="0.1" oninput="saveDraft()">
@@ -139,7 +139,7 @@
       </div>
 
       <div id="workAndMaterialSection" class="daily-only">
-        <label>🛠️️ 今日作業</label>
+        <label>🛠 今日作業</label>
         <div class="checkbox-grid" id="workItemsGrid"></div>
         <input type="text" id="customWorkItem" class="hidden" placeholder="請具體說明其他施作項目內容..." maxlength="100" oninput="saveDraft()" style="margin-top:10px">
         <textarea id="workNotes" rows="2" placeholder="作業補充（選填）" oninput="saveDraft()" style="margin-top:10px"></textarea>
@@ -214,14 +214,14 @@
         if (mode === 'daily_report') {
             btnDaily.style.background = '#00B900'; btnDaily.style.color = 'white'; btnDaily.style.border = 'none';
             btnIssue.style.background = '#e9ecef'; btnIssue.style.color = '#333'; btnIssue.style.border = '1px solid #ccc';
-            formTitle.innerHTML = '👷 施工日報表 <span class="version-tag">v6.2</span>';
+            formTitle.innerHTML = '👷 施工日報表 <span class="version-tag">v6.3</span>';
             submitButton.textContent = '確認送出施工日報'; submitButton.style.background = '#00B900';
             materialLabel.textContent = '📦 今日用料';
             issueExtraSection.classList.add('hidden'); dailyOnlyElements.forEach(el => el.classList.remove('hidden'));
         } else {
             btnDaily.style.background = '#e9ecef'; btnDaily.style.color = '#333'; btnDaily.style.border = '1px solid #ccc';
             btnIssue.style.background = '#28a745'; btnIssue.style.color = 'white'; btnIssue.style.border = 'none';
-            formTitle.innerHTML = '🚚 供應商直送登記表 <span class="version-tag">v6.2</span>';
+            formTitle.innerHTML = '🚚 供應商直送登記表 <span class="version-tag">v6.3</span>';
             submitButton.textContent = '確認登記供應商直送'; submitButton.style.background = '#28a745';
             materialLabel.textContent = '📦 進場材料清單';
             issueExtraSection.classList.remove('hidden'); dailyOnlyElements.forEach(el => el.classList.add('hidden'));
@@ -229,7 +229,6 @@
         updateAllBalances(); saveDraft();
     }
 
-    // 💡 已修正選擇器，避免選到施工廠商區塊
     function updateAllBalances() { document.querySelectorAll('#materialsContainer .material-group').forEach(group => { updateBalanceDisplay(group); }); }
     function ensureSubmissionId() { if (!currentSubmissionId) currentSubmissionId = window.crypto && typeof window.crypto.randomUUID === 'function' ? window.crypto.randomUUID() : Date.now().toString(36) + '-' + Math.random().toString(36).slice(2); return currentSubmissionId; }
     function getSelectedProjectName() { if (projectMode === 'LOCKED') return document.getElementById('lockedProjectName').value.trim(); const select = document.getElementById('projectName'); return select.options[select.selectedIndex]?.text.trim() || ''; }
@@ -289,7 +288,6 @@
         container.appendChild(div); refreshMaterialTitles(); if(!isRestoringDraft) saveDraft(); 
     }
     
-    // 💡 已修正選擇器，避免選到施工廠商區塊並導致計算錯誤
     function refreshMaterialTitles() { document.querySelectorAll('#materialsContainer .material-group').forEach((g, i) => g.querySelector('.material-title').textContent = `品項 ${i + 1}`); document.getElementById('addMaterialButton').disabled = document.querySelectorAll('#materialsContainer .material-group').length >= MAX_MATERIAL_ROWS; }
     function updateBalanceDisplay(groupDiv) { const select = groupDiv.querySelector('.mat-name'), qtyInput = groupDiv.querySelector('.mat-qty'), infoDiv = groupDiv.querySelector('.material-balance-info'); const materialId = select.value; if (!materialId || !projectMaterialBalances[materialId]) { infoDiv.classList.add('hidden'); return; } const bData = projectMaterialBalances[materialId], iQty = Number(qtyInput.value) || 0, itm = MATERIAL_ITEMS_MAP.get(materialId), pkgQty = itm && itm.packageQuantity ? Number(itm.packageQuantity) : 1, bUnit = itm ? (itm.baseUnit || itm.stockUnit) : '', curUse = iQty * pkgQty, curRem = bData.remainingBaseQuantity, expRem = curRem - curUse, formType = document.getElementById('formType').value; infoDiv.classList.remove('hidden'); if (formType === 'material_issue') { const lbl = document.getElementById('issueType').value === 'OPENING' ? '本次開工首批進場' : '本次追加進場'; infoDiv.style.borderLeftColor = '#00B900'; infoDiv.style.backgroundColor = '#eef5ee'; infoDiv.innerHTML = `<strong>目前案場剩餘：</strong> ${curRem} ${bUnit}<br><span style="color: #00B900;"><strong>${lbl}：</strong> +${curUse} ${bUnit}</span><br><strong>登記後預計剩餘：</strong> ${curRem + curUse} ${bUnit}`; } else { if (expRem < 0 && iQty > 0) { infoDiv.style.borderLeftColor = '#dc3545'; infoDiv.style.backgroundColor = '#fff3f3'; infoDiv.innerHTML = `<strong>目前案場剩餘：</strong> ${curRem} ${bUnit}<br><strong>本次預計耗用：</strong> -${curUse} ${bUnit}<br><strong>送出後預計剩餘：</strong> <span style="color:#dc3545;font-weight:bold;">${expRem} ${bUnit}</span>`; } else { infoDiv.style.borderLeftColor = '#00B900'; infoDiv.style.backgroundColor = '#eef5ee'; infoDiv.innerHTML = `<strong>目前理論剩餘：</strong> ${curRem} ${bUnit}<br><span style="color:#007bff;"><strong>送出後預計剩餘：</strong> ${expRem} ${bUnit}</span>`; } } }
 
@@ -298,17 +296,14 @@
     function saveDraft() {
       if (isRestoringDraft || (projectMode !== 'LOCKED' && projectMode !== 'COMPATIBLE')) return;
       const rName = document.getElementById('reporterName').value.trim(); if(rName) localStorage.setItem('savedReporterName', rName);
-      // 💡 已修正選擇器，保護自動存檔不再崩潰
       const draft = { formType: document.getElementById('formType').value, issueType: document.getElementById('issueType').value, submissionId: ensureSubmissionId(), projectId: document.getElementById('projectId').value.trim(), reportDate: document.getElementById('reportDate').value, isNoWork: document.getElementById('noWorkToday').checked, noWorkReason: document.getElementById('noWorkReason').value, contractorsList: [...document.querySelectorAll('.contractor-group')].map(g=>({name:g.querySelector('.contractor-name').value, customName:g.querySelector('.custom-contractor-name').value, workers:g.querySelector('.contractor-workers').value})), workItems: [...document.querySelectorAll('input[name="workItem"]:checked')].map(c=>c.value), customWorkItem: document.getElementById('customWorkItem').value, workNotes: document.getElementById('workNotes').value, noMaterial: document.getElementById('noMaterial').checked, materialsList: [...document.querySelectorAll('#materialsContainer .material-group')].map(g=>({materialId:g.querySelector('.mat-name').value, qty:g.querySelector('.mat-qty').value})), remarks: document.getElementById('remarks').value, temp: document.getElementById('temp').value, humidity: document.getElementById('humidity').value, wind: document.getElementById('wind').value };
       localStorage.setItem(getDraftKey(), JSON.stringify(draft));
     }
     
     function loadDraft() { isRestoringDraft = true; try { const saved = localStorage.getItem(getDraftKey()); if (!saved) { currentSubmissionId = ensureSubmissionId(); addContractorRow(); addMaterialRow(); return; } const draft = JSON.parse(saved); if (draft.formType) switchMode(draft.formType); if (draft.issueType) document.getElementById('issueType').value = draft.issueType; if (draft.reportDate) document.getElementById('reportDate').value = draft.reportDate; currentSubmissionId = String(draft.submissionId || ensureSubmissionId()); if (draft.isNoWork) { document.getElementById('noWorkToday').checked = true; document.getElementById('noWorkReason').value = draft.noWorkReason || ''; handleNoWorkChange(); } ['temp','humidity','wind','workNotes','remarks'].forEach(id => { document.getElementById(id).value = draft[id] || ''; }); document.getElementById('contractorsContainer').innerHTML=''; if(draft.contractorsList?.length>0) draft.contractorsList.forEach(c=>addContractorRow(c.name, c.customName, c.workers)); else addContractorRow(); if(draft.workItems) { document.querySelectorAll('input[name="workItem"]').forEach(cb => cb.checked = draft.workItems.includes(cb.value)); const hasO = draft.workItems.includes('其他'); document.getElementById('customWorkItem').classList.toggle('hidden', !hasO); document.getElementById('customWorkItem').value = hasO ? (draft.customWorkItem||'') : ''; } const noMat = draft.noMaterial === true; document.getElementById('noMaterial').checked = noMat; if(noMat) handleNoMaterialChange(); else { document.getElementById('materialsContainer').style.display='block'; document.getElementById('materialsContainer').innerHTML=''; if(draft.materialsList?.length>0) draft.materialsList.forEach(m=>addMaterialRow(m.materialId, m.qty)); else addMaterialRow(); } } catch(e){ localStorage.removeItem(getDraftKey()); document.getElementById('contractorsContainer').innerHTML=''; addContractorRow(); addMaterialRow(); } finally { isRestoringDraft = false; } }
 
-    // 💡 已修正選擇器
     function buildMaterialItems() { const formType = document.getElementById('formType').value, isNoW = formType==='daily_report' && document.getElementById('noWorkToday').checked, isNoM = formType==='daily_report' && document.getElementById('noMaterial').checked; if(isNoW || isNoM) return []; return [...document.querySelectorAll('#materialsContainer .material-group')].map(g => { const sId = g.querySelector('.mat-name').value; if(!sId || !MATERIAL_ITEMS_MAP.has(sId)) return null; const itm = MATERIAL_ITEMS_MAP.get(sId), qty = Number(g.querySelector('.mat-qty').value)||0; return { materialId: itm.materialId, materialName: itm.materialName, quantity: qty, stockUnit: itm.stockUnit, baseQuantity: qty * (itm.packageQuantity||1), baseUnit: itm.baseUnit||itm.stockUnit }; }).filter(i => i && i.quantity > 0); }
     
-    // 💡 已修正選擇器與嚴格案場檢查
     function validateForm() { 
         if(!document.getElementById('reporterName').value.trim()) return alert('請填寫姓名'), false; 
         if(!document.getElementById('projectId').value.trim()) return alert('請選擇案場'), false; 
@@ -331,7 +326,19 @@
       const btn = document.getElementById('submitButton'), formType = document.getElementById('formType').value;
       isSubmitting = true; btn.disabled = true; btn.textContent = '⏳ 正在送出...';
 
-      let payload = { formType, projectId: document.getElementById('projectId').value.trim(), projectName: getSelectedProjectName(), submissionId: ensureSubmissionId(), reporterName: document.getElementById('reporterName').value.trim(), remarks: document.getElementById('remarks').value.trim()||'無' };
+      // 💡 已補上漏送的天氣變數
+      let payload = { 
+          formType, 
+          projectId: document.getElementById('projectId').value.trim(), 
+          projectName: getSelectedProjectName(), 
+          submissionId: ensureSubmissionId(), 
+          reporterName: document.getElementById('reporterName').value.trim(), 
+          remarks: document.getElementById('remarks').value.trim()||'無',
+          temp: document.getElementById('temp').value,
+          humidity: document.getElementById('humidity').value,
+          wind: document.getElementById('wind').value
+      };
+
       if (formType === 'material_issue') { payload.issueType = document.getElementById('issueType').value; payload.date = document.getElementById('reportDate').value; payload.materialItems = buildMaterialItems(); payload.forceDirectIssue = false; } 
       else { if(document.getElementById('noWorkToday').checked){ payload.isNoWork=true; payload.noWorkReason=document.getElementById('noWorkReason').value; payload.contractorItems=[]; payload.workItems=[]; payload.materialItems=[]; } else { payload.isNoWork=false; payload.contractorItems = [...document.querySelectorAll('.contractor-group')].map(g=>({contractorName:g.querySelector('.contractor-name').value==='其他'?g.querySelector('.custom-contractor-name').value:g.querySelector('.contractor-name').value, workerCount:Number(g.querySelector('.contractor-workers').value)})).filter(i=>i.contractorName&&i.workerCount); payload.workItems=[...document.querySelectorAll('input[name="workItem"]:checked')].map(c=>c.value); payload.customWorkItem=document.getElementById('customWorkItem').value; payload.workNotes=document.getElementById('workNotes').value; payload.materialItems=buildMaterialItems(); } }
       
@@ -363,7 +370,6 @@
 
     function closeDuplicateWarning() {
         document.getElementById('duplicateIssueOverlay').classList.add('hidden');document.body.style.overflow='';
-        // 💡 已修正選擇器
         const group=[...document.querySelectorAll('#materialsContainer .material-group')].find(el=>el.querySelector('.mat-name')?.value===pendingMatchMaterialId);
         if(group){group.scrollIntoView({behavior:'smooth',block:'center'});group.style.outline='3px solid #f59e0b';setTimeout(()=>group.style.outline='',2500);}
     }
