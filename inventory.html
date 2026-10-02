@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
     <meta name="theme-color" content="#087f5b">
-    <title>云說倉庫管理 v6.5.2</title>
+    <title>云說倉庫管理 v6.5.3</title>
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <style>
         :root {
@@ -119,7 +119,7 @@
     <header class="header">
         <div class="header-row">
             <div>
-                <div class="title">📦 云說倉庫管理 <span class="version-tag">v6.5.2</span></div>
+                <div class="title">📦 云說倉庫管理 <span class="version-tag">v6.5.3</span></div>
                 <div class="subtitle" id="userGreeting">載入中...</div>
             </div>
             <button class="icon-btn" aria-label="重新整理" onclick="initApp()">↻</button>
@@ -721,7 +721,7 @@ async function enableItem(key){if(!confirm('確認重新啟用品項？庫存不
 
 window.addEventListener('load', initApp);
 </script>
-<!-- v6.5.2 category selector -->
+<!-- v6.5.3 category selector -->
 <script>
 (() => {
   "use strict";
@@ -848,5 +848,78 @@ window.addEventListener('load', initApp);
   installStyles();
 })();
 </script>
+
+<!-- v6.5.3 zero-stock disable fix -->
+<script>
+(() => {
+  "use strict";
+  const DISABLE_REASONS_UI = ['品牌不再使用','停止採購','改用其他品牌','材料規格淘汰','主管決定停用','其他'];
+
+  function closeZeroStockDisableDialog() {
+    document.getElementById('zeroStockDisableOverlay')?.remove();
+  }
+
+  async function submitZeroStockDisable(key, item) {
+    const reason = document.getElementById('zeroStockDisableReason').value;
+    const note = document.getElementById('zeroStockDisableNote').value.trim();
+    const operator = document.getElementById('operatorName').value.trim();
+    if (!operator) return alert('請先填寫操作人');
+    if (!reason) return alert('請選擇停用原因');
+    if (reason === '其他' && !note) return alert('選擇其他停用原因時，補充說明必填');
+    if (!confirm(`確認停用「${item.materialName}」？\n目前庫存：0${item.stockUnit || ''}\n停用後不會出現在一般庫存與異動選單。`)) return;
+    const button = document.getElementById('zeroStockDisableSubmit');
+    button.disabled = true;
+    button.textContent = '處理中...';
+    try {
+      const data = await apiJson(`/api/warehouse/material-items/${encodeURIComponent(key)}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ action:'DISABLE', disableReason:reason, remarks:note, operatorName:operator })
+      });
+      Object.assign(item, data.item);
+      closeZeroStockDisableDialog();
+      populateSelects();
+      renderList();
+      renderManager();
+      showToast('✅ 零庫存品項已停用');
+    } catch (error) {
+      alert(error.message || '停用失敗');
+      button.disabled = false;
+      button.textContent = '確認停用';
+    }
+  }
+
+  function openZeroStockDisableDialog(key, item) {
+    document.getElementById('zeroStockDisableOverlay')?.remove();
+    const overlay = document.createElement('div');
+    overlay.id = 'zeroStockDisableOverlay';
+    overlay.className = 'v652-overlay';
+    overlay.innerHTML = `<section class="v652-dialog">
+      <h3>停用零庫存品項</h3>
+      <p class="v652-note">此材料目前為 0${escapeHtml(item.stockUnit || '')}，沒有實體庫存可報廢。可直接停用品項並保留歷史資料。</p>
+      <div class="v652-field"><label>材料品項</label><div class="v652-preview">${escapeHtml(item.materialName)}<br>${escapeHtml(item.materialCode || item.materialId)}</div></div>
+      <div class="v652-field"><label>停用原因 *</label><select id="zeroStockDisableReason">${DISABLE_REASONS_UI.map(x => `<option>${x}</option>`).join('')}</select></div>
+      <div class="v652-field v652-hidden" id="zeroStockDisableNoteWrap"><label>補充說明 *</label><input id="zeroStockDisableNote" placeholder="請說明其他停用原因"></div>
+      <div class="v652-actions"><button type="button" class="v652-cancel" id="zeroStockDisableCancel">取消</button><button type="button" class="v652-save" id="zeroStockDisableSubmit">確認停用</button></div>
+    </section>`;
+    document.body.appendChild(overlay);
+    overlay.onclick = e => { if (e.target === overlay) closeZeroStockDisableDialog(); };
+    document.getElementById('zeroStockDisableCancel').onclick = closeZeroStockDisableDialog;
+    document.getElementById('zeroStockDisableReason').onchange = e => {
+      document.getElementById('zeroStockDisableNoteWrap').classList.toggle('v652-hidden', e.target.value !== '其他');
+      if (e.target.value !== '其他') document.getElementById('zeroStockDisableNote').value = '';
+    };
+    document.getElementById('zeroStockDisableSubmit').onclick = () => submitZeroStockDisable(key, item);
+  }
+
+  window.scrapItem = function(key) {
+    const item = materialsData.find(x => itemKey(x) === key);
+    if (!item) return alert('找不到材料品項');
+    if (item.active === false) return enableItem(key);
+    if (Number(item.stockQuantity || 0) === 0) return openZeroStockDisableDialog(key, item);
+    openSheet('SCRAP_DISPOSAL', item.materialId);
+  };
+})();
+</script>
+
 </body>
 </html>
