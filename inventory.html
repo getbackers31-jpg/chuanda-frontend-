@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
     <meta name="theme-color" content="#087f5b">
-    <title>云說倉庫管理 v6.5</title>
+    <title>云說倉庫管理 v6.5.1</title>
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <style>
         :root {
@@ -110,14 +110,16 @@
         }
 
         .report-panel{margin:10px 14px 12px;border:1px solid var(--line);border-radius:14px;background:#fff;overflow:hidden}.report-head{padding:12px 14px;border-bottom:1px solid var(--line)}.report-title{font-size:15px;font-weight:900}.report-subtitle{margin-top:3px;color:var(--muted);font-size:11px;line-height:1.45}.report-body{padding:14px}.report-range-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.report-range-btn{min-height:46px;padding:10px 8px;border:1px solid var(--line);border-radius:12px;background:#fff;color:#495057;font-size:13px;font-weight:800;cursor:pointer}.report-range-btn.active{border-color:var(--green);background:var(--green3);color:var(--green)}.custom-range{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:12px}.custom-range.hidden{display:none}.custom-range label{display:block;margin-bottom:5px;color:var(--muted);font-size:11px;font-weight:800}.custom-range input{width:100%;min-height:44px;padding:10px;border:1px solid #ced4da;border-radius:10px;background:#fff}.report-range-text{margin-top:12px;padding:10px 12px;border-radius:10px;background:#f8f9fa;color:#495057;font-size:12px;line-height:1.5}.report-sheets{margin:12px 0;padding-left:20px;color:#495057;font-size:12px;line-height:1.65}.report-submit{width:100%;min-height:50px;padding:12px 14px;border:0;border-radius:11px;background:var(--green);color:#fff;font-size:15px;font-weight:900;cursor:pointer}.report-submit:disabled{opacity:.62;cursor:not-allowed}.report-result{display:none;margin-top:12px;padding:12px;border-radius:10px;background:var(--green3);color:var(--green);font-size:12px;line-height:1.6;overflow-wrap:anywhere}.report-result.show{display:block}.report-result.error{background:var(--redbg);color:var(--red)}@media(max-width:340px){.report-range-grid,.custom-range{grid-template-columns:1fr}}
-    </style>
+    
+        .material-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}.material-tag{padding:3px 7px;border-radius:999px;background:#f1f3f5;color:#495057;font-size:10px;font-weight:800}.material-tag.temp{background:var(--orangebg);color:var(--orange)}.material-tag.off{background:#e9ecef;color:#868e96}.manage-panel{margin:10px 14px 12px;border:1px solid var(--line);border-radius:14px;background:#fff;padding:13px}.manage-row{display:flex;justify-content:space-between;align-items:center;gap:10px}.manage-btn{min-height:42px;border:0;border-radius:10px;background:var(--green);color:#fff;padding:0 14px;font-weight:900}.manage-list{display:grid;gap:10px;margin-top:12px}.manage-card{border:1px solid var(--line);border-radius:12px;padding:12px}.manage-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:10px}.manage-actions button{min-height:39px;border:1px solid var(--line);border-radius:9px;background:#fff;font-weight:800}.manage-actions .danger{color:var(--red);border-color:#ffa8a8}.category-picker{display:flex;flex-wrap:wrap;gap:7px}.category-picker button{padding:8px 11px;border:1px solid var(--line);border-radius:999px;background:#fff;font-weight:800}.category-picker button.active{border-color:var(--green);background:var(--green3);color:var(--green)}
+</style>
 </head>
 <body>
 <div class="app">
     <header class="header">
         <div class="header-row">
             <div>
-                <div class="title">📦 云說倉庫管理 <span class="version-tag">v6.5</span></div>
+                <div class="title">📦 云說倉庫管理 <span class="version-tag">v6.5.1</span></div>
                 <div class="subtitle" id="userGreeting">載入中...</div>
             </div>
             <button class="icon-btn" aria-label="重新整理" onclick="initApp()">↻</button>
@@ -166,7 +168,9 @@
         <button id="generateReportBtn" class="report-submit" type="button" onclick="generateWarehouseReport()">產生並儲存 Excel 報表</button><div id="reportResult" class="report-result" role="status"></div>
       </div>
     </section>
-    <div class="notice">
+    
+    <section class="manage-panel"><div class="manage-row"><div><strong>🏷️ 材料品項管理</strong><div class="recent-subtitle">新增品項、標籤、代碼、報廢與停用</div></div><button class="manage-btn" onclick="openMaterialManager()">開啟管理</button></div><div id="managerArea" hidden><div id="managerList" class="manage-list"></div></div></section>
+<div class="notice">
         <strong>💡 材料流向：</strong><br>
         公司倉庫送往工地請使用「領至案場」；<br>供應商直送工地請使用工程小幫手。
     </div>
@@ -192,6 +196,7 @@
                 <button class="type-btn" data-type="WAREHOUSE_ADJUSTMENT" onclick="chooseType(this)">🔄 盤點修正</button>
                 <button class="type-btn" data-type="PROJECT_TRANSFER_OUT" onclick="chooseType(this)">🚚 領至案場</button>
                 <button class="type-btn" data-type="PROJECT_RETURN" onclick="chooseType(this)">↩️ 案場退回</button>
+                <button class="type-btn" data-type="SCRAP_DISPOSAL" onclick="chooseType(this)">🗑️ 報廢材料</button>
             </div>
             
             <div class="field">
@@ -225,6 +230,8 @@
                 <div id="projectImpact" class="preview-row" hidden><span>案場材料領入</span><strong id="projImpactValue">0</strong></div>
             </div>
             
+            <div id="adjustmentReasonField" class="field" hidden><label>盤點原因</label><select id="adjustmentReason"><option value="">請選擇</option><option>定期實體盤點</option><option>前次入庫漏登</option><option>前次領料漏登</option><option>材料損壞</option><option>材料遺失</option><option>期初數量修正</option><option>其他</option></select></div>
+            <div id="scrapReasonField" class="field" hidden><label>報廢原因</label><select id="scrapReason"><option>材料過期</option><option>材料變質</option><option>材料結塊</option><option>包裝破損</option><option>受潮或污染</option><option>無法繼續施工使用</option><option>盤點確認報廢</option><option>其他</option></select><label style="margin-top:10px"><input id="disableAfterScrap" type="checkbox" style="width:auto"> 全部報廢後同步停用品項</label><select id="disableReason" style="margin-top:8px"><option>品牌不再使用</option><option>停止採購</option><option>改用其他品牌</option><option>材料規格淘汰</option><option>主管決定停用</option><option>其他</option></select></div>
             <div class="field">
                 <label>備註</label>
                 <textarea id="sheetRemark" rows="2" placeholder="選填，例如：廠商送貨、開工首批領料"></textarea>
@@ -329,7 +336,8 @@ const RECENT_TYPE_INFO = {
     WAREHOUSE_ADJUSTMENT: { label:'盤點修正', icon:'🔄', cls:'adjust' },
     PROJECT_TRANSFER_OUT: { label:'領至案場', icon:'🚚', cls:'transfer' },
     PROJECT_RETURN: { label:'案場退回', icon:'↩️', cls:'return' },
-    INITIAL_COUNT: { label:'期初盤點', icon:'📋', cls:'adjust' }
+    INITIAL_COUNT: { label:'期初盤點', icon:'📋', cls:'adjust' },
+    SCRAP_DISPOSAL: { label:'報廢處理', icon:'🗑️', cls:'transfer' }
 };
 function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
@@ -429,7 +437,7 @@ function toggleRecent() {
 
 function populateSelects() {
     const mSel = document.getElementById('sheetMaterial');
-    mSel.innerHTML = materialsData.map(m => {
+    mSel.innerHTML = materialsData.filter(m=>m.active!==false).map(m => {
         const stock = Number(m.stockQuantity || 0);
         return `<option value="${m.materialId}">${m.materialName} (庫存:${stock}${m.stockUnit})</option>`;
     }).join('');
@@ -445,7 +453,7 @@ function formatNumber(value) {
 }
 function renderList() {
     const searchStr = document.getElementById('searchInput').value.toLowerCase();
-    const managed = materialsData.filter(m => m.inventoryManaged !== false);
+    const managed = materialsData.filter(m => m.inventoryManaged !== false && m.active !== false);
     const sumTotal = managed.length;
     const sumLow = managed.filter(m => m.minimumStockEnabled === true && m.stockStatus === 'LOW_STOCK').length;
     const sumEmpty = managed.filter(m => m.stockStatus === 'OUT_OF_STOCK').length;
@@ -470,7 +478,7 @@ function renderList() {
         const photo=m.photoUrl||m.imageUrl||m.image||(m.materialCode?m.materialCode+'.jpg':m.materialId+'.jpg');
         const thumb=`<img src="images/${photo}" onerror="this.outerHTML='${icon}'" style="width:100%;height:100%;object-fit:cover;border-radius:13px;">`;
         return `<article class="card" role="button" tabindex="0" aria-label="選擇 ${m.materialName} 並新增庫存異動" onclick="openSheet(null,'${m.materialId}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openSheet(null,'${m.materialId}');}">
-          <div class="card-top"><div class="thumb" style="padding:0;background:none;">${thumb}</div><div class="meta"><div class="name">${m.materialName}</div><div class="code">${m.materialCode||'無編號'}</div><span class="status ${statusCls}">${statusTxt}</span>${note}</div><div class="stock"><strong>${formatNumber(stock)}${m.stockUnit}</strong><span>共${formatNumber(baseQty)}${m.baseUnit||m.stockUnit}</span></div></div>
+          <div class="card-top"><div class="thumb" style="padding:0;background:none;">${thumb}</div><div class="meta"><div class="name">${m.materialName}</div><div class="code">${m.materialCode||'無編號'}</div><div class="material-tags">${(m.materialCategories?.length?m.materialCategories:['尚未分類']).map(x=>`<span class="material-tag">${escapeHtml(x)}</span>`).join('')}${m.codeStatus==='TEMPORARY'?'<span class="material-tag temp">臨時代碼</span>':''}</div><span class="status ${statusCls}">${statusTxt}</span>${note}</div><div class="stock"><strong>${formatNumber(stock)}${m.stockUnit}</strong><span>共${formatNumber(baseQty)}${m.baseUnit||m.stockUnit}</span></div></div>
           <div class="card-hint">點擊卡片選擇入庫、盤點、領料或退回 ›</div></article>`;
     }).join('');
     document.getElementById('materialList').innerHTML=html||'<div style="text-align:center;padding:40px;color:#6c757d;">查無符合條件的材料</div>';
@@ -497,7 +505,10 @@ function openSheet(type = null, matId = null) {
     overlay.classList.remove('hidden');
     document.body.style.overflow = 'hidden';
     if (matId) document.getElementById('sheetMaterial').value = matId;
-    document.getElementById('qty').value = '';
+    const qtyInput = document.getElementById('qty');
+    qtyInput.disabled = false;
+    qtyInput.value = '';
+    document.getElementById('disableAfterScrap').checked = false;
     document.getElementById('sheetRemark').value = '';
     const btn = document.querySelector(`[data-type="${type || 'PURCHASE_IN'}"]`);
     if (btn) chooseType(btn);
@@ -516,6 +527,8 @@ function chooseType(btn) {
     currentType = btn.dataset.type;
     
     const needsProject = ['PROJECT_TRANSFER_OUT', 'PROJECT_RETURN'].includes(currentType);
+    document.getElementById('adjustmentReasonField').hidden=currentType!=='WAREHOUSE_ADJUSTMENT';
+    document.getElementById('scrapReasonField').hidden=currentType!=='SCRAP_DISPOSAL';
     document.getElementById('projectField').hidden = !needsProject;
     document.getElementById('projectImpact').hidden = currentType !== 'PROJECT_TRANSFER_OUT';
     
@@ -523,7 +536,8 @@ function chooseType(btn) {
         PURCHASE_IN: ['本次入庫數量', '本次入庫'],
         WAREHOUSE_ADJUSTMENT: ['盤點後實際總數量', '盤點差異'],
         PROJECT_TRANSFER_OUT: ['領出數量', '本次領出'],
-        PROJECT_RETURN: ['退回數量', '本次退回']
+        PROJECT_RETURN: ['退回數量', '本次退回'],
+        SCRAP_DISPOSAL: ['報廢數量', '本次報廢']
     };
     
     document.getElementById('qtyLabel').textContent = labels[currentType][0];
@@ -550,7 +564,7 @@ function updatePreview() {
         const diff = q - currentStock;
         sign = diff >= 0 ? '＋' : '−';
         displayQ = Math.abs(diff);
-    } else if (currentType === 'PROJECT_TRANSFER_OUT') {
+    } else if (['PROJECT_TRANSFER_OUT','SCRAP_DISPOSAL'].includes(currentType)) {
         after = currentStock - q;
         sign = '−';
     } else {
@@ -582,18 +596,30 @@ async function submitTransaction() {
     if (!transactionDate) return alert('請選擇異動日期');
     if (!Number.isFinite(qty) || qty < 0) return alert('請輸入有效數量');
     if (qty <= 0 && currentType !== 'WAREHOUSE_ADJUSTMENT') return alert('請輸入大於 0 的有效數量');
+    const remarks = document.getElementById('sheetRemark').value.trim();
+    if (currentType === 'WAREHOUSE_ADJUSTMENT') {
+        const adjReason = document.getElementById('adjustmentReason').value;
+        if (!adjReason) return alert('請選擇盤點原因');
+        if (adjReason === '其他' && !remarks) return alert('選擇其他盤點原因時，備註說明必填');
+    } else if (currentType === 'SCRAP_DISPOSAL') {
+        const scrapReason = document.getElementById('scrapReason').value;
+        const disableAfter = document.getElementById('disableAfterScrap').checked;
+        const disableReason = document.getElementById('disableReason').value;
+        if (scrapReason === '其他' && !remarks) return alert('選擇其他報廢原因時，備註說明必填');
+        if (disableAfter && disableReason === '其他' && !remarks) return alert('選擇其他停用原因時，備註說明必填');
+    }
     if (['PROJECT_TRANSFER_OUT','PROJECT_RETURN'].includes(currentType) && !projectId) return alert('請選擇案場');
 
     const mat = materialsData.find(m => m.materialId === matId);
     const currentStock = Number(mat.stockQuantity || 0);
-    if (currentType === 'PROJECT_TRANSFER_OUT' && currentStock - qty < 0) {
+    if (['PROJECT_TRANSFER_OUT','SCRAP_DISPOSAL'].includes(currentType) && currentStock - qty < 0) {
         return alert(`倉庫庫存不足，目前只有 ${currentStock}${mat.stockUnit}`);
     }
 
-    const names = {PURCHASE_IN:'採購入庫',WAREHOUSE_ADJUSTMENT:'盤點修正',PROJECT_TRANSFER_OUT:'倉庫領至案場',PROJECT_RETURN:'案場退回'};
+    const names = {PURCHASE_IN:'採購入庫',WAREHOUSE_ADJUSTMENT:'盤點修正',PROJECT_TRANSFER_OUT:'倉庫領至案場',PROJECT_RETURN:'案場退回',SCRAP_DISPOSAL:'報廢材料'};
     let after = currentStock;
     if (currentType === 'WAREHOUSE_ADJUSTMENT') after = qty;
-    else if (currentType === 'PROJECT_TRANSFER_OUT') after = currentStock - qty;
+    else if (['PROJECT_TRANSFER_OUT','SCRAP_DISPOSAL'].includes(currentType)) after = currentStock - qty;
     else after = currentStock + qty;
 
     if (!confirm(`確認執行「${names[currentType]}」？
@@ -613,7 +639,10 @@ async function submitTransaction() {
         endpoint = `${API_BASE_URL}/api/warehouse/transactions`;
         payload.transactionType = currentType;
         if (currentType === 'PURCHASE_IN') payload.quantity = qty;
-        else payload.actualQuantity = qty;
+        else {payload.actualQuantity = qty;payload.adjustmentReason=document.getElementById('adjustmentReason').value;}
+    } else if (currentType === 'SCRAP_DISPOSAL') {
+        endpoint = `${API_BASE_URL}/api/warehouse/material-items/${encodeURIComponent(itemKey(mat))}/scrap`;
+        payload.quantity=qty;payload.scrapReason=document.getElementById('scrapReason').value;payload.disableAfter=document.getElementById('disableAfterScrap').checked;payload.disableReason=document.getElementById('disableReason').value;
     } else if (currentType === 'PROJECT_TRANSFER_OUT') {
         endpoint = `${API_BASE_URL}/api/warehouse/project-transfer`;
         payload.projectId = projectId;
@@ -657,9 +686,38 @@ function showToast(msg) {
     }, 2600);
 }
 
+document.getElementById('disableAfterScrap').addEventListener('change', function() {
+    const qtyInput = document.getElementById('qty');
+    const matId = document.getElementById('sheetMaterial').value;
+    const mat = materialsData.find(m => m.materialId === matId);
+    if (!mat) return;
+    if (this.checked) {
+        qtyInput.value = Number(mat.stockQuantity || 0);
+        qtyInput.disabled = true;
+    } else {
+        qtyInput.disabled = false;
+        qtyInput.value = '';
+    }
+    updatePreview();
+});
 overlay.addEventListener('click', e => { 
     if (e.target === overlay && !isSubmitting) closeSheet(); 
 });
+
+
+const CATEGORY_OPTIONS=['油漆','底漆','中塗漆','面漆','溶劑','耗材'];
+function authHeaders(){const t=liff.isLoggedIn()?liff.getIDToken():null;return {'Content-Type':'application/json',Authorization:`Bearer ${t}`}}
+function itemKey(m){return m.materialUid||m.materialId}
+async function openMaterialManager(){const area=document.getElementById('managerArea');area.hidden=!area.hidden;if(!area.hidden)renderManager()}
+function renderManager(){const el=document.getElementById('managerList');el.innerHTML=`<button class="manage-btn" onclick="createMaterialDialog()">＋ 新增材料品項</button>`+materialsData.map(m=>`<article class="manage-card"><strong>${escapeHtml(m.materialName)}</strong><div class="code">${escapeHtml(m.materialCode||m.materialId)}</div><div class="material-tags">${(m.materialCategories?.length?m.materialCategories:['尚未分類']).map(x=>`<span class="material-tag">${escapeHtml(x)}</span>`).join('')}${m.codeStatus==='TEMPORARY'?'<span class="material-tag temp">臨時代碼</span>':''}${m.active===false?'<span class="material-tag off">已停用</span>':''}</div><div class="manage-actions"><button onclick="editTags('${itemKey(m)}')">修改標籤</button><button onclick="renameItem('${itemKey(m)}')">修改中文名稱</button><button onclick="recodeItem('${itemKey(m)}')">${m.codeStatus==='TEMPORARY'?'轉正式代碼':'更正英文代碼'}</button><button class="danger" onclick="scrapItem('${itemKey(m)}')">${m.active===false?'重新啟用':'報廢／停用'}</button></div></article>`).join('')}
+async function apiJson(url,opt={}){const r=await fetch(`${API_BASE_URL}${url}`,{...opt,headers:{...authHeaders(),...(opt.headers||{})}}),d=await r.json();if(!r.ok||!d.success)throw new Error(d.error||'操作失敗');return d}
+function chooseCategories(initial=[]){const value=prompt(`輸入材料標籤，可用逗號分隔：\n${CATEGORY_OPTIONS.join('、')}\n也可輸入自訂標籤`,initial.join(','));return value===null?null:value.split(/[,，]/).map(x=>x.trim()).filter(Boolean)}
+async function createMaterialDialog(){try{const name=prompt('中文材料名稱');if(!name)return;const temp=confirm('按「確定」使用臨時代碼；按「取消」輸入正式英文代碼');const code=temp?'':prompt('正式英文代碼');if(!temp&&!code)return;const cats=chooseCategories(['油漆']);if(!cats?.length)return;const stockUnit=prompt('庫存單位（桶／罐／支／其他）','桶');if(!stockUnit)return;const capacity=Number(prompt('每一庫存單位的容量','5'));const baseUnit=prompt('基準單位（加侖／公升／公斤／其他）','加侖');if(!baseUnit||!(capacity>0))return alert('容量或單位不正確');const operator=document.getElementById('operatorName').value.trim()||prompt('操作人');const d=await apiJson('/api/warehouse/material-items',{method:'POST',body:JSON.stringify({codeStatus:temp?'TEMPORARY':'FORMAL',materialCode:code,materialName:name,materialCategories:cats,stockUnit,packageQuantity:capacity,baseUnit,createReason:'新購入材料',operatorName:operator})});materialsData.push(d.item);populateSelects();renderList();renderManager();showToast(`✅ 已新增 ${d.item.materialCode}`)}catch(e){alert(e.message)}}
+async function editTags(key){const m=materialsData.find(x=>itemKey(x)===key),cats=chooseCategories(m.materialCategories||[]);if(!cats)return;try{const d=await apiJson(`/api/warehouse/material-items/${encodeURIComponent(key)}`,{method:'PATCH',body:JSON.stringify({action:'UPDATE_CATEGORIES',materialCategories:cats,operatorName:document.getElementById('operatorName').value.trim()})});Object.assign(m,d.item);renderList();renderManager()}catch(e){alert(e.message)}}
+async function renameItem(key){const m=materialsData.find(x=>itemKey(x)===key),name=prompt('新的中文名稱',m.materialName);if(!name)return;try{const d=await apiJson(`/api/warehouse/material-items/${encodeURIComponent(key)}`,{method:'PATCH',body:JSON.stringify({action:'RENAME',materialName:name,reason:'主管確認名稱',operatorName:document.getElementById('operatorName').value.trim()})});Object.assign(m,d.item);renderList();renderManager()}catch(e){alert(e.message)}}
+async function recodeItem(key){const m=materialsData.find(x=>itemKey(x)===key),code=prompt('新的正式英文代碼',m.codeStatus==='TEMPORARY'?'':m.materialCode);if(!code)return;try{const d=await apiJson(`/api/warehouse/material-items/${encodeURIComponent(key)}`,{method:'PATCH',body:JSON.stringify({action:m.codeStatus==='TEMPORARY'?'FORMALIZE':'RECODE',materialCode:code,reason:m.codeStatus==='TEMPORARY'?'臨時代碼轉正式':'主管調整編碼',operatorName:document.getElementById('operatorName').value.trim()})});Object.assign(m,d.item);populateSelects();renderList();renderManager()}catch(e){alert(e.message)}}
+function scrapItem(key){const m=materialsData.find(x=>itemKey(x)===key);if(m.active===false)return enableItem(key);openSheet('SCRAP_DISPOSAL',m.materialId)}
+async function enableItem(key){if(!confirm('確認重新啟用品項？庫存不會自動增加。'))return;try{const m=materialsData.find(x=>itemKey(x)===key),d=await apiJson(`/api/warehouse/material-items/${encodeURIComponent(key)}`,{method:'PATCH',body:JSON.stringify({action:'ENABLE',reason:'恢復使用',operatorName:document.getElementById('operatorName').value.trim()})});Object.assign(m,d.item);renderList();renderManager()}catch(e){alert(e.message)}}
 
 window.addEventListener('load', initApp);
 </script>
