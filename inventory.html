@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
     <meta name="theme-color" content="#087f5b">
-    <title>云說倉庫管理 v6.4</title>
+    <title>云說倉庫管理 v6.4.1</title>
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <style>
         :root {
@@ -109,26 +109,7 @@
             .sheet { margin-bottom: 18px; border-radius: 20px; }
         }
 
-        .report-panel { margin: 10px 14px 12px; border: 1px solid var(--line); border-radius: 14px; background: #fff; overflow: hidden; }
-        .report-head { padding: 12px 14px; border-bottom: 1px solid var(--line); }
-        .report-title { font-size: 15px; font-weight: 900; }
-        .report-subtitle { margin-top: 3px; color: var(--muted); font-size: 11px; line-height: 1.45; }
-        .report-body { padding: 14px; }
-        .report-range-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
-        .report-range-btn { min-height: 46px; padding: 10px 8px; border: 1px solid var(--line); border-radius: 12px; background: #fff; color: #495057; font-size: 13px; font-weight: 800; cursor: pointer; }
-        .report-range-btn.active { border-color: var(--green); background: var(--green3); color: var(--green); }
-        .custom-range { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 9px; margin-top: 12px; }
-        .custom-range.hidden { display: none; }
-        .custom-range label { display: block; margin-bottom: 5px; color: var(--muted); font-size: 11px; font-weight: 800; }
-        .custom-range input { width: 100%; min-height: 44px; padding: 10px; border: 1px solid #ced4da; border-radius: 10px; background: #fff; }
-        .report-range-text { margin-top: 12px; padding: 10px 12px; border-radius: 10px; background: #f8f9fa; color: #495057; font-size: 12px; line-height: 1.5; }
-        .report-sheets { margin: 12px 0; padding-left: 20px; color: #495057; font-size: 12px; line-height: 1.65; }
-        .report-submit { width: 100%; min-height: 50px; padding: 12px 14px; border: 0; border-radius: 11px; background: var(--green); color: #fff; font-size: 15px; font-weight: 900; cursor: pointer; }
-        .report-submit:disabled { opacity: .62; cursor: not-allowed; }
-        .report-result { display: none; margin-top: 12px; padding: 12px; border-radius: 10px; background: var(--green3); color: var(--green); font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
-        .report-result.show { display: block; }
-        .report-result.error { background: var(--redbg); color: var(--red); }
-        @media (max-width: 340px) { .report-range-grid, .custom-range { grid-template-columns: 1fr; } }
+        .report-panel{margin:10px 14px 12px;border:1px solid var(--line);border-radius:14px;background:#fff;overflow:hidden}.report-head{padding:12px 14px;border-bottom:1px solid var(--line)}.report-title{font-size:15px;font-weight:900}.report-subtitle{margin-top:3px;color:var(--muted);font-size:11px;line-height:1.45}.report-body{padding:14px}.report-range-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.report-range-btn{min-height:46px;padding:10px 8px;border:1px solid var(--line);border-radius:12px;background:#fff;color:#495057;font-size:13px;font-weight:800;cursor:pointer}.report-range-btn.active{border-color:var(--green);background:var(--green3);color:var(--green)}.custom-range{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:12px}.custom-range.hidden{display:none}.custom-range label{display:block;margin-bottom:5px;color:var(--muted);font-size:11px;font-weight:800}.custom-range input{width:100%;min-height:44px;padding:10px;border:1px solid #ced4da;border-radius:10px;background:#fff}.report-range-text{margin-top:12px;padding:10px 12px;border-radius:10px;background:#f8f9fa;color:#495057;font-size:12px;line-height:1.5}.report-sheets{margin:12px 0;padding-left:20px;color:#495057;font-size:12px;line-height:1.65}.report-submit{width:100%;min-height:50px;padding:12px 14px;border:0;border-radius:11px;background:var(--green);color:#fff;font-size:15px;font-weight:900;cursor:pointer}.report-submit:disabled{opacity:.62;cursor:not-allowed}.report-result{display:none;margin-top:12px;padding:12px;border-radius:10px;background:var(--green3);color:var(--green);font-size:12px;line-height:1.6;overflow-wrap:anywhere}.report-result.show{display:block}.report-result.error{background:var(--redbg);color:var(--red)}@media(max-width:340px){.report-range-grid,.custom-range{grid-template-columns:1fr}}
     </style>
 </head>
 <body>
@@ -136,7 +117,7 @@
     <header class="header">
         <div class="header-row">
             <div>
-                <div class="title">📦 云說倉庫管理 <span class="version-tag">v6.4</span></div>
+                <div class="title">📦 云說倉庫管理 <span class="version-tag">v6.4.1</span></div>
                 <div class="subtitle" id="userGreeting">載入中...</div>
             </div>
             <button class="icon-btn" aria-label="重新整理" onclick="initApp()">↻</button>
@@ -171,28 +152,19 @@
 
 
     <section class="report-panel" aria-labelledby="warehouseReportTitle">
-        <div class="report-head">
-            <div class="report-title" id="warehouseReportTitle">📊 倉庫 Excel 報表</div>
-            <div class="report-subtitle">報表將直接儲存到公司 OneDrive，不會下載到手機。</div>
+      <div class="report-head"><div class="report-title" id="warehouseReportTitle">📊 倉庫 Excel 報表</div><div class="report-subtitle">報表會直接儲存到公司 OneDrive，不會下載到手機。</div></div>
+      <div class="report-body">
+        <div class="report-range-grid" role="group" aria-label="報表範圍">
+          <button type="button" class="report-range-btn" data-report-range="all" onclick="selectReportRange('all')">全部紀錄</button>
+          <button type="button" class="report-range-btn active" data-report-range="month" onclick="selectReportRange('month')">本月</button>
+          <button type="button" class="report-range-btn" data-report-range="custom" onclick="selectReportRange('custom')">自訂日期</button>
+          <button type="button" class="report-range-btn" data-report-range="current" onclick="selectReportRange('current')">目前庫存</button>
         </div>
-        <div class="report-body">
-            <div class="report-range-grid" role="group" aria-label="報表範圍">
-                <button type="button" class="report-range-btn" data-report-range="all" onclick="selectReportRange('all')">全部紀錄</button>
-                <button type="button" class="report-range-btn active" data-report-range="month" onclick="selectReportRange('month')">本月</button>
-                <button type="button" class="report-range-btn" data-report-range="custom" onclick="selectReportRange('custom')">自訂日期</button>
-                <button type="button" class="report-range-btn" data-report-range="current" onclick="selectReportRange('current')">目前庫存</button>
-            </div>
-            <div id="customRangeFields" class="custom-range hidden">
-                <div><label for="reportStartDate">開始日期</label><input id="reportStartDate" type="date" onchange="updateReportRangeText()"></div>
-                <div><label for="reportEndDate">結束日期</label><input id="reportEndDate" type="date" onchange="updateReportRangeText()"></div>
-            </div>
-            <div id="reportRangeText" class="report-range-text">正在計算報表範圍...</div>
-            <ol class="report-sheets">
-                <li>倉庫庫存總表</li><li>倉庫異動明細</li><li>案場轉撥紀錄</li><li>盤點差異</li><li>庫存警示</li>
-            </ol>
-            <button id="generateReportBtn" class="report-submit" type="button" onclick="generateWarehouseReport()">產生並儲存 Excel 報表</button>
-            <div id="reportResult" class="report-result" role="status"></div>
-        </div>
+        <div id="customRangeFields" class="custom-range hidden"><div><label for="reportStartDate">開始日期</label><input id="reportStartDate" type="date" onchange="updateReportRangeText()"></div><div><label for="reportEndDate">結束日期</label><input id="reportEndDate" type="date" onchange="updateReportRangeText()"></div></div>
+        <div id="reportRangeText" class="report-range-text">正在計算報表範圍...</div>
+        <ol class="report-sheets"><li>倉庫庫存總表</li><li>倉庫異動明細</li><li>案場轉撥紀錄</li><li>盤點差異</li><li>庫存警示</li></ol>
+        <button id="generateReportBtn" class="report-submit" type="button" onclick="generateWarehouseReport()">產生並儲存 Excel 報表</button><div id="reportResult" class="report-result" role="status"></div>
+      </div>
     </section>
     <div class="notice">
         <strong>💡 材料流向：</strong><br>
@@ -277,110 +249,12 @@ let isSubmitting = false;
 let currentReportRange = 'month';
 
 
-function formatDateForDisplay(value) {
-    return value ? value.replace(/-/g, '/') : '';
-}
-function firstDayOfTaiwanMonth() {
-    const today = getTaiwanDateString();
-    return `${today.slice(0, 7)}-01`;
-}
-function initializeReportControls() {
-    const today = getTaiwanDateString();
-    const start = document.getElementById('reportStartDate');
-    const end = document.getElementById('reportEndDate');
-    if (start && end) {
-        start.value = start.value || firstDayOfTaiwanMonth();
-        end.value = end.value || today;
-        start.max = today;
-        end.max = today;
-    }
-    selectReportRange(currentReportRange);
-}
-function selectReportRange(range) {
-    currentReportRange = range;
-    document.querySelectorAll('[data-report-range]').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.reportRange === range);
-    });
-    const customFields = document.getElementById('customRangeFields');
-    if (customFields) customFields.classList.toggle('hidden', range !== 'custom');
-    updateReportRangeText();
-}
-function updateReportRangeText() {
-    const el = document.getElementById('reportRangeText');
-    if (!el) return;
-    const today = getTaiwanDateString();
-    if (currentReportRange === 'all') {
-        el.textContent = '報表範圍：第一筆倉庫異動至匯出當下';
-    } else if (currentReportRange === 'month') {
-        el.textContent = `報表範圍：${formatDateForDisplay(firstDayOfTaiwanMonth())} 至 ${formatDateForDisplay(today)}`;
-    } else if (currentReportRange === 'current') {
-        el.textContent = `庫存快照：截至 ${formatDateForDisplay(today)}；不包含期間異動明細`;
-    } else {
-        const start = document.getElementById('reportStartDate')?.value || '';
-        const end = document.getElementById('reportEndDate')?.value || '';
-        el.textContent = start && end
-            ? `報表範圍：${formatDateForDisplay(start)} 至 ${formatDateForDisplay(end)}`
-            : '請選擇開始日期與結束日期';
-    }
-}
-async function generateWarehouseReport() {
-    const button = document.getElementById('generateReportBtn');
-    const resultBox = document.getElementById('reportResult');
-    if (!button || !resultBox) return;
-    const payload = { range: currentReportRange };
-    if (currentReportRange === 'custom') {
-        payload.startDate = document.getElementById('reportStartDate').value;
-        payload.endDate = document.getElementById('reportEndDate').value;
-        if (!payload.startDate || !payload.endDate) {
-            resultBox.className = 'report-result show error';
-            resultBox.textContent = '請選擇開始日期與結束日期。';
-            return;
-        }
-        if (payload.startDate > payload.endDate) {
-            resultBox.className = 'report-result show error';
-            resultBox.textContent = '開始日期不可晚於結束日期。';
-            return;
-        }
-    }
-    const token = liff.isLoggedIn() ? liff.getIDToken() : null;
-    if (!token) {
-        try { restartLineLogin(); } catch (error) {
-            resultBox.className = 'report-result show error';
-            resultBox.textContent = error.message;
-        }
-        return;
-    }
-    button.disabled = true;
-    button.textContent = '⏳ 正在產生並儲存報表...';
-    resultBox.className = 'report-result show';
-    resultBox.textContent = '正在整理庫存與異動資料，報表完成後會直接存入 OneDrive。';
-    try {
-        const response = await fetch(`${API_BASE_URL}/api/warehouse/export-excel`, {
-            method: 'POST',
-            headers: { 'Content-Type':'application/json', Authorization:`Bearer ${token}` },
-            body: JSON.stringify(payload)
-        });
-        const text = await response.text();
-        let result = {};
-        try { result = text ? JSON.parse(text) : {}; }
-        catch (_) { throw new Error(`API 回傳格式錯誤（HTTP ${response.status}）`); }
-        if (response.status === 401) {
-            restartLineLogin();
-            return;
-        }
-        if (!response.ok || !result.success) throw new Error(result.error || result.message || `報表產生失敗（HTTP ${response.status}）`);
-        clearAuthRetryFlag();
-        resultBox.className = 'report-result show';
-        resultBox.innerHTML = `✅ Excel 報表已儲存至 OneDrive<br><strong>${escapeHtml(result.fileName || '')}</strong><br>${escapeHtml(result.folderPath || '')}`;
-        showToast('✅ 倉庫 Excel 報表已儲存');
-    } catch (error) {
-        resultBox.className = 'report-result show error';
-        resultBox.textContent = `產生報表失敗：${error.message}`;
-    } finally {
-        button.disabled = false;
-        button.textContent = '產生並儲存 Excel 報表';
-    }
-}
+function firstDayOfTaiwanMonth(){const t=getTaiwanDateString();return `${t.slice(0,7)}-01`}
+function fmtReportDate(v){return v?String(v).replace(/-/g,'/'):''}
+function initializeReportControls(){const t=getTaiwanDateString(),s=document.getElementById('reportStartDate'),e=document.getElementById('reportEndDate');if(s&&e){s.value=s.value||firstDayOfTaiwanMonth();e.value=e.value||t;s.max=t;e.max=t}selectReportRange(currentReportRange)}
+function selectReportRange(r){currentReportRange=r;document.querySelectorAll('[data-report-range]').forEach(b=>b.classList.toggle('active',b.dataset.reportRange===r));document.getElementById('customRangeFields')?.classList.toggle('hidden',r!=='custom');updateReportRangeText()}
+function updateReportRangeText(){const el=document.getElementById('reportRangeText');if(!el)return;const t=getTaiwanDateString();if(currentReportRange==='all')el.textContent='報表範圍：第一筆倉庫異動至匯出當下';else if(currentReportRange==='month')el.textContent=`報表範圍：${fmtReportDate(firstDayOfTaiwanMonth())} 至 ${fmtReportDate(t)}`;else if(currentReportRange==='current')el.textContent=`庫存快照：截至 ${fmtReportDate(t)}；不包含期間異動明細`;else{const s=document.getElementById('reportStartDate').value,e=document.getElementById('reportEndDate').value;el.textContent=s&&e?`報表範圍：${fmtReportDate(s)} 至 ${fmtReportDate(e)}`:'請選擇開始日期與結束日期'}}
+async function generateWarehouseReport(){const b=document.getElementById('generateReportBtn'),box=document.getElementById('reportResult'),payload={range:currentReportRange};if(currentReportRange==='custom'){payload.startDate=document.getElementById('reportStartDate').value;payload.endDate=document.getElementById('reportEndDate').value;if(!payload.startDate||!payload.endDate){box.className='report-result show error';box.textContent='請選擇開始日期與結束日期。';return}if(payload.startDate>payload.endDate){box.className='report-result show error';box.textContent='開始日期不可晚於結束日期。';return}}const token=liff.isLoggedIn()?liff.getIDToken():null;if(!token){try{restartLineLogin()}catch(e){box.className='report-result show error';box.textContent=e.message}return}b.disabled=true;b.textContent='⏳ 正在產生並儲存報表...';box.className='report-result show';box.textContent='正在整理資料，完成後會直接存入 OneDrive。';try{const r=await fetch(`${API_BASE_URL}/api/warehouse/export-excel`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`},body:JSON.stringify(payload)}),txt=await r.text();let data={};try{data=txt?JSON.parse(txt):{}}catch(_){throw new Error(`API 回傳格式錯誤（HTTP ${r.status}）`)}if(r.status===401){restartLineLogin();return}if(!r.ok||!data.success)throw new Error(data.error||data.message||`報表產生失敗（HTTP ${r.status}）`);clearAuthRetryFlag();box.className='report-result show';box.innerHTML=`✅ Excel 報表已儲存至 OneDrive<br><strong>${escapeHtml(data.fileName||'')}</strong><br>${escapeHtml(data.folderPath||'')}`;showToast('✅ 倉庫 Excel 報表已儲存')}catch(e){box.className='report-result show error';box.textContent=`產生報表失敗：${e.message}`}finally{b.disabled=false;b.textContent='產生並儲存 Excel 報表'}}
 
 function createSubmissionId() {
     return window.crypto?.randomUUID ? window.crypto.randomUUID() : Date.now().toString(36) + '-' + Math.random().toString(36).slice(2);
