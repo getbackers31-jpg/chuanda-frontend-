@@ -59,7 +59,7 @@
 </head>
 <body>
   <div class="container">
-    <h2 id="formTitle">👷 施工日報表 <span class="version-tag">v6.3.1</span></h2>
+    <h2 id="formTitle">👷 施工日報表 <span class="version-tag">v6.5.8</span></h2>
 
     <div style="display:flex; gap:10px; margin-bottom:15px;">
         <button type="button" id="btnDailyMode" class="btn btn-primary" style="flex:1; padding:10px; border:none; border-radius:5px; background:#00B900; color:white; font-weight:bold; cursor:pointer;" onclick="switchMode('daily_report')">📝 填寫施工日報</button>
@@ -214,14 +214,14 @@
         if (mode === 'daily_report') {
             btnDaily.style.background = '#00B900'; btnDaily.style.color = 'white'; btnDaily.style.border = 'none';
             btnIssue.style.background = '#e9ecef'; btnIssue.style.color = '#333'; btnIssue.style.border = '1px solid #ccc';
-            formTitle.innerHTML = '👷 施工日報表 <span class="version-tag">v6.3.1</span>';
+            formTitle.innerHTML = '👷 施工日報表 <span class="version-tag">v6.5.8</span>';
             submitButton.textContent = '確認送出施工日報'; submitButton.style.background = '#00B900';
             materialLabel.textContent = '📦 今日用料';
             issueExtraSection.classList.add('hidden'); dailyOnlyElements.forEach(el => el.classList.remove('hidden'));
         } else {
             btnDaily.style.background = '#e9ecef'; btnDaily.style.color = '#333'; btnDaily.style.border = '1px solid #ccc';
             btnIssue.style.background = '#28a745'; btnIssue.style.color = 'white'; btnIssue.style.border = 'none';
-            formTitle.innerHTML = '🚚 供應商直送登記表 <span class="version-tag">v6.3.1</span>';
+            formTitle.innerHTML = '🚚 供應商直送登記表 <span class="version-tag">v6.5.8</span>';
             submitButton.textContent = '確認登記供應商直送'; submitButton.style.background = '#28a745';
             materialLabel.textContent = '📦 進場材料清單';
             issueExtraSection.classList.remove('hidden'); dailyOnlyElements.forEach(el => el.classList.add('hidden'));
@@ -289,7 +289,37 @@
     }
     
     function refreshMaterialTitles() { document.querySelectorAll('#materialsContainer .material-group').forEach((g, i) => g.querySelector('.material-title').textContent = `品項 ${i + 1}`); document.getElementById('addMaterialButton').disabled = document.querySelectorAll('#materialsContainer .material-group').length >= MAX_MATERIAL_ROWS; }
-    function updateBalanceDisplay(groupDiv) { const select = groupDiv.querySelector('.mat-name'), qtyInput = groupDiv.querySelector('.mat-qty'), infoDiv = groupDiv.querySelector('.material-balance-info'); const materialId = select.value; if (!materialId || !projectMaterialBalances[materialId]) { infoDiv.classList.add('hidden'); return; } const bData = projectMaterialBalances[materialId], iQty = Number(qtyInput.value) || 0, itm = MATERIAL_ITEMS_MAP.get(materialId), pkgQty = itm && itm.packageQuantity ? Number(itm.packageQuantity) : 1, bUnit = itm ? (itm.baseUnit || itm.stockUnit) : '', curUse = iQty * pkgQty, curRem = bData.remainingBaseQuantity, expRem = curRem - curUse, formType = document.getElementById('formType').value; infoDiv.classList.remove('hidden'); if (formType === 'material_issue') { const lbl = document.getElementById('issueType').value === 'OPENING' ? '本次開工首批進場' : '本次追加進場'; infoDiv.style.borderLeftColor = '#00B900'; infoDiv.style.backgroundColor = '#eef5ee'; infoDiv.innerHTML = `<strong>目前案場剩餘：</strong> ${curRem} ${bUnit}<br><span style="color: #00B900;"><strong>${lbl}：</strong> +${curUse} ${bUnit}</span><br><strong>登記後預計剩餘：</strong> ${curRem + curUse} ${bUnit}`; } else { if (expRem < 0 && iQty > 0) { infoDiv.style.borderLeftColor = '#dc3545'; infoDiv.style.backgroundColor = '#fff3f3'; infoDiv.innerHTML = `<strong>目前案場剩餘：</strong> ${curRem} ${bUnit}<br><strong>本次預計耗用：</strong> -${curUse} ${bUnit}<br><strong>送出後預計剩餘：</strong> <span style="color:#dc3545;font-weight:bold;">${expRem} ${bUnit}</span>`; } else { infoDiv.style.borderLeftColor = '#00B900'; infoDiv.style.backgroundColor = '#eef5ee'; infoDiv.innerHTML = `<strong>目前理論剩餘：</strong> ${curRem} ${bUnit}<br><span style="color:#007bff;"><strong>送出後預計剩餘：</strong> ${expRem} ${bUnit}</span>`; } } }
+    function updateBalanceDisplay(groupDiv) {
+      const select = groupDiv.querySelector('.mat-name');
+      const qtyInput = groupDiv.querySelector('.mat-qty');
+      const infoDiv = groupDiv.querySelector('.material-balance-info');
+      const materialId = select.value;
+      if (!materialId || !projectMaterialBalances[materialId]) {
+        infoDiv.classList.add('hidden');
+        return;
+      }
+      const bData = projectMaterialBalances[materialId];
+      const inputQty = Number(qtyInput.value) || 0;
+      const item = MATERIAL_ITEMS_MAP.get(materialId);
+      const packageQuantity = item && item.packageQuantity ? Number(item.packageQuantity) : 1;
+      const stockUnit = item ? item.stockUnit : '';
+      const enteredQuantity = Number(
+        bData.enteredQuantity ??
+        ((bData.enteredBaseQuantity ?? bData.issuedBaseQuantity ?? 0) / packageQuantity)
+      );
+      const formType = document.getElementById('formType').value;
+      infoDiv.classList.remove('hidden');
+      infoDiv.style.borderLeftColor = '#00B900';
+      infoDiv.style.backgroundColor = '#eef5ee';
+      if (formType === 'material_issue') {
+        const label = document.getElementById('issueType').value === 'OPENING'
+          ? '本次開工首批進場'
+          : '本次追加進場';
+        infoDiv.innerHTML = `<strong>目前累計進場：</strong> ${enteredQuantity} ${stockUnit}<br><span style="color:#00B900;"><strong>${label}：</strong> +${inputQty} ${stockUnit}</span><br><strong>登記後累計進場：</strong> ${enteredQuantity + inputQty} ${stockUnit}`;
+      } else {
+        infoDiv.innerHTML = `<strong>案場累計進場：</strong> ${enteredQuantity} ${stockUnit}<br><span style="color:#007bff;"><strong>今日登記使用：</strong> ${inputQty} ${stockUnit}</span>`;
+      }
+    }
 
     async function getWeather() {
         if (!navigator.geolocation) {
