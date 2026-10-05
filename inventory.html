@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
     <meta name="theme-color" content="#087f5b">
-    <title>云說倉庫管理 v6.5.3</title>
+    <title>云說倉庫管理 v6.5.5</title>
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <style>
         :root {
@@ -79,6 +79,7 @@
         .normal { background: var(--green3); color: var(--green); }
         .low { background: var(--orangebg); color: var(--orange); }
         .empty { background: var(--redbg); color: var(--red); }
+        
         .fab { position: fixed; right: max(18px, calc((100vw - 560px)/2 + 18px)); bottom: calc(18px + env(safe-area-inset-bottom)); z-index: 21; width: 58px; height: 58px; border: 0; border-radius: 50%; box-shadow: 0 8px 22px rgba(8,127,91,.3); background: var(--green); color: #fff; font-size: 30px; cursor: pointer; }
         .overlay { position: fixed; inset: 0; z-index: 100; display: flex; align-items: flex-end; justify-content: center; background: rgba(0,0,0,.52); opacity: 1; visibility: visible; transition: .2s; }
         .overlay.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
@@ -112,14 +113,14 @@
         .report-panel{margin:10px 14px 12px;border:1px solid var(--line);border-radius:14px;background:#fff;overflow:hidden}.report-head{padding:12px 14px;border-bottom:1px solid var(--line)}.report-title{font-size:15px;font-weight:900}.report-subtitle{margin-top:3px;color:var(--muted);font-size:11px;line-height:1.45}.report-body{padding:14px}.report-range-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.report-range-btn{min-height:46px;padding:10px 8px;border:1px solid var(--line);border-radius:12px;background:#fff;color:#495057;font-size:13px;font-weight:800;cursor:pointer}.report-range-btn.active{border-color:var(--green);background:var(--green3);color:var(--green)}.custom-range{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:12px}.custom-range.hidden{display:none}.custom-range label{display:block;margin-bottom:5px;color:var(--muted);font-size:11px;font-weight:800}.custom-range input{width:100%;min-height:44px;padding:10px;border:1px solid #ced4da;border-radius:10px;background:#fff}.report-range-text{margin-top:12px;padding:10px 12px;border-radius:10px;background:#f8f9fa;color:#495057;font-size:12px;line-height:1.5}.report-sheets{margin:12px 0;padding-left:20px;color:#495057;font-size:12px;line-height:1.65}.report-submit{width:100%;min-height:50px;padding:12px 14px;border:0;border-radius:11px;background:var(--green);color:#fff;font-size:15px;font-weight:900;cursor:pointer}.report-submit:disabled{opacity:.62;cursor:not-allowed}.report-result{display:none;margin-top:12px;padding:12px;border-radius:10px;background:var(--green3);color:var(--green);font-size:12px;line-height:1.6;overflow-wrap:anywhere}.report-result.show{display:block}.report-result.error{background:var(--redbg);color:var(--red)}@media(max-width:340px){.report-range-grid,.custom-range{grid-template-columns:1fr}}
     
         .material-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}.material-tag{padding:3px 7px;border-radius:999px;background:#f1f3f5;color:#495057;font-size:10px;font-weight:800}.material-tag.temp{background:var(--orangebg);color:var(--orange)}.material-tag.off{background:#e9ecef;color:#868e96}.manage-panel{margin:10px 14px 12px;border:1px solid var(--line);border-radius:14px;background:#fff;padding:13px}.manage-row{display:flex;justify-content:space-between;align-items:center;gap:10px}.manage-btn{min-height:42px;border:0;border-radius:10px;background:var(--green);color:#fff;padding:0 14px;font-weight:900}.manage-list{display:grid;gap:10px;margin-top:12px}.manage-card{border:1px solid var(--line);border-radius:12px;padding:12px}.manage-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:10px}.manage-actions button{min-height:39px;border:1px solid var(--line);border-radius:9px;background:#fff;font-weight:800}.manage-actions .danger{color:var(--red);border-color:#ffa8a8}.category-picker{display:flex;flex-wrap:wrap;gap:7px}.category-picker button{padding:8px 11px;border:1px solid var(--line);border-radius:999px;background:#fff;font-weight:800}.category-picker button.active{border-color:var(--green);background:var(--green3);color:var(--green)}
-</style>
+    </style>
 </head>
 <body>
 <div class="app">
     <header class="header">
         <div class="header-row">
             <div>
-                <div class="title">📦 云說倉庫管理 <span class="version-tag">v6.5.3</span></div>
+                <div class="title">📦 云說倉庫管理 <span class="version-tag">v6.5.5</span></div>
                 <div class="subtitle" id="userGreeting">載入中...</div>
             </div>
             <button class="icon-btn" aria-label="重新整理" onclick="initApp()">↻</button>
@@ -143,7 +144,6 @@
         <button class="chip" data-filter="empty" onclick="setFilter('empty')">缺貨</button>
     </div>
 
-
     <section class="recent" aria-labelledby="recentTitle">
         <button class="recent-head" type="button" onclick="toggleRecent()" aria-expanded="false" id="recentButton">
             <span><span class="recent-title" id="recentTitle">最近異動</span><span class="recent-subtitle" id="recentSummary">載入最近紀錄中...</span></span>
@@ -151,7 +151,6 @@
         </button>
         <div class="recent-body hidden" id="recentBody"><div class="recent-state">載入中...</div></div>
     </section>
-
 
     <section class="report-panel" aria-labelledby="warehouseReportTitle">
       <div class="report-head"><div class="report-title" id="warehouseReportTitle">📊 倉庫 Excel 報表</div><div class="report-subtitle">報表會直接儲存到公司 OneDrive，不會下載到手機。</div></div>
@@ -170,7 +169,8 @@
     </section>
     
     <section class="manage-panel"><div class="manage-row"><div><strong>🏷️ 材料品項管理</strong><div class="recent-subtitle">新增品項、標籤、代碼、報廢與停用</div></div><button class="manage-btn" onclick="openMaterialManager()">開啟管理</button></div><div id="managerArea" hidden><div id="managerList" class="manage-list"></div></div></section>
-<div class="notice">
+    
+    <div class="notice">
         <strong>💡 材料流向：</strong><br>
         公司倉庫送往工地請使用「領至案場」；<br>供應商直送工地請使用工程小幫手。
     </div>
@@ -182,7 +182,6 @@
     <button class="fab" onclick="openSheet('PURCHASE_IN')" aria-label="新增異動">＋</button>
 </div>
 
-<!-- 底部彈出異動表單 -->
 <div id="overlay" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
     <section class="sheet">
         <div class="handle"></div>
@@ -255,7 +254,6 @@ let currentSubmissionId = '';
 let isSubmitting = false;
 let currentReportRange = 'month';
 
-
 function firstDayOfTaiwanMonth(){const t=getTaiwanDateString();return `${t.slice(0,7)}-01`}
 function fmtReportDate(v){return v?String(v).replace(/-/g,'/'):''}
 function initializeReportControls(){const t=getTaiwanDateString(),s=document.getElementById('reportStartDate'),e=document.getElementById('reportEndDate');if(s&&e){s.value=s.value||firstDayOfTaiwanMonth();e.value=e.value||t;s.max=t;e.max=t}selectReportRange(currentReportRange)}
@@ -263,12 +261,9 @@ function selectReportRange(r){currentReportRange=r;document.querySelectorAll('[d
 function updateReportRangeText(){const el=document.getElementById('reportRangeText');if(!el)return;const t=getTaiwanDateString();if(currentReportRange==='all')el.textContent='報表範圍：第一筆倉庫異動至匯出當下';else if(currentReportRange==='month')el.textContent=`報表範圍：${fmtReportDate(firstDayOfTaiwanMonth())} 至 ${fmtReportDate(t)}`;else if(currentReportRange==='current')el.textContent=`庫存快照：截至 ${fmtReportDate(t)}；不包含期間異動明細`;else{const s=document.getElementById('reportStartDate').value,e=document.getElementById('reportEndDate').value;el.textContent=s&&e?`報表範圍：${fmtReportDate(s)} 至 ${fmtReportDate(e)}`:'請選擇開始日期與結束日期'}}
 async function generateWarehouseReport(){const b=document.getElementById('generateReportBtn'),box=document.getElementById('reportResult'),payload={range:currentReportRange};if(currentReportRange==='custom'){payload.startDate=document.getElementById('reportStartDate').value;payload.endDate=document.getElementById('reportEndDate').value;if(!payload.startDate||!payload.endDate){box.className='report-result show error';box.textContent='請選擇開始日期與結束日期。';return}if(payload.startDate>payload.endDate){box.className='report-result show error';box.textContent='開始日期不可晚於結束日期。';return}}const token=liff.isLoggedIn()?liff.getIDToken():null;if(!token){try{restartLineLogin()}catch(e){box.className='report-result show error';box.textContent=e.message}return}b.disabled=true;b.textContent='⏳ 正在產生並儲存報表...';box.className='report-result show';box.textContent='正在整理資料，完成後會直接存入 OneDrive。';try{const r=await fetch(`${API_BASE_URL}/api/warehouse/export-excel`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`},body:JSON.stringify(payload)}),txt=await r.text();let data={};try{data=txt?JSON.parse(txt):{}}catch(_){throw new Error(`API 回傳格式錯誤（HTTP ${r.status}）`)}if(r.status===401){restartLineLogin();return}if(!r.ok||!data.success)throw new Error(data.error||data.message||`報表產生失敗（HTTP ${r.status}）`);clearAuthRetryFlag();box.className='report-result show';box.innerHTML=`✅ Excel 報表已儲存至 OneDrive<br><strong>${escapeHtml(data.fileName||'')}</strong><br>${escapeHtml(data.folderPath||'')}`;showToast('✅ 倉庫 Excel 報表已儲存')}catch(e){box.className='report-result show error';box.textContent=`產生報表失敗：${e.message}`}finally{b.disabled=false;b.textContent='產生並儲存 Excel 報表'}}
 
-function createSubmissionId() {
-    return window.crypto?.randomUUID ? window.crypto.randomUUID() : Date.now().toString(36) + '-' + Math.random().toString(36).slice(2);
-}
-function getTaiwanDateString() {
-    return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
-}
+function createSubmissionId() { return window.crypto?.randomUUID ? window.crypto.randomUUID() : Date.now().toString(36) + '-' + Math.random().toString(36).slice(2); }
+function getTaiwanDateString() { return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()); }
+
 async function initApp() {
     showToast("資料同步中...");
     initializeReportControls();
@@ -278,18 +273,14 @@ async function initApp() {
     dateInput.max = today;
     
     const savedName = localStorage.getItem('warehouseOperatorName');
-    if (savedName) {
-        document.getElementById('operatorName').value = savedName;
-    }
+    if (savedName) document.getElementById('operatorName').value = savedName;
 
     try {
         await liff.init({ liffId: LIFF_ID });
         if (liff.isLoggedIn()) {
             const profile = await liff.getProfile();
             document.getElementById('userGreeting').textContent = `哈囉，${profile.displayName}`;
-            if (!savedName) {
-                document.getElementById('operatorName').value = profile.displayName;
-            }
+            if (!savedName) document.getElementById('operatorName').value = profile.displayName;
         } else {
             liff.login();
             return;
@@ -308,17 +299,8 @@ async function initApp() {
         const invJson = await invRes.json();
         const projJson = await projRes.json();
 
-        if (invJson.success && Array.isArray(invJson.items)) {
-            materialsData = invJson.items;
-        } else {
-            materialsData = [];
-        }
-
-        if (projJson.success && Array.isArray(projJson.projects)) {
-            projectsData = projJson.projects;
-        } else {
-            projectsData = [];
-        }
+        materialsData = (invJson.success && Array.isArray(invJson.items)) ? invJson.items : [];
+        projectsData = (projJson.success && Array.isArray(projJson.projects)) ? projJson.projects : [];
 
         populateSelects();
         renderList();
@@ -330,7 +312,6 @@ async function initApp() {
     }
 }
 
-
 const RECENT_TYPE_INFO = {
     PURCHASE_IN: { label:'採購入庫', icon:'➕', cls:'purchase' },
     WAREHOUSE_ADJUSTMENT: { label:'盤點修正', icon:'🔄', cls:'adjust' },
@@ -339,9 +320,7 @@ const RECENT_TYPE_INFO = {
     INITIAL_COUNT: { label:'期初盤點', icon:'📋', cls:'adjust' },
     SCRAP_DISPOSAL: { label:'報廢處理', icon:'🗑️', cls:'transfer' }
 };
-function escapeHtml(value) {
-    return String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
-}
+function escapeHtml(value) { return String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char])); }
 function formatRecentTime(value) {
     if (!value) return '';
     const date = new Date(value);
@@ -369,66 +348,37 @@ function renderRecentTransactions(items) {
 }
 const AUTH_RETRY_KEY = 'warehouseAuthRetryOnce';
 function restartLineLogin() {
-    if (sessionStorage.getItem(AUTH_RETRY_KEY) === '1') {
-        throw new Error('LINE 登入憑證更新失敗，請完全關閉頁面後重新開啟');
-    }
+    if (sessionStorage.getItem(AUTH_RETRY_KEY) === '1') throw new Error('LINE 登入憑證更新失敗，請完全關閉頁面後重新開啟');
     sessionStorage.setItem(AUTH_RETRY_KEY, '1');
     const redirectUri = window.location.href.split('#')[0];
     if (liff.isLoggedIn()) liff.logout();
     liff.login({ redirectUri });
 }
-function clearAuthRetryFlag() {
-    sessionStorage.removeItem(AUTH_RETRY_KEY);
-}
+function clearAuthRetryFlag() { sessionStorage.removeItem(AUTH_RETRY_KEY); }
 
 async function loadRecentTransactions() {
     try {
         const token = liff.isLoggedIn() ? liff.getIDToken() : null;
-        if (!token) {
-            restartLineLogin();
-            return;
-        }
+        if (!token) return restartLineLogin();
 
-        const response = await fetch(`${API_BASE_URL}/api/warehouse/recent-transactions?limit=5`, {
-            headers: { Authorization: `Bearer ${token}` }
-        });
-
+        const response = await fetch(`${API_BASE_URL}/api/warehouse/recent-transactions?limit=5`, { headers: { Authorization: `Bearer ${token}` } });
         const responseText = await response.text();
         let result = null;
-        try {
-            result = responseText ? JSON.parse(responseText) : {};
-        } catch (parseError) {
-            throw new Error(`API 回傳格式錯誤（HTTP ${response.status}）`);
-        }
+        try { result = responseText ? JSON.parse(responseText) : {}; } catch (parseError) { throw new Error(`API 回傳格式錯誤（HTTP ${response.status}）`); }
 
-        if (response.status === 401) {
-            restartLineLogin();
-            return;
-        }
-        if (!response.ok || !result.success) {
-            const apiMessage = result.error || result.message || '伺服器回應錯誤';
-            throw new Error(`${apiMessage}（HTTP ${response.status}）`);
-        }
+        if (response.status === 401) return restartLineLogin();
+        if (!response.ok || !result.success) throw new Error(`${result.error || result.message || '伺服器回應錯誤'}（HTTP ${response.status}）`);
 
         clearAuthRetryFlag();
         renderRecentTransactions(result.items);
     } catch (error) {
         const message = String(error?.message || '未知錯誤');
-        console.error('最近異動載入失敗:', error);
         document.getElementById('recentSummary').textContent = `載入失敗：${message}`;
-        document.getElementById('recentBody').innerHTML = `
-            <div class="recent-state">
-                ⚠️ 最近異動載入失敗<br>
-                <strong style="display:block; margin-top:6px; color:var(--red); overflow-wrap:anywhere;">${escapeHtml(message)}</strong>
-                <span style="display:block; margin-top:6px;">庫存操作不受影響。</span>
-                <button type="button" class="chip" onclick="loadRecentTransactions()" style="margin-top:8px">重新載入</button>
-            </div>`;
+        document.getElementById('recentBody').innerHTML = `<div class="recent-state">⚠️ 最近異動載入失敗<br><strong style="display:block; margin-top:6px; color:var(--red); overflow-wrap:anywhere;">${escapeHtml(message)}</strong><span style="display:block; margin-top:6px;">庫存操作不受影響。</span><button type="button" class="chip" onclick="loadRecentTransactions()" style="margin-top:8px">重新載入</button></div>`;
     }
 }
 function toggleRecent() {
-    const body = document.getElementById('recentBody');
-    const button = document.getElementById('recentButton');
-    const toggle = document.getElementById('recentToggle');
+    const body = document.getElementById('recentBody'), button = document.getElementById('recentButton'), toggle = document.getElementById('recentToggle');
     const opening = body.classList.contains('hidden');
     body.classList.toggle('hidden', !opening);
     button.setAttribute('aria-expanded', String(opening));
@@ -436,21 +386,11 @@ function toggleRecent() {
 }
 
 function populateSelects() {
-    const mSel = document.getElementById('sheetMaterial');
-    mSel.innerHTML = materialsData.filter(m=>m.active!==false).map(m => {
-        const stock = Number(m.stockQuantity || 0);
-        return `<option value="${m.materialId}">${m.materialName} (庫存:${stock}${m.stockUnit})</option>`;
-    }).join('');
-    
-    const pSel = document.getElementById('sheetProject');
-    pSel.innerHTML = projectsData.map(p => {
-        return `<option value="${p.projectId}">${p.projectName}</option>`;
-    }).join('');
+    document.getElementById('sheetMaterial').innerHTML = materialsData.filter(m=>m.active!==false).map(m => `<option value="${m.materialId}">${m.materialName} (庫存:${Number(m.stockQuantity || 0)}${m.stockUnit})</option>`).join('');
+    document.getElementById('sheetProject').innerHTML = projectsData.map(p => `<option value="${p.projectId}">${p.projectName}</option>`).join('');
 }
 
-function formatNumber(value) {
-    return new Intl.NumberFormat('zh-TW', { maximumFractionDigits: 4 }).format(Number(value || 0));
-}
+function formatNumber(value) { return new Intl.NumberFormat('zh-TW', { maximumFractionDigits: 4 }).format(Number(value || 0)); }
 function renderList() {
     const searchStr = document.getElementById('searchInput').value.toLowerCase();
     const managed = materialsData.filter(m => m.inventoryManaged !== false && m.active !== false);
@@ -488,13 +428,7 @@ function renderList() {
 }
 function setFilter(type) {
     currentFilter = type;
-    document.querySelectorAll('.chip').forEach(x => {
-        if (x.dataset.filter === type) {
-            x.classList.add('active');
-        } else {
-            x.classList.remove('active');
-        }
-    });
+    document.querySelectorAll('.chip').forEach(x => x.classList.toggle('active', x.dataset.filter === type));
     renderList();
 }
 
@@ -622,11 +556,10 @@ async function submitTransaction() {
     else if (['PROJECT_TRANSFER_OUT','SCRAP_DISPOSAL'].includes(currentType)) after = currentStock - qty;
     else after = currentStock + qty;
 
-    if (!confirm(`確認執行「${names[currentType]}」？
+    // V6.5.5 Check if we need to show zero stock alert (柔性防呆)
+    const isScrapToZero = currentType === 'SCRAP_DISPOSAL' && Math.abs(after) < 0.0001 && currentStock > 0 && !document.getElementById('disableAfterScrap').checked;
 
-材料：${mat.materialName}
-目前倉庫：${currentStock}${mat.stockUnit}
-異動後：${after}${mat.stockUnit}`)) return;
+    if (!confirm(`確認執行「${names[currentType]}」？\n\n材料：${mat.materialName}\n目前倉庫：${currentStock}${mat.stockUnit}\n異動後：${after}${mat.stockUnit}`)) return;
 
     const btn = document.getElementById('submitBtn');
     isSubmitting = true;
@@ -664,11 +597,34 @@ async function submitTransaction() {
         localStorage.setItem('warehouseOperatorName',operator);
         showToast(result.duplicate ? '此筆異動先前已完成，未重複入帳' : `✅ ${names[currentType]} 完成！`);
         currentSubmissionId = '';
-        closeSheet();
-        setTimeout(initApp,600);
+        
+        // 報廢至 0 時，先同步前端資料，再詢問是否停用。
+        // 不在提示視窗顯示期間執行 initApp，避免 materialsData 被替換後仍操作舊物件。
+        if (result.item) {
+            Object.assign(mat, result.item);
+        } else if (isScrapToZero && !result.duplicate) {
+            mat.stockQuantity = 0;
+            mat.stockBaseQuantity = 0;
+            mat.stockStatus = 'OUT_OF_STOCK';
+        }
+
+        if (isScrapToZero && !result.duplicate) {
+            closeSheet();
+            populateSelects();
+            renderList();
+            renderManager();
+
+            setTimeout(() => {
+                if (typeof window.showZeroStockAlert === 'function') {
+                    window.showZeroStockAlert(itemKey(mat), mat);
+                }
+            }, 300);
+        } else {
+            closeSheet();
+            setTimeout(initApp, 600);
+        }
     } catch (e) {
-        alert(`寫入失敗：
-${e.message}`);
+        alert(`寫入失敗：\n${e.message}`);
     } finally {
         isSubmitting = false;
         btn.disabled = false;
@@ -704,7 +660,6 @@ overlay.addEventListener('click', e => {
     if (e.target === overlay && !isSubmitting) closeSheet(); 
 });
 
-
 const CATEGORY_OPTIONS=['油漆','底漆','中塗漆','面漆','溶劑','耗材'];
 function authHeaders(){const t=liff.isLoggedIn()?liff.getIDToken():null;return {'Content-Type':'application/json',Authorization:`Bearer ${t}`}}
 function itemKey(m){return m.materialUid||m.materialId}
@@ -712,16 +667,10 @@ async function openMaterialManager(){const area=document.getElementById('manager
 function renderManager(){const el=document.getElementById('managerList');el.innerHTML=`<button class="manage-btn" onclick="createMaterialDialog()">＋ 新增材料品項</button>`+materialsData.map(m=>`<article class="manage-card"><strong>${escapeHtml(m.materialName)}</strong><div class="code">${escapeHtml(m.materialCode||m.materialId)}</div><div class="material-tags">${(m.materialCategories?.length?m.materialCategories:['尚未分類']).map(x=>`<span class="material-tag">${escapeHtml(x)}</span>`).join('')}${m.codeStatus==='TEMPORARY'?'<span class="material-tag temp">臨時代碼</span>':''}${m.active===false?'<span class="material-tag off">已停用</span>':''}</div><div class="manage-actions"><button onclick="editTags('${itemKey(m)}')">修改標籤</button><button onclick="renameItem('${itemKey(m)}')">修改中文名稱</button><button onclick="recodeItem('${itemKey(m)}')">${m.codeStatus==='TEMPORARY'?'轉正式代碼':'更正英文代碼'}</button><button class="danger" onclick="scrapItem('${itemKey(m)}')">${m.active===false?'重新啟用':'報廢／停用'}</button></div></article>`).join('')}
 async function apiJson(url,opt={}){const r=await fetch(`${API_BASE_URL}${url}`,{...opt,headers:{...authHeaders(),...(opt.headers||{})}}),d=await r.json();if(!r.ok||!d.success)throw new Error(d.error||'操作失敗');return d}
 function chooseCategories(initial=[]){const value=prompt(`輸入材料標籤，可用逗號分隔：\n${CATEGORY_OPTIONS.join('、')}\n也可輸入自訂標籤`,initial.join(','));return value===null?null:value.split(/[,，]/).map(x=>x.trim()).filter(Boolean)}
-async function createMaterialDialog(){try{const name=prompt('中文材料名稱');if(!name)return;const temp=confirm('按「確定」使用臨時代碼；按「取消」輸入正式英文代碼');const code=temp?'':prompt('正式英文代碼');if(!temp&&!code)return;const cats=chooseCategories(['油漆']);if(!cats?.length)return;const stockUnit=prompt('庫存單位（桶／罐／支／其他）','桶');if(!stockUnit)return;const capacity=Number(prompt('每一庫存單位的容量','5'));const baseUnit=prompt('基準單位（加侖／公升／公斤／其他）','加侖');if(!baseUnit||!(capacity>0))return alert('容量或單位不正確');const operator=document.getElementById('operatorName').value.trim()||prompt('操作人');const d=await apiJson('/api/warehouse/material-items',{method:'POST',body:JSON.stringify({codeStatus:temp?'TEMPORARY':'FORMAL',materialCode:code,materialName:name,materialCategories:cats,stockUnit,packageQuantity:capacity,baseUnit,createReason:'新購入材料',operatorName:operator})});materialsData.push(d.item);populateSelects();renderList();renderManager();showToast(`✅ 已新增 ${d.item.materialCode}`)}catch(e){alert(e.message)}}
-async function editTags(key){const m=materialsData.find(x=>itemKey(x)===key),cats=chooseCategories(m.materialCategories||[]);if(!cats)return;try{const d=await apiJson(`/api/warehouse/material-items/${encodeURIComponent(key)}`,{method:'PATCH',body:JSON.stringify({action:'UPDATE_CATEGORIES',materialCategories:cats,operatorName:document.getElementById('operatorName').value.trim()})});Object.assign(m,d.item);renderList();renderManager()}catch(e){alert(e.message)}}
-async function renameItem(key){const m=materialsData.find(x=>itemKey(x)===key),name=prompt('新的中文名稱',m.materialName);if(!name)return;try{const d=await apiJson(`/api/warehouse/material-items/${encodeURIComponent(key)}`,{method:'PATCH',body:JSON.stringify({action:'RENAME',materialName:name,reason:'主管確認名稱',operatorName:document.getElementById('operatorName').value.trim()})});Object.assign(m,d.item);renderList();renderManager()}catch(e){alert(e.message)}}
-async function recodeItem(key){const m=materialsData.find(x=>itemKey(x)===key),code=prompt('新的正式英文代碼',m.codeStatus==='TEMPORARY'?'':m.materialCode);if(!code)return;try{const d=await apiJson(`/api/warehouse/material-items/${encodeURIComponent(key)}`,{method:'PATCH',body:JSON.stringify({action:m.codeStatus==='TEMPORARY'?'FORMALIZE':'RECODE',materialCode:code,reason:m.codeStatus==='TEMPORARY'?'臨時代碼轉正式':'主管調整編碼',operatorName:document.getElementById('operatorName').value.trim()})});Object.assign(m,d.item);populateSelects();renderList();renderManager()}catch(e){alert(e.message)}}
-function scrapItem(key){const m=materialsData.find(x=>itemKey(x)===key);if(m.active===false)return enableItem(key);openSheet('SCRAP_DISPOSAL',m.materialId)}
-async function enableItem(key){if(!confirm('確認重新啟用品項？庫存不會自動增加。'))return;try{const m=materialsData.find(x=>itemKey(x)===key),d=await apiJson(`/api/warehouse/material-items/${encodeURIComponent(key)}`,{method:'PATCH',body:JSON.stringify({action:'ENABLE',reason:'恢復使用',operatorName:document.getElementById('operatorName').value.trim()})});Object.assign(m,d.item);renderList();renderManager()}catch(e){alert(e.message)}}
 
 window.addEventListener('load', initApp);
 </script>
-<!-- v6.5.3 category selector -->
+
 <script>
 (() => {
   "use strict";
@@ -808,13 +757,63 @@ window.addEventListener('load', initApp);
     return value;
   }
 
+  // --- V6.5.5 新增與補回的模態化管理函式 ---
+  window.renameItem = function(key) {
+    const item = materialsData.find(x => itemKey(x) === key);
+    if (!item) return showToast("找不到材料品項");
+    const body = `<div class="v652-field"><label>新的中文名稱 *</label><input id="renameInput" value="${esc(item.materialName)}" placeholder="請輸入完整中文名稱"></div>`;
+    modal(`修改名稱：${item.materialName}`, body, async box => {
+      const name = box.querySelector('#renameInput').value.trim();
+      if (!name) throw new Error("中文名稱不可空白");
+      if (name === item.materialName) return;
+      const data = await apiJson(`/api/warehouse/material-items/${encodeURIComponent(key)}`, {
+        method:"PATCH", 
+        body:JSON.stringify({action:"RENAME", materialName:name, reason:"主管確認名稱", operatorName:operatorName()})
+      });
+      Object.assign(item, data.item); renderList(); renderManager(); showToast('✅ 名稱已更新');
+    });
+  };
+
+  window.recodeItem = function(key) {
+    const item = materialsData.find(x => itemKey(x) === key);
+    if (!item) return showToast("找不到材料品項");
+    const isTemp = item.codeStatus === 'TEMPORARY';
+    const body = `<div class="v652-field"><label>${isTemp ? '正式英文代碼 *' : '更正英文代碼 *'}</label><input id="recodeInput" value="${isTemp ? '' : esc(item.materialCode)}" placeholder="例如 P-NP-9011-GRA-5G"></div>`;
+    modal(isTemp ? `轉正式代碼：${item.materialName}` : `更正代碼：${item.materialName}`, body, async box => {
+      const code = box.querySelector('#recodeInput').value.trim();
+      if (!code) throw new Error("代碼不可空白");
+      if (code === item.materialCode) return;
+      const data = await apiJson(`/api/warehouse/material-items/${encodeURIComponent(key)}`, {
+        method:"PATCH", 
+        body:JSON.stringify({action:isTemp?"FORMALIZE":"RECODE", materialCode:code, reason:isTemp?"臨時代碼轉正式":"主管調整編碼", operatorName:operatorName()})
+      });
+      Object.assign(item, data.item); populateSelects(); renderList(); renderManager(); showToast('✅ 代碼已更新');
+    });
+  };
+
+  window.enableItem = function(key) {
+    const item = materialsData.find(x => itemKey(x) === key);
+    if (!item) return showToast("找不到材料品項");
+    const body = `<p class="v652-note">重新啟用此材料後，它將再次出現在庫存清單與異動選單中。<br>注意：這不會自動恢復庫存數量，需另外新增入庫或盤點。</p><div class="v652-field"><label>重新啟用原因 *</label><input id="enableReason" value="恢復使用" placeholder="請輸入啟用原因"></div>`;
+    modal(`重新啟用：${item.materialName}`, body, async box => {
+      const reason = box.querySelector('#enableReason').value.trim();
+      if (!reason) throw new Error("重新啟用原因不可空白");
+      const data = await apiJson(`/api/warehouse/material-items/${encodeURIComponent(key)}`, {
+        method:"PATCH", 
+        body:JSON.stringify({action:"ENABLE", reason:reason, operatorName:operatorName()})
+      });
+      Object.assign(item, data.item); renderList(); renderManager(); showToast('✅ 材料已啟用');
+    });
+  };
+  // ------------------------------------------
+
   window.editTags = function(key) {
     const item = materialsData.find(x => itemKey(x) === key);
-    if (!item) return alert("找不到材料品項");
+    if (!item) return showToast("找不到材料品項");
     const root = modal(`修改標籤：${item.materialName}`, categoryMarkup(item.materialCategories || []), async box => {
       const categories = readCategories(box);
       const data = await apiJson(`/api/warehouse/material-items/${encodeURIComponent(key)}`, {method:"PATCH", body:JSON.stringify({action:"UPDATE_CATEGORIES", materialCategories:categories, operatorName:operatorName()})});
-      Object.assign(item, data.item); renderList(); renderManager();
+      Object.assign(item, data.item); renderList(); renderManager(); showToast('✅ 標籤已更新');
     });
     bindCategoryUI(root);
   };
@@ -849,7 +848,6 @@ window.addEventListener('load', initApp);
 })();
 </script>
 
-<!-- v6.5.3 zero-stock disable fix -->
 <script>
 (() => {
   "use strict";
@@ -910,6 +908,36 @@ window.addEventListener('load', initApp);
     };
     document.getElementById('zeroStockDisableSubmit').onclick = () => submitZeroStockDisable(key, item);
   }
+
+  // v6.5.5: 實作獨立且優美的「庫存歸零防呆」提醒窗
+  window.showZeroStockAlert = function(key, item) {
+    document.getElementById('zsa-overlay-temp')?.remove();
+    const overlay = document.createElement('div');
+    overlay.id = 'zsa-overlay-temp';
+    overlay.className = 'v652-overlay';
+    overlay.style.alignItems = 'center';
+    overlay.innerHTML = `
+        <div style="background:#fff; border-radius:18px; padding:24px; width:min(100%, 340px); text-align:center; box-shadow:0 15px 40px rgba(0,0,0,0.25); transform: translateY(0); animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+            <div style="width:52px; height:52px; border-radius:50%; background:#fff5f5; display:flex; align-items:center; justify-content:center; margin:0 auto 16px;">
+                <span style="font-size:26px;">⚠️</span>
+            </div>
+            <h3 style="margin:0 0 10px; font-size:19px; color:#212529; font-weight:800;">庫存已歸零</h3>
+            <p style="margin:0 0 24px; color:#6c757d; font-size:14px; line-height:1.6;">您剛剛的操作使 <strong style="color:#212529;">${escapeHtml(item.materialName)}</strong> 的庫存降為 0。<br>是否需要前往設定將此材料停用？</p>
+            <div style="display:flex; gap:10px;">
+                <button id="zsa-later" style="flex:1; padding:13px; border:1px solid #dee2e6; background:#fff; color:#495057; border-radius:11px; font-weight:800; cursor:pointer; font-size:14px;">稍後再說</button>
+                <button id="zsa-disable" style="flex:1; padding:13px; border:0; background:#c92a2a; color:#fff; border-radius:11px; font-weight:800; cursor:pointer; font-size:14px;">前往停用</button>
+            </div>
+            <style>@keyframes popIn { from { opacity:0; transform:scale(0.95) translateY(10px); } to { opacity:1; transform:scale(1) translateY(0); } }</style>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+    
+    overlay.querySelector('#zsa-later').onclick = () => overlay.remove();
+    overlay.querySelector('#zsa-disable').onclick = () => {
+        overlay.remove();
+        openZeroStockDisableDialog(key, item);
+    };
+  };
 
   window.scrapItem = function(key) {
     const item = materialsData.find(x => itemKey(x) === key);
