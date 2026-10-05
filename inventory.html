@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
     <meta name="theme-color" content="#087f5b">
-    <title>云說倉庫管理 v6.5.5</title>
+    <title>云說倉庫管理 v6.5.6</title>
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <style>
         :root {
@@ -113,14 +113,31 @@
         .report-panel{margin:10px 14px 12px;border:1px solid var(--line);border-radius:14px;background:#fff;overflow:hidden}.report-head{padding:12px 14px;border-bottom:1px solid var(--line)}.report-title{font-size:15px;font-weight:900}.report-subtitle{margin-top:3px;color:var(--muted);font-size:11px;line-height:1.45}.report-body{padding:14px}.report-range-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.report-range-btn{min-height:46px;padding:10px 8px;border:1px solid var(--line);border-radius:12px;background:#fff;color:#495057;font-size:13px;font-weight:800;cursor:pointer}.report-range-btn.active{border-color:var(--green);background:var(--green3);color:var(--green)}.custom-range{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:12px}.custom-range.hidden{display:none}.custom-range label{display:block;margin-bottom:5px;color:var(--muted);font-size:11px;font-weight:800}.custom-range input{width:100%;min-height:44px;padding:10px;border:1px solid #ced4da;border-radius:10px;background:#fff}.report-range-text{margin-top:12px;padding:10px 12px;border-radius:10px;background:#f8f9fa;color:#495057;font-size:12px;line-height:1.5}.report-sheets{margin:12px 0;padding-left:20px;color:#495057;font-size:12px;line-height:1.65}.report-submit{width:100%;min-height:50px;padding:12px 14px;border:0;border-radius:11px;background:var(--green);color:#fff;font-size:15px;font-weight:900;cursor:pointer}.report-submit:disabled{opacity:.62;cursor:not-allowed}.report-result{display:none;margin-top:12px;padding:12px;border-radius:10px;background:var(--green3);color:var(--green);font-size:12px;line-height:1.6;overflow-wrap:anywhere}.report-result.show{display:block}.report-result.error{background:var(--redbg);color:var(--red)}@media(max-width:340px){.report-range-grid,.custom-range{grid-template-columns:1fr}}
     
         .material-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}.material-tag{padding:3px 7px;border-radius:999px;background:#f1f3f5;color:#495057;font-size:10px;font-weight:800}.material-tag.temp{background:var(--orangebg);color:var(--orange)}.material-tag.off{background:#e9ecef;color:#868e96}.manage-panel{margin:10px 14px 12px;border:1px solid var(--line);border-radius:14px;background:#fff;padding:13px}.manage-row{display:flex;justify-content:space-between;align-items:center;gap:10px}.manage-btn{min-height:42px;border:0;border-radius:10px;background:var(--green);color:#fff;padding:0 14px;font-weight:900}.manage-list{display:grid;gap:10px;margin-top:12px}.manage-card{border:1px solid var(--line);border-radius:12px;padding:12px}.manage-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:10px}.manage-actions button{min-height:39px;border:1px solid var(--line);border-radius:9px;background:#fff;font-weight:800}.manage-actions .danger{color:var(--red);border-color:#ffa8a8}.category-picker{display:flex;flex-wrap:wrap;gap:7px}.category-picker button{padding:8px 11px;border:1px solid var(--line);border-radius:999px;background:#fff;font-weight:800}.category-picker button.active{border-color:var(--green);background:var(--green3);color:var(--green)}
-    </style>
+    
+        /* v6.5.6: 品項管理獨立模式 */
+        body.manager-mode .summary,
+        body.manager-mode .search-wrap,
+        body.manager-mode .filters,
+        body.manager-mode .recent,
+        body.manager-mode .report-panel,
+        body.manager-mode .notice,
+        body.manager-mode #materialList,
+        body.manager-mode .fab { display:none !important; }
+        body.manager-mode .manage-panel { margin-top:14px; min-height:calc(100vh - 110px); }
+        body.manager-mode .manage-row { position:sticky; top:calc(69px + env(safe-area-inset-top)); z-index:8; margin:-13px -13px 12px; padding:13px; border-bottom:1px solid var(--line); background:#fff; }
+        body.manager-mode #managerArea { display:block !important; }
+        body.manager-mode #managerList { padding-bottom:calc(24px + env(safe-area-inset-bottom)); }
+        .manager-mode-title { display:none; margin:2px 0 12px; padding:11px 12px; border-radius:10px; background:var(--green3); color:var(--green); font-size:13px; font-weight:800; line-height:1.5; }
+        body.manager-mode .manager-mode-title { display:block; }
+        #managerToggleBtn.secondary { border:1px solid var(--green); background:#fff; color:var(--green); }
+</style>
 </head>
 <body>
 <div class="app">
     <header class="header">
         <div class="header-row">
             <div>
-                <div class="title">📦 云說倉庫管理 <span class="version-tag">v6.5.5</span></div>
+                <div class="title">📦 云說倉庫管理 <span class="version-tag">v6.5.6</span></div>
                 <div class="subtitle" id="userGreeting">載入中...</div>
             </div>
             <button class="icon-btn" aria-label="重新整理" onclick="initApp()">↻</button>
@@ -168,7 +185,7 @@
       </div>
     </section>
     
-    <section class="manage-panel"><div class="manage-row"><div><strong>🏷️ 材料品項管理</strong><div class="recent-subtitle">新增品項、標籤、代碼、報廢與停用</div></div><button class="manage-btn" onclick="openMaterialManager()">開啟管理</button></div><div id="managerArea" hidden><div id="managerList" class="manage-list"></div></div></section>
+    <section class="manage-panel" id="materialManagerPanel"><div class="manage-row"><div><strong>🏷️ 材料品項管理</strong><div class="recent-subtitle">新增品項、標籤、代碼、報廢與停用</div></div><button class="manage-btn" id="managerToggleBtn" onclick="openMaterialManager()">開啟管理</button></div><div id="managerArea" hidden><div class="manager-mode-title">目前為品項管理模式。此畫面顯示使用中、零庫存、臨時代碼與已停用的全部材料。按「返回庫存總覽」後才會顯示日常庫存卡片。</div><div id="managerList" class="manage-list"></div></div></section>
     
     <div class="notice">
         <strong>💡 材料流向：</strong><br>
@@ -598,8 +615,8 @@ async function submitTransaction() {
         showToast(result.duplicate ? '此筆異動先前已完成，未重複入帳' : `✅ ${names[currentType]} 完成！`);
         currentSubmissionId = '';
         
-        // 報廢至 0 時，先同步前端資料，再詢問是否停用。
-        // 不在提示視窗顯示期間執行 initApp，避免 materialsData 被替換後仍操作舊物件。
+        // 報廢至 0 時先同步畫面，再詢問是否停用。
+        // 提示視窗顯示期間不重新執行 initApp，避免管理物件被替換。
         if (result.item) {
             Object.assign(mat, result.item);
         } else if (isScrapToZero && !result.duplicate) {
@@ -607,13 +624,11 @@ async function submitTransaction() {
             mat.stockBaseQuantity = 0;
             mat.stockStatus = 'OUT_OF_STOCK';
         }
-
         if (isScrapToZero && !result.duplicate) {
             closeSheet();
             populateSelects();
             renderList();
             renderManager();
-
             setTimeout(() => {
                 if (typeof window.showZeroStockAlert === 'function') {
                     window.showZeroStockAlert(itemKey(mat), mat);
@@ -663,7 +678,22 @@ overlay.addEventListener('click', e => {
 const CATEGORY_OPTIONS=['油漆','底漆','中塗漆','面漆','溶劑','耗材'];
 function authHeaders(){const t=liff.isLoggedIn()?liff.getIDToken():null;return {'Content-Type':'application/json',Authorization:`Bearer ${t}`}}
 function itemKey(m){return m.materialUid||m.materialId}
-async function openMaterialManager(){const area=document.getElementById('managerArea');area.hidden=!area.hidden;if(!area.hidden)renderManager()}
+async function openMaterialManager(){
+    const area=document.getElementById('managerArea');
+    const button=document.getElementById('managerToggleBtn');
+    const entering=!document.body.classList.contains('manager-mode');
+    document.body.classList.toggle('manager-mode',entering);
+    area.hidden=!entering;
+    button.textContent=entering?'← 返回庫存總覽':'開啟管理';
+    button.classList.toggle('secondary',entering);
+    if(entering){
+        renderManager();
+        document.getElementById('materialManagerPanel')?.scrollIntoView({behavior:'smooth',block:'start'});
+    }else{
+        renderList();
+        window.scrollTo({top:0,behavior:'smooth'});
+    }
+}
 function renderManager(){const el=document.getElementById('managerList');el.innerHTML=`<button class="manage-btn" onclick="createMaterialDialog()">＋ 新增材料品項</button>`+materialsData.map(m=>`<article class="manage-card"><strong>${escapeHtml(m.materialName)}</strong><div class="code">${escapeHtml(m.materialCode||m.materialId)}</div><div class="material-tags">${(m.materialCategories?.length?m.materialCategories:['尚未分類']).map(x=>`<span class="material-tag">${escapeHtml(x)}</span>`).join('')}${m.codeStatus==='TEMPORARY'?'<span class="material-tag temp">臨時代碼</span>':''}${m.active===false?'<span class="material-tag off">已停用</span>':''}</div><div class="manage-actions"><button onclick="editTags('${itemKey(m)}')">修改標籤</button><button onclick="renameItem('${itemKey(m)}')">修改中文名稱</button><button onclick="recodeItem('${itemKey(m)}')">${m.codeStatus==='TEMPORARY'?'轉正式代碼':'更正英文代碼'}</button><button class="danger" onclick="scrapItem('${itemKey(m)}')">${m.active===false?'重新啟用':'報廢／停用'}</button></div></article>`).join('')}
 async function apiJson(url,opt={}){const r=await fetch(`${API_BASE_URL}${url}`,{...opt,headers:{...authHeaders(),...(opt.headers||{})}}),d=await r.json();if(!r.ok||!d.success)throw new Error(d.error||'操作失敗');return d}
 function chooseCategories(initial=[]){const value=prompt(`輸入材料標籤，可用逗號分隔：\n${CATEGORY_OPTIONS.join('、')}\n也可輸入自訂標籤`,initial.join(','));return value===null?null:value.split(/[,，]/).map(x=>x.trim()).filter(Boolean)}
@@ -909,7 +939,7 @@ window.addEventListener('load', initApp);
     document.getElementById('zeroStockDisableSubmit').onclick = () => submitZeroStockDisable(key, item);
   }
 
-  // v6.5.5: 實作獨立且優美的「庫存歸零防呆」提醒窗
+  // v6.5.6: 實作獨立且優美的「庫存歸零防呆」提醒窗
   window.showZeroStockAlert = function(key, item) {
     document.getElementById('zsa-overlay-temp')?.remove();
     const overlay = document.createElement('div');
