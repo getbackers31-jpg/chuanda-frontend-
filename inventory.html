@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
     <meta name="theme-color" content="#087f5b">
-    <title>云說倉庫管理 v6.5.7</title>
+    <title>云說倉庫管理 v6.5.8</title>
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <style>
         :root {
@@ -114,7 +114,7 @@
     
         .material-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}.material-tag{padding:3px 7px;border-radius:999px;background:#f1f3f5;color:#495057;font-size:10px;font-weight:800}.material-tag.temp{background:var(--orangebg);color:var(--orange)}.material-tag.off{background:#e9ecef;color:#868e96}.manage-panel{margin:10px 14px 12px;border:1px solid var(--line);border-radius:14px;background:#fff;padding:13px}.manage-row{display:flex;justify-content:space-between;align-items:center;gap:10px}.manage-btn{min-height:42px;border:0;border-radius:10px;background:var(--green);color:#fff;padding:0 14px;font-weight:900}.manage-list{display:grid;gap:10px;margin-top:12px}.manage-card{border:1px solid var(--line);border-radius:12px;padding:12px}.manage-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:10px}.manage-actions button{min-height:39px;border:1px solid var(--line);border-radius:9px;background:#fff;font-weight:800}.manage-actions .danger{color:var(--red);border-color:#ffa8a8}.category-picker{display:flex;flex-wrap:wrap;gap:7px}.category-picker button{padding:8px 11px;border:1px solid var(--line);border-radius:999px;background:#fff;font-weight:800}.category-picker button.active{border-color:var(--green);background:var(--green3);color:var(--green)}
     
-        /* v6.5.7: 品項管理獨立模式 */
+        /* v6.5.8: 品項管理獨立模式 */
         body.manager-mode .summary,
         body.manager-mode .search-wrap,
         body.manager-mode .filters,
@@ -137,7 +137,7 @@
     <header class="header">
         <div class="header-row">
             <div>
-                <div class="title">📦 云說倉庫管理 <span class="version-tag">v6.5.7</span></div>
+                <div class="title">📦 云說倉庫管理 <span class="version-tag">v6.5.8</span></div>
                 <div class="subtitle" id="userGreeting">載入中...</div>
             </div>
             <button class="icon-btn" aria-label="重新整理" onclick="initApp()">↻</button>
@@ -222,12 +222,13 @@
             
             <div class="field">
                 <label>材料品項</label>
-                <select id="sheetMaterial" onchange="updatePreview()"><option>載入中...</option></select>
+                <select id="sheetMaterial" onchange="updatePreview();updateReturnPreview()"><option>載入中...</option></select>
             </div>
             
             <div id="projectField" class="field" hidden>
                 <label>案場</label>
-                <select id="sheetProject"><option>載入中...</option></select>
+                <select id="sheetProject" onchange="loadProjectReturnMaterials(true)"><option>載入中...</option></select>
+                <div id="projectReturnHint" hidden style="margin-top:8px;padding:9px 10px;border-radius:10px;background:var(--green3);color:var(--green);font-size:12px;font-weight:800;line-height:1.5;">🟢 綠色標記表示該案場有材料尚未登記退回。</div>
             </div>
             
             <div class="field">
@@ -244,6 +245,9 @@
                 <div class="preview-row"><span id="changeLabel">本次入庫</span><strong id="changeValue">0</strong></div>
                 <div class="preview-row final"><span>異動後倉庫</span><span id="afterValue">0</span></div>
                 <div id="projectImpact" class="preview-row" hidden><span>案場材料領入</span><strong id="projImpactValue">0</strong></div>
+                <div id="returnEnteredRow" class="preview-row" hidden><span>累計進場</span><strong id="returnEnteredValue">0</strong></div>
+                <div id="returnReturnedRow" class="preview-row" hidden><span>已退回倉庫</span><strong id="returnReturnedValue">0</strong></div>
+                <div id="returnUnreturnedRow" class="preview-row final" hidden><span>🟢 尚未退回紀錄</span><span id="returnUnreturnedValue">0</span></div>
             </div>
             
             <div id="adjustmentReasonField" class="field" hidden><label>盤點原因</label><select id="adjustmentReason"><option value="">請選擇</option><option>定期實體盤點</option><option>前次入庫漏登</option><option>前次領料漏登</option><option>材料損壞</option><option>材料遺失</option><option>期初數量修正</option><option>其他</option></select></div>
@@ -270,6 +274,8 @@ let currentType = 'PURCHASE_IN';
 let currentSubmissionId = '';
 let isSubmitting = false;
 let currentReportRange = 'month';
+let currentProjectBalances = [];
+let projectBalanceRequestId = 0;
 
 function firstDayOfTaiwanMonth(){const t=getTaiwanDateString();return `${t.slice(0,7)}-01`}
 function fmtReportDate(v){return v?String(v).replace(/-/g,'/'):''}
@@ -403,8 +409,18 @@ function toggleRecent() {
 }
 
 function populateSelects() {
-    document.getElementById('sheetMaterial').innerHTML = materialsData.filter(m=>m.active!==false).map(m => `<option value="${m.materialId}">${m.materialName} (庫存:${Number(m.stockQuantity || 0)}${m.stockUnit})</option>`).join('');
+    renderMaterialDropdown();
     updateProjectDropdown();
+}
+function renderMaterialDropdown() {
+    const select = document.getElementById('sheetMaterial');
+    if (currentType === 'PROJECT_RETURN') {
+        const returnable = currentProjectBalances.filter(item => item.returnable);
+        select.innerHTML = returnable.map(item => `<option value="${item.materialId}">🟢 ${escapeHtml(item.materialName)}｜尚未退回 ${formatNumber(item.unreturnedQuantity)}${escapeHtml(item.stockUnit)}</option>`).join('') || '<option value="">該案場目前沒有尚未退回材料</option>';
+    } else {
+        select.innerHTML = materialsData.filter(m=>m.active!==false).map(m => `<option value="${m.materialId}">${escapeHtml(m.materialName)} (庫存:${formatNumber(m.stockQuantity || 0)}${escapeHtml(m.stockUnit)})</option>`).join('');
+    }
+    updatePreview();
 }
 function updateProjectDropdown() {
     const select = document.getElementById('sheetProject');
@@ -412,13 +428,49 @@ function updateProjectDropdown() {
     if (currentType === 'PROJECT_TRANSFER_OUT') {
         projects = projectsData.filter(project => project.active !== false);
     } else if (currentType === 'PROJECT_RETURN') {
-        projects = projectsData.filter(project => project.active !== false || project.hasReturnableMaterials === true);
+        projects = projectsData.filter(project => project.hasUnreturnedMaterials === true || project.hasReturnableMaterials === true);
     }
     select.innerHTML = projects.map(project => {
-        const suffix = project.active === false ? ' 【已結案】' : '';
-        const count = project.hasReturnableMaterials ? `・可退${project.returnableItemCount || 0}項` : '';
-        return `<option value="${project.projectId}">${escapeHtml(project.projectName + suffix + count)}</option>`;
+        const closed = project.active === false ? '【已結案】' : '';
+        const count = currentType === 'PROJECT_RETURN' ? `🟢 尚有${project.unreturnedItemCount ?? project.returnableItemCount ?? 0}項未退回` : '';
+        const label = [count, project.projectName, closed].filter(Boolean).join(' ');
+        return `<option value="${project.projectId}">${escapeHtml(label)}</option>`;
     }).join('') || '<option value="">無可用案場</option>';
+}
+async function loadProjectReturnMaterials(resetQuantity = false) {
+    if (currentType !== 'PROJECT_RETURN') return;
+    const projectId = document.getElementById('sheetProject').value;
+    currentProjectBalances = [];
+    if (resetQuantity) document.getElementById('qty').value = '';
+    if (!projectId) { renderMaterialDropdown(); return; }
+    const requestId = ++projectBalanceRequestId;
+    const select = document.getElementById('sheetMaterial');
+    select.innerHTML = '<option value="">載入案場材料中...</option>';
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/projects/${encodeURIComponent(projectId)}/material-balances`);
+        const result = await response.json();
+        if (requestId !== projectBalanceRequestId) return;
+        if (!response.ok || !result.success) throw new Error(result.error || '無法取得案場材料');
+        currentProjectBalances = (result.balances || []).filter(item => item.returnable);
+        renderMaterialDropdown();
+    } catch (error) {
+        if (requestId !== projectBalanceRequestId) return;
+        select.innerHTML = '<option value="">案場材料載入失敗</option>';
+        showToast(`案場材料載入失敗：${error.message}`);
+        updateReturnPreview();
+    }
+}
+function updateReturnPreview() {
+    const isReturn = currentType === 'PROJECT_RETURN';
+    ['returnEnteredRow','returnReturnedRow','returnUnreturnedRow'].forEach(id => document.getElementById(id).hidden = !isReturn);
+    document.getElementById('projectReturnHint').hidden = !isReturn;
+    if (!isReturn) return;
+    const materialId = document.getElementById('sheetMaterial').value;
+    const item = currentProjectBalances.find(entry => entry.materialId === materialId);
+    const unit = item?.stockUnit || '';
+    document.getElementById('returnEnteredValue').textContent = item ? `${formatNumber(item.enteredQuantity)} ${unit}` : '-';
+    document.getElementById('returnReturnedValue').textContent = item ? `${formatNumber(item.returnedQuantity)} ${unit}` : '-';
+    document.getElementById('returnUnreturnedValue').textContent = item ? `${formatNumber(item.unreturnedQuantity)} ${unit}` : '-';
 }
 
 function formatNumber(value) { return new Intl.NumberFormat('zh-TW', { maximumFractionDigits: 4 }).format(Number(value || 0)); }
@@ -497,6 +549,8 @@ function chooseType(btn) {
     document.getElementById('projectField').hidden = !needsProject;
     document.getElementById('projectImpact').hidden = currentType !== 'PROJECT_TRANSFER_OUT';
     if (needsProject) updateProjectDropdown();
+    if (currentType === 'PROJECT_RETURN') loadProjectReturnMaterials(true);
+    else { currentProjectBalances = []; renderMaterialDropdown(); }
     
     const labels = {
         PURCHASE_IN: ['本次入庫數量', '本次入庫'],
@@ -519,6 +573,13 @@ function updatePreview() {
     
     const unit = mat.stockUnit;
     const currentStock = Number(mat.stockQuantity || 0);
+    if (currentType === 'PROJECT_RETURN') {
+        const balance = currentProjectBalances.find(item => item.materialId === matId);
+        if (!balance) return alert('請重新選擇案場與可退回材料');
+        if (qty > Number(balance.unreturnedQuantity || 0) + 0.0001) {
+            return alert(`本次退回不可超過尚未退回紀錄 ${formatNumber(balance.unreturnedQuantity)}${balance.stockUnit}`);
+        }
+    }
     const q = Number(document.getElementById('qty').value || 0);
     
     let after = currentStock;
@@ -548,6 +609,7 @@ function updatePreview() {
     if (currentType === 'PROJECT_TRANSFER_OUT') {
         document.getElementById('projImpactValue').textContent = `＋${q} ${unit}`;
     }
+    updateReturnPreview();
 }
 
 async function submitTransaction() {
@@ -954,7 +1016,7 @@ window.addEventListener('load', initApp);
     document.getElementById('zeroStockDisableSubmit').onclick = () => submitZeroStockDisable(key, item);
   }
 
-  // v6.5.7: 實作獨立且優美的「庫存歸零防呆」提醒窗
+  // v6.5.8: 實作獨立且優美的「庫存歸零防呆」提醒窗
   window.showZeroStockAlert = function(key, item) {
     document.getElementById('zsa-overlay-temp')?.remove();
     const overlay = document.createElement('div');
