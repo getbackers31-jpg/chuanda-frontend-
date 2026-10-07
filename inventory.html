@@ -521,7 +521,6 @@ function openSheet(type = null, matId = null) {
     currentSubmissionId = createSubmissionId();
     overlay.classList.remove('hidden');
     document.body.style.overflow = 'hidden';
-    if (matId) document.getElementById('sheetMaterial').value = matId;
     const qtyInput = document.getElementById('qty');
     qtyInput.disabled = false;
     qtyInput.value = '';
@@ -529,7 +528,9 @@ function openSheet(type = null, matId = null) {
     document.getElementById('sheetRemark').value = '';
     const btn = document.querySelector(`[data-type="${type || 'PURCHASE_IN'}"]`);
     if (btn) chooseType(btn);
-    document.getElementById('sheetTitle').textContent = matId ? '選擇異動方式' : '新增庫存異動';
+    // chooseType() 會重建下拉選單，所以指定材料必須在切換異動類型後再套用。
+    if (matId) document.getElementById('sheetMaterial').value = matId;
+    document.getElementById('sheetTitle').textContent = matId ? '處理指定材料' : '新增庫存異動';
     updatePreview();
 }
 function closeSheet() {
