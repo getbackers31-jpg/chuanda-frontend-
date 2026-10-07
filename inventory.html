@@ -499,7 +499,7 @@ function renderList() {
             note=`<div class="minimum-note normal-note">最低保有${formatNumber(m.lowStockThreshold)}${m.stockUnit}・庫存正常</div>`;
         }
         const photo=m.photoUrl||m.imageUrl||m.image||(m.materialCode?m.materialCode+'.jpg':m.materialId+'.jpg');
-        const thumb=`<img src="images/${photo}" onerror="this.outerHTML='${icon}'" style="width:100%;height:100%;object-fit:cover;border-radius:13px;">`;
+        const thumb=`<img src="images/${photo}" onerror="this.outerHTML='${icon}'" style="width:100%;height:100%;object-fit:contain;border-radius:13px;background:#f8f9fa;padding:3px;">`;
         return `<article class="card" role="button" tabindex="0" aria-label="選擇 ${m.materialName} 並新增庫存異動" onclick="openSheet(null,'${m.materialId}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openSheet(null,'${m.materialId}');}">
           <div class="card-top"><div class="thumb" style="padding:0;background:none;">${thumb}</div><div class="meta"><div class="name">${m.materialName}</div><div class="code">${m.materialCode||'無編號'}</div><div class="material-tags">${(m.materialCategories?.length?m.materialCategories:['尚未分類']).map(x=>`<span class="material-tag">${escapeHtml(x)}</span>`).join('')}${m.codeStatus==='TEMPORARY'?'<span class="material-tag temp">臨時代碼</span>':''}</div><span class="status ${statusCls}">${statusTxt}</span>${note}</div><div class="stock"><strong>${formatNumber(stock)}${m.stockUnit}</strong><span>共${formatNumber(baseQty)}${m.baseUnit||m.stockUnit}</span></div></div>
           <div class="card-hint">點擊卡片選擇入庫、盤點、領料或退回 ›</div></article>`;
@@ -528,7 +528,6 @@ function openSheet(type = null, matId = null) {
     document.getElementById('sheetRemark').value = '';
     const btn = document.querySelector(`[data-type="${type || 'PURCHASE_IN'}"]`);
     if (btn) chooseType(btn);
-    // chooseType() 會重建下拉選單，所以指定材料必須在切換異動類型後再套用。
     if (matId) document.getElementById('sheetMaterial').value = matId;
     document.getElementById('sheetTitle').textContent = matId ? '處理指定材料' : '新增庫存異動';
     updatePreview();
