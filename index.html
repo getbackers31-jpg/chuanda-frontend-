@@ -59,7 +59,7 @@
 </head>
 <body>
   <div class="container">
-    <h2 id="formTitle">👷 施工日報表 <span class="version-tag">v6.5.8</span></h2>
+    <h2 id="formTitle">👷 施工日報表 <span class="version-tag">v6.5.9</span></h2>
 
     <div style="display:flex; gap:10px; margin-bottom:15px;">
         <button type="button" id="btnDailyMode" class="btn btn-primary" style="flex:1; padding:10px; border:none; border-radius:5px; background:#00B900; color:white; font-weight:bold; cursor:pointer;" onclick="switchMode('daily_report')">📝 填寫施工日報</button>
@@ -214,14 +214,14 @@
         if (mode === 'daily_report') {
             btnDaily.style.background = '#00B900'; btnDaily.style.color = 'white'; btnDaily.style.border = 'none';
             btnIssue.style.background = '#e9ecef'; btnIssue.style.color = '#333'; btnIssue.style.border = '1px solid #ccc';
-            formTitle.innerHTML = '👷 施工日報表 <span class="version-tag">v6.5.8</span>';
+            formTitle.innerHTML = '👷 施工日報表 <span class="version-tag">v6.5.9</span>';
             submitButton.textContent = '確認送出施工日報'; submitButton.style.background = '#00B900';
             materialLabel.textContent = '📦 今日用料';
             issueExtraSection.classList.add('hidden'); dailyOnlyElements.forEach(el => el.classList.remove('hidden'));
         } else {
             btnDaily.style.background = '#e9ecef'; btnDaily.style.color = '#333'; btnDaily.style.border = '1px solid #ccc';
             btnIssue.style.background = '#28a745'; btnIssue.style.color = 'white'; btnIssue.style.border = 'none';
-            formTitle.innerHTML = '🚚 供應商直送登記表 <span class="version-tag">v6.5.8</span>';
+            formTitle.innerHTML = '🚚 供應商直送登記表 <span class="version-tag">v6.5.9</span>';
             submitButton.textContent = '確認登記供應商直送'; submitButton.style.background = '#28a745';
             materialLabel.textContent = '📦 進場材料清單';
             issueExtraSection.classList.remove('hidden'); dailyOnlyElements.forEach(el => el.classList.add('hidden'));
