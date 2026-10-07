@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
     <meta name="theme-color" content="#087f5b">
-    <title>云說倉庫管理 v6.5.8</title>
+    <title>云說倉庫管理 v6.5.9</title>
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <style>
         :root {
@@ -114,7 +114,7 @@
     
         .material-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}.material-tag{padding:3px 7px;border-radius:999px;background:#f1f3f5;color:#495057;font-size:10px;font-weight:800}.material-tag.temp{background:var(--orangebg);color:var(--orange)}.material-tag.off{background:#e9ecef;color:#868e96}.manage-panel{margin:10px 14px 12px;border:1px solid var(--line);border-radius:14px;background:#fff;padding:13px}.manage-row{display:flex;justify-content:space-between;align-items:center;gap:10px}.manage-btn{min-height:42px;border:0;border-radius:10px;background:var(--green);color:#fff;padding:0 14px;font-weight:900}.manage-list{display:grid;gap:10px;margin-top:12px}.manage-card{border:1px solid var(--line);border-radius:12px;padding:12px}.manage-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:10px}.manage-actions button{min-height:39px;border:1px solid var(--line);border-radius:9px;background:#fff;font-weight:800}.manage-actions .danger{color:var(--red);border-color:#ffa8a8}.category-picker{display:flex;flex-wrap:wrap;gap:7px}.category-picker button{padding:8px 11px;border:1px solid var(--line);border-radius:999px;background:#fff;font-weight:800}.category-picker button.active{border-color:var(--green);background:var(--green3);color:var(--green)}
     
-        /* v6.5.8: 品項管理獨立模式 */
+        /* v6.5.9: 品項管理獨立模式 */
         body.manager-mode .summary,
         body.manager-mode .search-wrap,
         body.manager-mode .filters,
@@ -137,7 +137,7 @@
     <header class="header">
         <div class="header-row">
             <div>
-                <div class="title">📦 云說倉庫管理 <span class="version-tag">v6.5.8</span></div>
+                <div class="title">📦 云說倉庫管理 <span class="version-tag">v6.5.9</span></div>
                 <div class="subtitle" id="userGreeting">載入中...</div>
             </div>
             <button class="icon-btn" aria-label="重新整理" onclick="initApp()">↻</button>
@@ -1016,7 +1016,7 @@ window.addEventListener('load', initApp);
     document.getElementById('zeroStockDisableSubmit').onclick = () => submitZeroStockDisable(key, item);
   }
 
-  // v6.5.8: 實作獨立且優美的「庫存歸零防呆」提醒窗
+  // v6.5.9: 實作獨立且優美的「庫存歸零防呆」提醒窗
   window.showZeroStockAlert = function(key, item) {
     document.getElementById('zsa-overlay-temp')?.remove();
     const overlay = document.createElement('div');
