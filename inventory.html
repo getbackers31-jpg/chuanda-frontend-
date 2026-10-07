@@ -68,7 +68,12 @@
         .minimum-note { margin-top:6px; color:var(--orange); font-size:12px; font-weight:800; line-height:1.4; }
         .minimum-note.normal-note { color:var(--green); }
         .card-top { display: flex; align-items: flex-start; gap: 11px; }
-        .thumb { display: grid; place-items: center; flex: none; width: 52px; height: 52px; border-radius: 13px; background: linear-gradient(145deg, #edf2ff, #e7f5ff); font-size: 27px; padding: 0; overflow: hidden; }
+        .thumb { display: flex; align-items: center; justify-content: center; flex: none; width: 72px; height: 72px; border-radius: 13px; background: #f8f9fa; font-size: 27px; padding: 4px; overflow: hidden; }
+        .thumb img { display:block; width:auto; height:auto; max-width:100%; max-height:100%; object-fit:contain; object-position:center; border-radius:9px; cursor:zoom-in; }
+        .photo-viewer { position:fixed; inset:0; z-index:10000; display:flex; align-items:center; justify-content:center; padding:18px; background:rgba(0,0,0,.92); }
+        .photo-viewer.hidden { display:none; }
+        .photo-viewer img { display:block; width:auto; height:auto; max-width:100%; max-height:88vh; object-fit:contain; object-position:center; background:#fff; border-radius:12px; box-shadow:0 12px 40px rgba(0,0,0,.45); }
+        .photo-viewer-close { position:absolute; top:calc(14px + env(safe-area-inset-top)); right:14px; width:44px; height:44px; border:0; border-radius:50%; background:rgba(255,255,255,.18); color:#fff; font-size:28px; line-height:1; cursor:pointer; }
         .meta { min-width: 0; flex: 1; }
         .name { font-weight: 800; line-height: 1.35; }
         .code { margin-top: 3px; color: var(--muted); font-size: 12px; }
@@ -199,6 +204,10 @@
     <button class="fab" onclick="openSheet('PURCHASE_IN')" aria-label="新增異動">＋</button>
 </div>
 
+<div id="photoViewer" class="photo-viewer hidden" role="dialog" aria-modal="true" aria-label="材料照片預覽" onclick="closePhotoViewer()">
+    <button type="button" class="photo-viewer-close" aria-label="關閉照片" onclick="event.stopPropagation();closePhotoViewer()">×</button>
+    <img id="photoViewerImage" alt="材料完整照片" onclick="event.stopPropagation()">
+</div>
 <div id="overlay" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
     <section class="sheet">
         <div class="handle"></div>
@@ -474,6 +483,22 @@ function updateReturnPreview() {
 }
 
 function formatNumber(value) { return new Intl.NumberFormat('zh-TW', { maximumFractionDigits: 4 }).format(Number(value || 0)); }
+function openPhotoViewer(src, materialName = '材料照片') {
+    if (!src) return;
+    const viewer = document.getElementById('photoViewer');
+    const image = document.getElementById('photoViewerImage');
+    image.src = src;
+    image.alt = `${materialName}完整照片`;
+    viewer.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+function closePhotoViewer() {
+    const viewer = document.getElementById('photoViewer');
+    const image = document.getElementById('photoViewerImage');
+    viewer.classList.add('hidden');
+    image.removeAttribute('src');
+    document.body.style.overflow = '';
+}
 function renderList() {
     const searchStr = document.getElementById('searchInput').value.toLowerCase();
     const managed = materialsData.filter(m => m.inventoryManaged !== false && m.active !== false);
@@ -499,9 +524,9 @@ function renderList() {
             note=`<div class="minimum-note normal-note">最低保有${formatNumber(m.lowStockThreshold)}${m.stockUnit}・庫存正常</div>`;
         }
         const photo=m.photoUrl||m.imageUrl||m.image||(m.materialCode?m.materialCode+'.jpg':m.materialId+'.jpg');
-        const thumb=`<img src="images/${photo}" onerror="this.outerHTML='${icon}'" style="width:100%;height:100%;object-fit:contain;border-radius:13px;background:#f8f9fa;padding:3px;">`;
+        const thumb=`<img src="images/${photo}" alt="${escapeHtml(m.materialName)}" loading="lazy" onclick="event.stopPropagation();openPhotoViewer(this.src, '${escapeHtml(m.materialName)}')" onerror="this.outerHTML='${icon}'">`;
         return `<article class="card" role="button" tabindex="0" aria-label="選擇 ${m.materialName} 並新增庫存異動" onclick="openSheet(null,'${m.materialId}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openSheet(null,'${m.materialId}');}">
-          <div class="card-top"><div class="thumb" style="padding:0;background:none;">${thumb}</div><div class="meta"><div class="name">${m.materialName}</div><div class="code">${m.materialCode||'無編號'}</div><div class="material-tags">${(m.materialCategories?.length?m.materialCategories:['尚未分類']).map(x=>`<span class="material-tag">${escapeHtml(x)}</span>`).join('')}${m.codeStatus==='TEMPORARY'?'<span class="material-tag temp">臨時代碼</span>':''}</div><span class="status ${statusCls}">${statusTxt}</span>${note}</div><div class="stock"><strong>${formatNumber(stock)}${m.stockUnit}</strong><span>共${formatNumber(baseQty)}${m.baseUnit||m.stockUnit}</span></div></div>
+          <div class="card-top"><div class="thumb">${thumb}</div><div class="meta"><div class="name">${m.materialName}</div><div class="code">${m.materialCode||'無編號'}</div><div class="material-tags">${(m.materialCategories?.length?m.materialCategories:['尚未分類']).map(x=>`<span class="material-tag">${escapeHtml(x)}</span>`).join('')}${m.codeStatus==='TEMPORARY'?'<span class="material-tag temp">臨時代碼</span>':''}</div><span class="status ${statusCls}">${statusTxt}</span>${note}</div><div class="stock"><strong>${formatNumber(stock)}${m.stockUnit}</strong><span>共${formatNumber(baseQty)}${m.baseUnit||m.stockUnit}</span></div></div>
           <div class="card-hint">點擊卡片選擇入庫、盤點、領料或退回 ›</div></article>`;
     }).join('');
     document.getElementById('materialList').innerHTML=html||'<div style="text-align:center;padding:40px;color:#6c757d;">查無符合條件的材料</div>';
