@@ -59,7 +59,7 @@
 </head>
 <body>
   <div class="container">
-    <h2 id="formTitle">👷 施工日報表 <span class="version-tag">v6.5.9</span></h2>
+    <h2 id="formTitle">👷 施工日報表 <span class="version-tag">v6.6.4</span></h2>
 
     <div style="display:flex; gap:10px; margin-bottom:15px;">
         <button type="button" id="btnDailyMode" class="btn btn-primary" style="flex:1; padding:10px; border:none; border-radius:5px; background:#00B900; color:white; font-weight:bold; cursor:pointer;" onclick="switchMode('daily_report')">📝 填寫施工日報</button>
@@ -214,14 +214,14 @@
         if (mode === 'daily_report') {
             btnDaily.style.background = '#00B900'; btnDaily.style.color = 'white'; btnDaily.style.border = 'none';
             btnIssue.style.background = '#e9ecef'; btnIssue.style.color = '#333'; btnIssue.style.border = '1px solid #ccc';
-            formTitle.innerHTML = '👷 施工日報表 <span class="version-tag">v6.5.9</span>';
+            formTitle.innerHTML = '👷 施工日報表 <span class="version-tag">v6.6.4</span>';
             submitButton.textContent = '確認送出施工日報'; submitButton.style.background = '#00B900';
             materialLabel.textContent = '📦 今日用料';
             issueExtraSection.classList.add('hidden'); dailyOnlyElements.forEach(el => el.classList.remove('hidden'));
         } else {
             btnDaily.style.background = '#e9ecef'; btnDaily.style.color = '#333'; btnDaily.style.border = '1px solid #ccc';
             btnIssue.style.background = '#28a745'; btnIssue.style.color = 'white'; btnIssue.style.border = 'none';
-            formTitle.innerHTML = '🚚 供應商直送登記表 <span class="version-tag">v6.5.9</span>';
+            formTitle.innerHTML = '🚚 供應商直送登記表 <span class="version-tag">v6.6.4</span>';
             submitButton.textContent = '確認登記供應商直送'; submitButton.style.background = '#28a745';
             materialLabel.textContent = '📦 進場材料清單';
             issueExtraSection.classList.remove('hidden'); dailyOnlyElements.forEach(el => el.classList.add('hidden'));
@@ -303,21 +303,20 @@
       const item = MATERIAL_ITEMS_MAP.get(materialId);
       const packageQuantity = item && item.packageQuantity ? Number(item.packageQuantity) : 1;
       const stockUnit = item ? item.stockUnit : '';
-      const enteredQuantity = Number(
-        bData.enteredQuantity ??
-        ((bData.enteredBaseQuantity ?? bData.issuedBaseQuantity ?? 0) / packageQuantity)
-      );
+      const enteredQuantity = Number(bData.enteredQuantity ?? ((bData.enteredBaseQuantity ?? bData.issuedBaseQuantity ?? 0) / packageQuantity));
+      const warehouseQuantity = Number(bData.warehouseEnteredQuantity ?? 0);
+      const supplierDirectQuantity = Number(bData.supplierDirectQuantity ?? 0);
+      const returnableQuantity = Number(bData.unreturnedQuantity ?? 0);
       const formType = document.getElementById('formType').value;
       infoDiv.classList.remove('hidden');
       infoDiv.style.borderLeftColor = '#00B900';
       infoDiv.style.backgroundColor = '#eef5ee';
+      const sourceLines = `<span style="color:#495057;"><strong>來源明細：</strong> 公司倉庫 ${warehouseQuantity} ${stockUnit}｜供應商直送 ${supplierDirectQuantity} ${stockUnit}</span><br><span style="color:#7c3aed;"><strong>可退回倉庫：</strong> ${returnableQuantity} ${stockUnit}</span>`;
       if (formType === 'material_issue') {
-        const label = document.getElementById('issueType').value === 'OPENING'
-          ? '本次開工首批進場'
-          : '本次追加進場';
-        infoDiv.innerHTML = `<strong>目前累計進場：</strong> ${enteredQuantity} ${stockUnit}<br><span style="color:#00B900;"><strong>${label}：</strong> +${inputQty} ${stockUnit}</span><br><strong>登記後累計進場：</strong> ${enteredQuantity + inputQty} ${stockUnit}`;
+        const label = document.getElementById('issueType').value === 'OPENING' ? '本次開工首批進場' : '本次追加進場';
+        infoDiv.innerHTML = `<strong>目前累計進場：</strong> ${enteredQuantity} ${stockUnit}<br>${sourceLines}<br><span style="color:#00B900;"><strong>${label}：</strong> +${inputQty} ${stockUnit}（供應商直送）</span><br><strong>登記後累計進場：</strong> ${enteredQuantity + inputQty} ${stockUnit}`;
       } else {
-        infoDiv.innerHTML = `<strong>案場累計進場：</strong> ${enteredQuantity} ${stockUnit}<br><span style="color:#007bff;"><strong>今日登記使用：</strong> ${inputQty} ${stockUnit}</span>`;
+        infoDiv.innerHTML = `<strong>案場累計進場：</strong> ${enteredQuantity} ${stockUnit}<br>${sourceLines}<br><span style="color:#007bff;"><strong>今日登記使用：</strong> ${inputQty} ${stockUnit}</span>`;
       }
     }
 
