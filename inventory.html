@@ -598,14 +598,14 @@ function updatePreview() {
     
     const unit = mat.stockUnit;
     const currentStock = Number(mat.stockQuantity || 0);
+    const q = Number(document.getElementById('qty').value || 0);
     if (currentType === 'PROJECT_RETURN') {
         const balance = currentProjectBalances.find(item => item.materialId === matId);
         if (!balance) return alert('請重新選擇案場與可退回材料');
-        if (qty > Number(balance.unreturnedQuantity || 0) + 0.0001) {
+        if (q > Number(balance.unreturnedQuantity || 0) + 0.0001) {
             return alert(`本次退回不可超過尚未退回紀錄 ${formatNumber(balance.unreturnedQuantity)}${balance.stockUnit}`);
         }
     }
-    const q = Number(document.getElementById('qty').value || 0);
     
     let after = currentStock;
     let sign = '＋';
